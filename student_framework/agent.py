@@ -14,8 +14,8 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from mia_agents.protocols import LLMClient
-from mia_agents.types import AgentResult, ToolSchema
-
+from mia_agents.types import AgentResult, ToolSchema, AgentStep
+import json
 
 class MyAgent:
     def __init__(
@@ -48,6 +48,8 @@ class MyAgent:
         self._system = system_prompt
         self._max_iterations = max_iterations
         self._max_history_messages = max_history_messages
+        self._schemas: dict[str, ToolSchema] = {}
+        self._tools: dict[str, Callable[..., str]] = {}
         # TODO (M1): inicializa el estado interno para las herramientas registradas.
         # TODO (M2): inicializa la estructura de historial conversacional.
 
@@ -65,7 +67,8 @@ class MyAgent:
         El callable se invoca con kwargs que coinciden con la firma.
         Debe devolver una cadena.
         """
-        raise NotImplementedError("M1: implementa el registro de herramientas")
+        self._schemas[schema.name] = schema
+        self._tools[schema.name] = tool
 
     def run(self, user_message: str) -> AgentResult:
         """Ejecuta el bucle del agente hasta una respuesta final o hasta max_iterations.
@@ -91,7 +94,44 @@ class MyAgent:
         `LLMResponse` y exponlos en `AgentResult.input_tokens` /
         `AgentResult.output_tokens`.
         """
-        raise NotImplementedError("M1: implementa el bucle del agente")
+        messages = [{
+            'role': 'user',
+            'content': user_message,
+        }]
+        steps : list[AgentStep] = []
+        for _ in range(self._max_iterations):
+            response = self._llm.chat(messages=messages, tools=list(self._schemas.values()), system= self._system)
+
+            if not response.tool_calls:
+                return AgentResult(
+                    answer=response.content,
+                    steps=steps)
+
+            messages.append({
+                'role': 'assistant',
+                'content': response.content,
+                'tool_calls': [ { 'id': tool.id, 'name': tool.name, 'arguments': tool.arguments } for tool in response.tool_calls ]
+            })
+
+            for tool_call in response.tool_calls:
+                tool_function = self._tools.get(tool_call.name)
+                kwargs = json.loads(tool_call.arguments) if tool_call.arguments else {}
+                tool_output = tool_function(**kwargs)
+                step = AgentStep(
+                    tool_name=tool_call.name,
+                    tool_input=tool_call.arguments,
+                    tool_output=str(tool_output),
+                    error=None
+                )
+                steps.append(step)
+                messages.append({
+                    'role': 'tool',
+                    'tool_call_id': tool_call.id,
+                    'name': tool_call.name,
+                    'content': step.tool_output if step.error is None else step.error
+                })
+
+        return AgentResult(answer='', steps=steps)
 
     def structured_call(
         self,
