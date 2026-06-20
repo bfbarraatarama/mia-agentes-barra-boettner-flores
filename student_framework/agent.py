@@ -114,22 +114,38 @@ class MyAgent:
             })
 
             for tool_call in response.tool_calls:
-                tool_function = self._tools.get(tool_call.name)
-                kwargs = json.loads(tool_call.arguments) if tool_call.arguments else {}
-                tool_output = tool_function(**kwargs)
+                error = None
+                tool_output = ""
+
+                try:
+                    kwargs = json.loads(tool_call.arguments) if tool_call.arguments else {}
+
+                    tool_function = self._tools.get(tool_call.name)
+
+                    if tool_function is None:
+                        error = f"Herramienta desconocida: {tool_call.name}"
+                    else:
+                        tool_output = str(tool_function(**kwargs))
+
+                except Exception as e:
+                    error = str(e)
+
                 step = AgentStep(
                     tool_name=tool_call.name,
                     tool_input=tool_call.arguments,
-                    tool_output=str(tool_output),
-                    error=None
+                    tool_output=tool_output,
+                    error=error,
                 )
+
                 steps.append(step)
+
                 messages.append({
-                    'role': 'tool',
-                    'tool_call_id': tool_call.id,
-                    'name': tool_call.name,
-                    'content': step.tool_output if step.error is None else step.error
-                })
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "name": tool_call.name,
+                    "content": tool_output if error is None else error,
+                })          
+
 
         return AgentResult(answer='', steps=steps)
 
