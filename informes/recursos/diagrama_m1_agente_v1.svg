@@ -1,0 +1,1948 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="1464.0709pt"
+   height="886.95673pt"
+   viewBox="0 0 1464.0709 886.95671"
+   version="1.1"
+   id="svg1262"
+   sodipodi:docname="diagrama_m1_agente_v1.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   inkscape:export-filename="diagrama_m1_agente_v1.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <sodipodi:namedview
+     id="namedview1264"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="pt"
+     showgrid="false"
+     inkscape:zoom="0.70710678"
+     inkscape:cx="291.32799"
+     inkscape:cy="610.23315"
+     inkscape:window-width="2560"
+     inkscape:window-height="1011"
+     inkscape:window-x="0"
+     inkscape:window-y="32"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="text_39-4"
+     showguides="false" />
+  <metadata
+     id="metadata650">
+    <rdf:RDF>
+      <cc:Work>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:date>2026-06-27T16:53:38.293574</dc:date>
+        <dc:format>image/svg+xml</dc:format>
+        <dc:creator>
+          <cc:Agent>
+            <dc:title>Matplotlib v3.10.8, https://matplotlib.org/</dc:title>
+          </cc:Agent>
+        </dc:creator>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs654">
+    <style
+       type="text/css"
+       id="style652">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+    <clipPath
+       id="pdfc800beb8-7">
+      <rect
+         x="7.1999998"
+         y="7.1999998"
+         width="1722"
+         height="1146"
+         id="rect1257-5" />
+    </clipPath>
+    <clipPath
+       id="clipPath1749">
+      <rect
+         x="7.1999998"
+         y="7.1999998"
+         width="1722"
+         height="1146"
+         id="rect1747" />
+    </clipPath>
+    <clipPath
+       id="pdfc800beb8-0">
+      <rect
+         x="7.1999998"
+         y="7.1999998"
+         width="1722"
+         height="1146"
+         id="rect1257-9" />
+    </clipPath>
+    <clipPath
+       id="clipPath1810">
+      <rect
+         x="7.1999998"
+         y="7.1999998"
+         width="1722"
+         height="1146"
+         id="rect1808" />
+    </clipPath>
+    <clipPath
+       id="pdfc800beb8-0-2">
+      <rect
+         x="7.1999998"
+         y="7.1999998"
+         width="1722"
+         height="1146"
+         id="rect1257-9-3" />
+    </clipPath>
+    <clipPath
+       id="clipPath1937">
+      <rect
+         x="7.1999998"
+         y="7.1999998"
+         width="1722"
+         height="1146"
+         id="rect1935" />
+    </clipPath>
+    <clipPath
+       id="pdfc800beb8-7-2">
+      <rect
+         x="7.1999998"
+         y="7.1999998"
+         width="1722"
+         height="1146"
+         id="rect1257-5-2" />
+    </clipPath>
+    <clipPath
+       id="clipPath16512">
+      <rect
+         x="7.1999998"
+         y="7.1999998"
+         width="1722"
+         height="1146"
+         id="rect16510" />
+    </clipPath>
+    <clipPath
+       id="pdfc800beb8-3">
+      <rect
+         x="7.1999998"
+         y="7.1999998"
+         width="1722"
+         height="1146"
+         id="rect1257-6" />
+    </clipPath>
+    <clipPath
+       id="clipPath17309">
+      <rect
+         x="7.1999998"
+         y="7.1999998"
+         width="1722"
+         height="1146"
+         id="rect17307" />
+    </clipPath>
+    <clipPath
+       id="pdfc800beb8-31">
+      <rect
+         x="7.1999998"
+         y="7.1999998"
+         width="1722"
+         height="1146"
+         id="rect1257-94" />
+    </clipPath>
+    <clipPath
+       id="clipPath20744">
+      <rect
+         x="7.1999998"
+         y="7.1999998"
+         width="1722"
+         height="1146"
+         id="rect20742" />
+    </clipPath>
+    <clipPath
+       id="pdfc800beb8-6">
+      <rect
+         x="7.1999998"
+         y="7.1999998"
+         width="1722"
+         height="1146"
+         id="rect1257-1" />
+    </clipPath>
+  </defs>
+  <g
+     id="figure_1"
+     transform="translate(-0.12382761,-30.781889)">
+    <g
+       id="patch_1"
+       transform="matrix(0.84316453,0,0,0.76435432,0.12382761,30.781889)"
+       style="stroke-width:0.638429;stroke-dasharray:none">
+      <path
+         d="M 0,1160.4 H 1736.4 V 0 H 0 Z"
+         style="fill:#ffffff;stroke-width:0.638429;stroke-dasharray:none"
+         id="path656" />
+    </g>
+    <g
+       id="text_51-5"
+       transform="translate(-158.12246,307.57172)"
+       style="stroke-linecap:butt;stroke-linejoin:round">
+      <text
+         style="font-size:7.2px;font-family:'DejaVu Sans';text-anchor:start;fill:#555555;stroke-linecap:butt;stroke-linejoin:round"
+         x="1031.0155"
+         y="331.94907"
+         id="text1153-0"><tspan
+           sodipodi:role="line"
+           x="1031.0155"
+           y="331.94907"
+           id="tspan30349-1">Convenciones de color:</tspan></text>
+    </g>
+    <g
+       id="axes_1">
+      <g
+         id="patch_2"
+         transform="matrix(0.82316917,0,0,1.0007659,6.6609848,-0.15225108)">
+        <path
+           d="m 50.9675,277.22625 h 292.74 q 12.915,0 12.915,-12.8925 V 133.26 q 0,-12.8925 -12.915,-12.8925 h -292.74 q -12.915,0 -12.915,12.8925 v 131.07375 q 0,12.8925 12.915,12.8925 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#e8eef8;stroke:#777777;stroke-width:1.3;stroke-linejoin:miter"
+           id="path659" />
+      </g>
+      <g
+         id="patch_3">
+        <path
+           d="M 395.3675,277.22625 H 820.845 q 12.915,0 12.915,-12.8925 V 133.26 q 0,-12.8925 -12.915,-12.8925 H 395.3675 q -12.915,0 -12.915,12.8925 v 131.07375 q 0,12.8925 12.915,12.8925 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#e9f6ec;stroke:#777777;stroke-width:1.3;stroke-linejoin:miter"
+           id="path662" />
+      </g>
+      <g
+         id="patch_4"
+         transform="matrix(0.52972982,0,0,1.0022485,483.55111,-0.3258492)">
+        <path
+           d="m 883.2675,277.22625 h 798.5775 q 12.915,0 12.915,-12.8925 V 133.26 q 0,-12.8925 -12.915,-12.8925 H 883.2675 q -12.915,0 -12.915,12.8925 v 131.07375 q 0,12.8925 12.915,12.8925 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#fff3d9;stroke:#777777;stroke-width:1.3;stroke-linejoin:miter"
+           id="path665" />
+      </g>
+      <g
+         id="patch_5"
+         transform="matrix(0.63821104,0,0,0.7449084,13.571748,86.715206)">
+        <path
+           d="M 50.9675,1079.4263 H 1115.02 q 12.915,0 12.915,-12.8925 V 312.3225 q 0,-12.8925 -12.915,-12.8925 H 50.9675 q -12.915,0 -12.915,12.8925 v 754.2113 q 0,12.8925 12.915,12.8925 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#eaf4ff;stroke:#777777;stroke-width:1.3;stroke-linejoin:miter"
+           id="path668" />
+      </g>
+      <g
+         id="patch_6"
+         transform="matrix(0.88733051,0,0,0.18913674,-157.68064,379.44622)"
+         style="stroke:#444444;stroke-width:1.20664;stroke-dasharray:none;stroke-opacity:1">
+        <path
+           d="m 1170.2675,1079.4263 h 511.5775 q 12.915,0 12.915,-12.8925 V 312.3225 q 0,-12.8925 -12.915,-12.8925 h -511.5775 q -12.915,0 -12.915,12.8925 v 754.2113 q 0,12.8925 12.915,12.8925 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#e8eef8;stroke:#444444;stroke-width:1.20664;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+           id="path671" />
+      </g>
+      <g
+         id="text_1">
+        <text
+           style="font-weight:700;font-size:10.5px;font-family:'DejaVu Sans';text-anchor:start;fill:#111111"
+           x="55.272499"
+           y="149.83336"
+           id="text674">Terminal / CLI</text>
+      </g>
+      <g
+         id="text_2"
+         transform="translate(260.09727,-39.536736)">
+        <text
+           style="font-size:8px;font-family:'DejaVu Sans';text-anchor:start;fill:#555555"
+           x="-73.006119"
+           y="172.85541"
+           id="text677">mia_agents.cli — provisto</text>
+      </g>
+      <g
+         id="text_3">
+        <text
+           style="font-weight:700;font-size:10.5px;font-family:'DejaVu Sans';text-anchor:start;fill:#111111"
+           x="399.67249"
+           y="149.83336"
+           id="text680">student_framework/__init__.py</text>
+      </g>
+      <g
+         id="text_4"
+         transform="translate(221.01053,-43.428505)">
+        <text
+           style="font-size:8px;font-family:'DejaVu Sans';text-anchor:start;fill:#555555"
+           x="399.67249"
+           y="176.90375"
+           id="text683">build_agent(config) — implementación del grupo</text>
+      </g>
+      <g
+         id="text_5"
+         transform="translate(74.419826,0.1211579)">
+        <text
+           style="font-weight:700;font-size:10.5px;font-family:'DejaVu Sans';text-anchor:start;fill:#111111"
+           x="887.57251"
+           y="149.83336"
+           id="text686">student_framework/tools/*.py</text>
+      </g>
+      <g
+         id="text_6"
+         transform="translate(266.06388,-42.916096)">
+        <text
+           style="font-size:8px;font-family:'DejaVu Sans';text-anchor:start;fill:#555555"
+           x="887.57251"
+           y="176.90375"
+           id="text689">herramientas + schemas — implementación del grupo</text>
+      </g>
+      <g
+         id="text_7">
+        <text
+           style="font-weight:700;font-size:10.5px;font-family:'DejaVu Sans';text-anchor:start;fill:#111111"
+           x="55.272499"
+           y="328.89587"
+           id="text692">student_framework/agent.py</text>
+      </g>
+      <g
+         id="text_8"
+         transform="translate(414.20473,-26.473179)">
+        <text
+           style="font-size:8px;font-family:'DejaVu Sans';text-anchor:start;fill:#555555"
+           x="55.272499"
+           y="355.96625"
+           id="text695">MyAgent, register_tool(...) y run(...) — implementación del grupo</text>
+      </g>
+      <g
+         id="text_9"
+         transform="translate(-289.608,144.22642)">
+        <text
+           style="font-weight:700;font-size:10.5px;font-family:'DejaVu Sans';text-anchor:start;fill:#111111"
+           x="1171.3608"
+           y="313.51038"
+           id="text698">mia_agents, LLMClient y tipos provistos</text>
+      </g>
+      <g
+         id="text_10"
+         transform="translate(-38.469103,61.130445)">
+        <text
+           style="font-size:8px;font-family:'DejaVu Sans';text-anchor:start;fill:#555555"
+           x="1295.8251"
+           y="394.52563"
+           id="text701">scaffold provisto</text>
+      </g>
+      <g
+         id="patch_7"
+         transform="matrix(0.5796657,0,0,1.0050493,60.998224,7.154168)">
+        <path
+           d="m 68.1875,234.9675 h 258.3 v -51.57 h -258.3 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path704" />
+      </g>
+      <g
+         id="patch_8"
+         transform="matrix(0.33791399,0,0,0.51074309,133.06674,84.687847)">
+        <path
+           d="m 68.1875,170.505 h 258.3 v -32.23125 h -258.3 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#f5f5f5;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path707"
+           transform="translate(-79.937401,10.952332)" />
+      </g>
+      <g
+         id="patch_9"
+         transform="matrix(0.61048648,0,0,0.69571161,210.04282,73.66633)">
+        <path
+           d="m 412.5875,171.9375 h 179.375 v -39.39375 h -179.375 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path710" />
+      </g>
+      <g
+         id="patch_10"
+         transform="matrix(0.67203725,0,0,0.62097396,202.66401,83.924703)">
+        <path
+           d="M 613.4875,171.9375 H 796.45 V 132.54375 H 613.4875 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path713" />
+      </g>
+      <g
+         id="patch_11"
+         transform="matrix(0.76472078,0,0,0.82269518,139.32551,58.64257)">
+        <path
+           d="M 412.5875,239.98125 H 796.45 V 193.425 H 412.5875 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path716" />
+      </g>
+      <g
+         id="patch_12"
+         transform="matrix(0.53708478,0,0,0.66408186,473.48026,90.485885)">
+        <path
+           d="m 896.9,182.68125 h 182.9625 v -48.705 H 896.9 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path719" />
+      </g>
+      <g
+         id="patch_13"
+         transform="matrix(0.55726444,0,0,1.0070041,453.53978,36.665741)">
+        <path
+           d="M 1101.3875,182.68125 H 1313.05 v -48.705 h -211.6625 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path722"
+           transform="matrix(1.0002681,0,0,0.65920494,0.33839642,53.440357)" />
+      </g>
+      <g
+         id="patch_14"
+         transform="matrix(0.50250447,0,0,0.66451061,528.87487,91.412212)">
+        <path
+           d="m 1338.1625,182.68125 h 182.9625 v -48.705 h -182.9625 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path725" />
+      </g>
+      <g
+         id="patch_15"
+         transform="matrix(0.51073004,0,0,0.66440528,522.446,91.394436)">
+        <path
+           d="m 1539.0625,182.68125 h 129.15 v -48.705 h -129.15 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#f8f8f8;stroke:#999999;stroke-width:1.1;stroke-linejoin:miter"
+           id="path728" />
+      </g>
+      <g
+         id="patch_16"
+         transform="matrix(0.50696461,0,0,1.0079475,515.37967,24.484859)">
+        <path
+           d="m 896.9,244.995 h 326.4625 V 205.60125 H 896.9 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#dcebff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path731" />
+      </g>
+      <g
+         id="patch_17"
+         transform="matrix(0.42562479,0,0,1.0096187,634.86807,24.05269)">
+        <path
+           d="m 1244.8875,244.995 h 423.325 v -39.39375 h -423.325 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#e6f4ea;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path734" />
+      </g>
+      <g
+         id="patch_18"
+         transform="matrix(0.46861785,0,0,0.61689662,35.701138,138.15183)">
+        <path
+           d="m 68.1875,368.90625 h 229.6 v -42.975 h -229.6 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path737" />
+      </g>
+      <g
+         id="patch_19"
+         transform="matrix(0.41810034,0,0,0.617657,186.11058,155.97381)">
+        <path
+           d="m 315.725,368.90625 h 358.75 v -42.975 h -358.75 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path740" />
+      </g>
+      <g
+         id="patch_20"
+         transform="matrix(0.36597031,0,0,0.66246158,293.29644,135.50994)">
+        <path
+           d="m 706.7625,393.975 h 373.1 v -68.04375 h -373.1 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#f2f0ff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path743" />
+      </g>
+      <g
+         id="patch_21"
+         transform="matrix(1.0001918,0,0,0.80634803,-0.06914607,86.159524)">
+        <path
+           d="M 68.1875,454.85625 H 308.55 v -42.975 H 68.1875 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path746"
+           transform="matrix(0.45351518,0,0,1.0092479,37.073006,-4.0077318)" />
+      </g>
+      <g
+         id="patch_22"
+         transform="matrix(0.6788435,0,0,0.62633246,-25.988915,161.89437)">
+        <path
+           d="M 333.6625,454.85625 H 652.95 v -42.975 H 333.6625 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path749"
+           transform="translate(0,1.3991648)" />
+      </g>
+      <g
+         id="patch_23"
+         transform="matrix(0.58682838,0,0,3.4916556,46.465814,-1018.6173)"
+         style="stroke:#344f71;stroke-width:0.301097;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1">
+        <path
+           d="m 685.2375,454.85625 h 358.75 v -42.975 h -358.75 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#f2f0ff;stroke:#344f71;stroke-width:0.301097;stroke-linejoin:miter;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+           id="path752" />
+      </g>
+      <g
+         id="patch_24"
+         transform="matrix(0.41583848,0,0,1.0069486,275.75617,-26.35766)">
+        <path
+           d="M 448.4625,540.80625 H 825.15 v -55.8675 H 448.4625 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#dcebff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path755" />
+      </g>
+      <g
+         id="patch_25"
+         transform="matrix(0.48588328,0,0,0.56002159,335.70784,205.63489)">
+        <path
+           d="m 1194.6625,540.80625 h 215.25 v -55.8675 h -215.25 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path758" />
+      </g>
+      <g
+         id="patch_26"
+         transform="matrix(0.42999529,0,0,0.56062599,302.61361,255.89659)">
+        <path
+           d="m 1442.2,540.80625 h 211.6625 v -55.8675 H 1442.2 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path761" />
+      </g>
+      <g
+         id="patch_27"
+         transform="matrix(0.55865181,0,0,1.4259974,402.42783,-345.64737)">
+        <path
+           d="m 1194.6625,621.7425 h 459.2 v -45.12375 h -459.2 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#f5f5f5;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path764" />
+      </g>
+      <g
+         id="patch_29"
+         transform="matrix(0.45138,0,0,0.53683175,-31.948637,200.40783)">
+        <path
+           d="m 685.2375,642.51375 h 243.95 q 8.61,0 8.61,-8.595 v -37.245 q 0,-8.595 -8.61,-8.595 h -243.95 q -8.61,0 -8.61,8.595 v 37.245 q 0,8.595 8.61,8.595 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#f8e8f4;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path770" />
+      </g>
+      <g
+         id="patch_30"
+         transform="matrix(0.43269269,0,0,0.66092482,5.6955757,124.01869)">
+        <path
+           d="m 150.7,641.08125 h 312.1125 v -51.57 H 150.7 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path773" />
+      </g>
+      <g
+         id="patch_31"
+         transform="matrix(0.43251713,0,0,0.79935137,5.7494257,36.213815)">
+        <path
+           d="m 150.7,707.6925 h 312.1125 v -51.57 H 150.7 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path776" />
+      </g>
+      <g
+         id="patch_32"
+         transform="matrix(0.39158808,0,0,0.64370902,30.714396,142.51246)">
+        <path
+           d="m 581.2,727.03125 h 394.625 v -50.1375 H 581.2 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path779" />
+      </g>
+      <g
+         id="patch_33"
+         transform="matrix(1.6284133,0,0,0.99357107,-877.80493,-112.01104)"
+         style="stroke:#333333;stroke-width:0.508654;stroke-dasharray:none;stroke-opacity:1">
+        <path
+           d="M 581.2,795.075 H 975.825 V 748.51875 H 581.2 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#f2f0ff;stroke:#333333;stroke-width:0.225945;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+           id="path782"
+           transform="matrix(0.99727731,0,0,5.081891,2.1196516,-3055.12)" />
+        <path
+           d="m 1170.2675,1079.4263 h 511.5775 q 12.915,0 12.915,-12.8925 V 312.3225 q 0,-12.8925 -12.915,-12.8925 h -511.5775 q -12.915,0 -12.915,12.8925 v 754.2113 q 0,12.8925 12.915,12.8925 z"
+           clip-path="url(#pdfc800beb8-6)"
+           style="fill:#ffdddd;fill-opacity:1;stroke:#444444;stroke-width:1.20664;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+           id="path671-5"
+           transform="matrix(0.5525563,0,0,0.17179359,-52.897731,721.40349)" />
+      </g>
+      <g
+         id="text_39-4"
+         transform="translate(-609.09894,20.877343)"
+         style="stroke-linecap:butt;stroke-linejoin:round">
+        <text
+           style="font-weight:700;font-size:8px;font-family:'DejaVu Sans';fill:#111111;stroke-linecap:butt;stroke-linejoin:round"
+           id="text958-7"
+           x="693.75458"
+           y="652.05707"><tspan
+             style="fill:#d50000;fill-opacity:1"
+             id="tspan44899">try / except Exception</tspan></text>
+        <text
+           style="font-weight:700;font-size:8px;font-family:'DejaVu Sans';fill:#111111;stroke-linecap:butt;stroke-linejoin:round"
+           transform="translate(735.40125,778.4835)"
+           id="text960-6" />
+      </g>
+      <g
+         id="patch_34"
+         transform="matrix(0.69795799,0,0,0.4886019,24.650535,311.03295)">
+        <path
+           d="m 82.5375,815.13 h 179.375 V 770.7225 H 82.5375 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path785" />
+      </g>
+      <g
+         id="patch_35"
+         transform="matrix(0.62670756,0,0,0.48935766,51.96987,310.43369)">
+        <path
+           d="M 290.6125,815.13 H 480.75 V 770.7225 H 290.6125 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path788" />
+      </g>
+      <g
+         id="patch_36"
+         transform="matrix(0.42293469,0,0,0.49143897,164.43735,308.78336)">
+        <path
+           d="M 516.625,816.5625 H 710.35 q 8.61,0 8.61,-8.595 V 777.885 q 0,-8.595 -8.61,-8.595 H 516.625 q -8.61,0 -8.61,8.595 v 30.0825 q 0,8.595 8.61,8.595 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#f8e8f4;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path791" />
+      </g>
+      <g
+         id="patch_37"
+         transform="matrix(0.34081802,0,0,1.0109173,183.60882,-30.03576)">
+        <path
+           d="m 746.225,800.805 h 326.4625 V 759.2625 H 746.225 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#e6f4ea;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path794" />
+      </g>
+      <g
+         id="patch_38"
+         transform="translate(-252.42722,-31.722809)">
+        <path
+           d="m 746.225,858.105 h 326.4625 V 816.5625 H 746.225 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffe6e6;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path797"
+           transform="matrix(0.34432557,0,0,1.0108572,289.41221,-56.45148)" />
+      </g>
+      <g
+         id="patch_39"
+         transform="translate(-56.432534,-62.395993)">
+        <path
+           d="M 369.5375,931.1625 H 739.05 V 881.025 H 369.5375 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path800"
+           transform="matrix(0.59027522,0,0,0.54041975,162.06253,407.34206)" />
+      </g>
+      <g
+         id="patch_40"
+         transform="matrix(0.4038287,0,0,1.0079423,262.17675,-78.290449)">
+        <path
+           d="M 771.3375,931.1625 H 1069.1 V 881.025 H 771.3375 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffffff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path803" />
+      </g>
+      <g
+         id="patch_41"
+         transform="matrix(0.48675977,0,0,0.70041507,241.20645,-169.3821)">
+        <path
+           d="M 452.05,1040.0325 H 832.325 V 998.49 H 452.05 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#ffe6e6;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path806" />
+      </g>
+      <g
+         id="patch_42"
+         transform="translate(142.81662,245.9505)">
+        <path
+           d="M 728.2875,434.80125 H 882.55 v -30.0825 H 728.2875 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#dcebff;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path809" />
+      </g>
+      <g
+         id="patch_43"
+         transform="translate(142.81662,245.9505)">
+        <path
+           d="M 907.6625,434.80125 H 1054.75 v -30.0825 H 907.6625 Z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#e6f4ea;stroke:#333333;stroke-width:1.1;stroke-linejoin:miter"
+           id="path812" />
+      </g>
+      <g
+         id="text_11"
+         transform="translate(-267.38731,16.200027)">
+        <text
+           style="font-weight:700;font-size:16px;font-family:'DejaVu Sans';text-anchor:middle"
+           x="868.20001"
+           y="45.06625"
+           id="text818">Milestone 1 — Flujo de ejecución y registro de herramientas</text>
+      </g>
+      <g
+         id="text_12"
+         transform="translate(-267.38731,16.200027)">
+        <text
+           style="font-size:10px;font-family:'DejaVu Sans';text-anchor:middle;fill:#555555"
+           x="868.20001"
+           y="73.930939"
+           id="text821">Separación entre interfaz visible para la LLM (ToolSchema) y ejecución local en Python (callables)</text>
+      </g>
+      <g
+         id="text_13"
+         transform="translate(9.3299399,5.690919)">
+        <text
+           style="font-size:7.6px;font-family:'DejaVu Sans';fill:#111111"
+           id="text824"
+           x="106.96815"
+           y="204.42757"><tspan
+             sodipodi:role="line"
+             id="tspan1526"
+             x="106.96815"
+             y="204.42757">python -m mia_agents.cli run</tspan><tspan
+             sodipodi:role="line"
+             x="106.96815"
+             y="213.92757"
+             id="tspan1626">--module student_framework</tspan><tspan
+             sodipodi:role="line"
+             id="tspan1528"
+             x="106.96815"
+             y="223.42757">--message ...</tspan></text>
+        <text
+           style="font-size:7.6px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(142.25709,211.27962)"
+           id="text826" />
+        <text
+           style="font-size:7.6px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(172.68678,220.00134)"
+           id="text828" />
+      </g>
+      <g
+         id="text_14"
+         transform="translate(-22.633568,13.360335)">
+        <text
+           style="font-size:7.4px;font-family:'DejaVu Sans';text-anchor:middle;fill:#111111"
+           x="197.33749"
+           y="156.4313"
+           id="text831">entrada del usuario</text>
+      </g>
+      <g
+         id="text_15"
+         transform="translate(14.535484,25.458535)">
+        <text
+           style="font-size:7.5px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(456.63867,149.90238)"
+           id="text834">llm = config['llm_client']</text>
+        <text
+           style="font-size:7.5px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(458.89688,158.50934)"
+           id="text836">o LLMClient.from_env()</text>
+      </g>
+      <g
+         id="text_16"
+         transform="translate(-26.772471,26.35734)">
+        <text
+           style="font-size:7.8px;font-family:'DejaVu Sans';text-anchor:middle;fill:#111111"
+           x="704.96875"
+           y="154.39294"
+           id="text839">agent = MyAgent(**kwargs)</text>
+      </g>
+      <g
+         id="text_17"
+         transform="translate(-0.49622992,17.83201)">
+        <text
+           style="font-size:7.8px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(531.83128,214.27135)"
+           id="text842">agent.register_tool(callable, schema)</text>
+        <text
+           style="font-size:7.8px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(509.93339,223.22258)"
+           id="text844">para calculator, distance_converter y file_reader</text>
+      </g>
+      <g
+         id="text_18"
+         transform="translate(16.21012,38.944562)">
+        <text
+           style="font-size:7.4px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(964.76427,151.9814)"
+           id="text847">calculator.py</text>
+        <text
+           style="font-size:7.4px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(963.72653,160.26778)"
+           id="text849">calculator(...)</text>
+        <text
+           style="font-size:7.4px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(953.83655,168.55416)"
+           id="text851">calculator_schema</text>
+      </g>
+      <g
+         id="text_19"
+         transform="translate(-80.213963,37.771079)">
+        <text
+           style="font-size:7.2px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(1167.5366,151.9527)"
+           id="text854">distance_converter.py</text>
+        <text
+           style="font-size:7.2px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(1166.5269,160.21537)"
+           id="text856">distance_converter(...)</text>
+        <text
+           style="font-size:7.2px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(1156.9043,168.47805)"
+           id="text858">distance_converter_schema</text>
+      </g>
+      <g
+         id="text_20"
+         transform="translate(-179.45649,37.886943)">
+        <text
+           style="font-size:7.4px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(1404.6531,151.77559)"
+           id="text861">file_reader.py</text>
+        <text
+           style="font-size:7.4px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(1398.7314,160.26778)"
+           id="text863">file_reader(path)</text>
+        <text
+           style="font-size:7.4px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(1393.7254,168.75997)"
+           id="text865">file_reader_schema</text>
+      </g>
+      <g
+         id="text_21"
+         transform="translate(-260.23657,38.777442)">
+        <text
+           style="font-size:7.2px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(1582.5809,156.28429)"
+           id="text868">example.py</text>
+        <text
+           style="font-size:7.2px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(1579.6486,164.34671)"
+           id="text870">no registrado</text>
+      </g>
+      <g
+         id="text_22"
+         transform="translate(74.262313,20.308374)">
+        <text
+           style="font-size:7.5px;font-family:'DejaVu Sans';fill:#111111"
+           id="text873"
+           x="908.01331"
+           y="223.47977"><tspan
+             sodipodi:role="line"
+             id="tspan1628"
+             x="908.01331"
+             y="223.47977">ToolSchema.from_callable(fn)</tspan><tspan
+             sodipodi:role="line"
+             x="908.01331"
+             y="232.85477"
+             id="tspan1632">Usa nombre, docstring de la función,</tspan><tspan
+             sodipodi:role="line"
+             x="908.01331"
+             y="242.22977"
+             id="tspan36264">tipos y Field(description=...)</tspan></text>
+        <text
+           style="font-size:7.5px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(1003.0217,227.47195)"
+           id="text875" />
+        <text
+           style="font-size:7.5px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(1020.9801,235.87031)"
+           id="text877" />
+      </g>
+      <g
+         id="text_23"
+         transform="translate(-190.95986,24.003747)">
+        <text
+           style="font-size:7.5px;font-family:'DejaVu Sans';fill:#111111"
+           id="text880"
+           x="1367.8713"
+           y="223.16849"><tspan
+             sodipodi:role="line"
+             id="tspan1636"
+             x="1367.8713"
+             y="223.16849">callables Python reales</tspan><tspan
+             sodipodi:role="line"
+             id="tspan1638"
+             x="1367.8713"
+             y="232.54349">devuelven str y se invocan con kwargs</tspan></text>
+        <text
+           style="font-size:7.5px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(1383.6682,231.56684)"
+           id="text882" />
+      </g>
+      <g
+         id="text_24"
+         transform="translate(-62.804727,4.8891108)">
+        <text
+           style="font-weight:700;font-size:8.2px;font-family:'DejaVu Sans';text-anchor:middle;fill:#111111"
+           x="182.9875"
+           y="349.56741"
+           id="text885">MyAgent.__init__</text>
+      </g>
+      <g
+         id="text_25"
+         transform="translate(-103.57783,22.024271)">
+        <text
+           style="font-weight:700;font-size:8.2px;font-family:'DejaVu Sans';text-anchor:middle;fill:#111111"
+           x="495.10001"
+           y="349.56741"
+           id="text888">register_tool(tool, schema)</text>
+      </g>
+      <g
+         id="text_26"
+         transform="translate(-273.42574,11.642648)">
+        <text
+           style="font-size:7.8px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(864.98387,353.15421)"
+           id="text891">estado interno</text>
+        <text
+           style="font-size:7.8px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(830.98867,361.8885)"
+           id="text893">_schemas[name] = ToolSchema</text>
+        <text
+           style="font-size:7.8px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(847.04509,370.83973)"
+           id="text895">_tools[name] = callable</text>
+      </g>
+      <g
+         id="text_27"
+         transform="translate(-65.185454,2.4824103)">
+        <text
+           style="font-weight:700;font-size:8.3px;font-family:'DejaVu Sans';text-anchor:middle;fill:#111111"
+           x="188.36874"
+           y="435.53906"
+           id="text898">run(user_message)</text>
+      </g>
+      <g
+         id="text_28"
+         transform="translate(-132.98826,2.6102993)">
+        <text
+           style="font-size:7.2px;font-family:'DejaVu Sans';fill:#111111"
+           id="text901"
+           x="345.64102"
+           y="427.19296">messages = [ {'role':'user', 'content':user_message} ]</text>
+        <text
+           style="font-size:7.2px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(462.63594,435.25538)"
+           id="text903" />
+        <text
+           style="font-size:7.2px;font-family:'DejaVu Sans';fill:#111111"
+           id="text905"
+           x="426.95346"
+           y="437.81717">steps = []</text>
+      </g>
+      <g
+         id="text_29"
+         transform="translate(-338.38711)">
+        <text
+           style="font-weight:700;font-size:8.2px;font-family:'DejaVu Sans';text-anchor:middle;fill:#111111"
+           x="864.61249"
+           y="435.5174"
+           id="text908">for _ in range(max_iterations)</text>
+      </g>
+      <g
+         id="text_30"
+         transform="translate(-6.8159795,-22.421588)">
+        <text
+           style="font-size:7.1px;font-family:'DejaVu Sans';fill:#111111"
+           id="text911"
+           x="484.46759"
+           y="497.18973"><tspan
+             sodipodi:role="line"
+             id="tspan16563"
+             x="484.46759"
+             y="497.18973">self._llm.chat(</tspan><tspan
+             sodipodi:role="line"
+             x="484.46759"
+             y="506.06473"
+             id="tspan16571">messages=messages,</tspan><tspan
+             sodipodi:role="line"
+             id="tspan16565"
+             x="484.46759"
+             y="514.9397">tools=list(self._schemas.values()),</tspan><tspan
+             sodipodi:role="line"
+             x="484.46759"
+             y="523.8147"
+             id="tspan16567">system=self._system</tspan><tspan
+             sodipodi:role="line"
+             x="484.46759"
+             y="532.6897"
+             id="tspan16569">)</tspan></text>
+        <text
+           style="font-size:7.1px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(594.83915,506.78247)"
+           id="text913" />
+        <text
+           style="font-size:7.1px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(573.81316,514.73292)"
+           id="text915" />
+        <text
+           style="font-size:7.1px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(596.99189,522.88084)"
+           id="text917" />
+        <text
+           style="font-size:7.1px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(635.42119,531.02875)"
+           id="text919" />
+      </g>
+      <g
+         id="text_31"
+         transform="translate(-333.54682,-19.103809)">
+        <text
+           style="font-weight:700;font-size:8.2px;font-family:'DejaVu Sans';text-anchor:middle;fill:#111111"
+           x="1302.2875"
+           y="515.13519"
+           id="text922">LLMClient.chat(...)</text>
+      </g>
+      <g
+         id="text_32"
+         transform="translate(-590.06062,31.467881)">
+        <text
+           style="font-size:7.8px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(1521.5893,510.5492)"
+           id="text925"><tspan
+             sodipodi:role="line"
+             id="tspan20730"
+             x="0"
+             y="0">LLMResponse</tspan><tspan
+             sodipodi:role="line"
+             id="tspan20732"
+             x="0"
+             y="9.75">content + tool_calls</tspan></text>
+        <text
+           style="font-size:7.8px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(1509.2848,519.28349)"
+           id="text927" />
+      </g>
+      <g
+         id="text_33"
+         transform="translate(-124.77526,-100.00899)">
+        <text
+           style="font-size:7.3px;font-family:'DejaVu Sans';fill:#111111"
+           id="text930"
+           x="1205.571"
+           y="596.93256"><tspan
+             sodipodi:role="line"
+             id="tspan22247"
+             x="1205.571"
+             y="596.93256">El cliente/proveedor traduce ToolSchema al formato del backend</tspan><tspan
+             sodipodi:role="line"
+             id="tspan22249"
+             x="1205.571"
+             y="606.05756">(Bedrock/Ollama según configuración).</tspan><tspan
+             sodipodi:role="line"
+             x="1205.571"
+             y="615.18256"
+             id="tspan23703" /><tspan
+             sodipodi:role="line"
+             x="1205.571"
+             y="624.30756"
+             id="tspan23705">Tipos provistos: ToolSchema, AgentStep, AgentResult</tspan><tspan
+             sodipodi:role="line"
+             x="1205.571"
+             y="633.43256"
+             id="tspan23707" /></text>
+        <text
+           style="font-size:7.3px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(1353.0567,605.45737)"
+           id="text932" />
+      </g>
+      <g
+         id="text_34"
+         transform="translate(-121.22404)">
+        <text
+           style="font-size:7.5px;font-family:'DejaVu Sans';text-anchor:middle;fill:#111111"
+           x="1424.2625"
+           y="991.24829"
+           id="text935" />
+      </g>
+      <g
+         id="text_35"
+         transform="translate(-474.43873,-84.914841)">
+        <text
+           style="font-weight:700;font-size:8.2px;font-family:'DejaVu Sans';text-anchor:middle;fill:#111111"
+           x="807.21252"
+           y="617.44489"
+           id="text938">¿response.tool_calls?</text>
+      </g>
+      <g
+         id="text_36"
+         transform="translate(-171.82726,-84.401218)">
+        <text
+           style="font-size:7.8px;font-family:'DejaVu Sans';text-anchor:middle;fill:#111111"
+           x="306.75626"
+           y="617.44855"
+           id="text941">NO: respuesta final de texto</text>
+      </g>
+      <g
+         id="text_37"
+         transform="translate(-178.24431,-101.68051)">
+        <text
+           style="font-size:7.3px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(270.93264,671.66024)"
+           id="text944"><tspan
+             sodipodi:role="line"
+             id="tspan19834"
+             x="0"
+             y="0">return AgentResult(</tspan><tspan
+             sodipodi:role="line"
+             x="0"
+             y="9.125"
+             id="tspan19840">answer=response.content,</tspan><tspan
+             sodipodi:role="line"
+             x="0"
+             y="18.25"
+             id="tspan19838">steps=steps</tspan><tspan
+             sodipodi:role="line"
+             id="tspan19836"
+             x="0"
+             y="27.375">)</tspan></text>
+        <text
+           style="font-size:7.3px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(255.32376,679.83464)"
+           id="text946" />
+        <text
+           style="font-size:7.3px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(281.78398,688.00905)"
+           id="text948" />
+        <text
+           style="font-size:7.3px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(305.33218,696.18345)"
+           id="text950" />
+      </g>
+      <g
+         id="text_38"
+         transform="translate(-441.3319,-106.11182)">
+        <text
+           style="font-size:7.4px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(707.63091,700.37)"
+           id="text953">SÍ: messages.append(role='assistant',</text>
+        <text
+           style="font-size:7.4px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(750.41216,708.65638)"
+           id="text955">tool_calls=[...])</text>
+      </g>
+      <g
+         id="text_39"
+         transform="translate(-602.46193,-1.9265254)">
+        <text
+           style="font-weight:700;font-size:8px;font-family:'DejaVu Sans';fill:#111111"
+           id="text958"
+           x="693.75458"
+           y="652.05707">for tool_call in response.tool_calls</text>
+        <text
+           style="font-weight:700;font-size:8px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(735.40125,778.4835)"
+           id="text960" />
+      </g>
+      <g
+         id="text_40"
+         transform="translate(-28.476693,-93.857565)">
+        <text
+           style="font-size:7.2px;font-family:'DejaVu Sans';text-anchor:middle;fill:#111111"
+           x="172.22501"
+           y="794.81287"
+           id="text963">json.loads(tool_call.arguments)</text>
+      </g>
+      <g
+         id="text_41"
+         transform="translate(-92.022143,-93.857565)">
+        <text
+           style="font-size:7.2px;font-family:'DejaVu Sans';text-anchor:middle;fill:#111111"
+           x="385.68124"
+           y="794.81287"
+           id="text966">self._tools.get(tool_call.name)</text>
+      </g>
+      <g
+         id="text_42"
+         transform="translate(-190.12521,-93.857565)">
+        <text
+           style="font-weight:700;font-size:7.8px;font-family:'DejaVu Sans';text-anchor:middle;fill:#111111"
+           x="613.48749"
+           y="795.07855"
+           id="text969">¿existe callable?</text>
+      </g>
+      <g
+         id="text_43"
+         transform="translate(-410.24917,-26.224065)">
+        <text
+           style="font-size:7.4px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(859.86758,778.33834)"
+           id="text972"><tspan
+             sodipodi:role="line"
+             id="tspan20572"
+             x="0"
+             y="0">SÍ:</tspan><tspan
+             sodipodi:role="line"
+             id="tspan20574"
+             x="0"
+             y="9.25">tool_function(**kwargs)</tspan><tspan
+             sodipodi:role="line"
+             x="0"
+             y="18.5"
+             id="tspan20576">tool_output: str</tspan></text>
+        <text
+           style="font-size:7.4px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(876.79855,786.83053)"
+           id="text974" />
+      </g>
+      <g
+         id="text_44"
+         transform="translate(-575.33111,-79.083221)">
+        <text
+           style="font-size:7.4px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(879.24517,835.3805)"
+           id="text977"><tspan
+             sodipodi:role="line"
+             id="tspan20578"
+             x="0"
+             y="0">NO o excepción:</tspan><tspan
+             sodipodi:role="line"
+             id="tspan20580"
+             x="0"
+             y="9.25">error = mensaje de fallo</tspan></text>
+        <text
+           style="font-size:7.4px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(864.45616,843.66688)"
+           id="text979" />
+      </g>
+      <g
+         id="text_45"
+         transform="translate(-132.44664,-69.118688)">
+        <text
+           style="font-size:7.7px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(465.34552,903.80023)"
+           id="text982">AgentStep(tool_name, tool_input, tool_output, error)</text>
+        <text
+           style="font-size:7.7px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(543.47284,912.6367)"
+           id="text984" />
+      </g>
+      <g
+         id="text_46"
+         transform="translate(-285.13518,-81.498974)">
+        <text
+           style="font-size:7.5px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(864.03555,903.85981)"
+           id="text987"><tspan
+             sodipodi:role="line"
+             id="tspan20620"
+             x="0"
+             y="0">messages.append(</tspan><tspan
+             sodipodi:role="line"
+             x="0"
+             y="9.375"
+             id="tspan20626">role='tool',</tspan><tspan
+             sodipodi:role="line"
+             id="tspan20622"
+             x="0"
+             y="18.75">content=tool_output o error</tspan><tspan
+             sodipodi:role="line"
+             x="0"
+             y="28.125"
+             id="tspan20624">)</tspan></text>
+        <text
+           style="font-size:7.5px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(866.15664,912.25816)"
+           id="text989" />
+      </g>
+      <g
+         id="text_47"
+         transform="translate(-91.178571,-475.61992)">
+        <text
+           style="font-size:7.4px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(588.63289,1017.0571)"
+           id="text992">si se alcanza max_iterations:</text>
+        <text
+           style="font-size:7.4px;font-family:'DejaVu Sans';fill:#111111"
+           transform="translate(560.61753,1025.5493)"
+           id="text994">return AgentResult(answer='', steps=steps)</text>
+      </g>
+      <g
+         id="text_48"
+         transform="translate(142.81662,245.9505)">
+        <text
+           style="font-size:7px;font-family:'DejaVu Sans';text-anchor:middle;fill:#111111"
+           x="805.41876"
+           y="421.69156"
+           id="text997">visible para LLM</text>
+      </g>
+      <g
+         id="text_49"
+         transform="translate(142.81662,245.9505)">
+        <text
+           style="font-size:7px;font-family:'DejaVu Sans';text-anchor:middle;fill:#111111"
+           x="981.20624"
+           y="421.69156"
+           id="text1000">ejecutable local</text>
+      </g>
+      <g
+         id="patch_45"
+         transform="rotate(-6.3131081,342.27829,460.12249)">
+        <path
+           d="m 328.47657,209.39761 q 41.0608,4.4405 80.78775,8.73676"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1003" />
+        <path
+           d="m 405.12636,215.47404 4.13796,2.66033 -4.61103,1.71416 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1005" />
+      </g>
+      <g
+         id="patch_45-3"
+         transform="rotate(83.991434,430.55811,375.82436)"
+         style="stroke-linecap:butt;stroke-linejoin:round">
+        <path
+           d="m 328.47657,209.39761 c 27.37387,2.96033 28.32837,196.82253 73.71667,203.00208"
+           clip-path="url(#pdfc800beb8-7)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"
+           id="path1003-5"
+           sodipodi:nodetypes="cc" />
+        <path
+           d="m 405.12636,215.47404 4.13796,2.66033 -4.61103,1.71416 z"
+           clip-path="url(#pdfc800beb8-7)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"
+           id="path1005-6"
+           transform="translate(-2.9735339,194.9434)" />
+      </g>
+      <g
+         id="patch_46"
+         transform="matrix(2.5460065,0,0,0.867431,-939.7856,48.75482)">
+        <path
+           d="m 593.96208,151.8825 q 8.76403,0 16.18643,0"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1008" />
+        <path
+           d="m 605.74851,149.6825 4.4,2.2 -4.4,2.2 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1010" />
+      </g>
+      <g
+         id="patch_47"
+         transform="rotate(-30.630214,725.01343,240.04205)">
+        <path
+           d="m 704.29802,173.65031 q -5.42698,9.0292 -10.1628,16.90849"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1013" />
+        <path
+           d="m 698.28752,187.92092 -4.1523,2.63788 0.38107,-4.90457 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1015" />
+      </g>
+      <g
+         id="patch_48">
+        <path
+           d="m 944.01724,196.84872 c -77.83117,3.18359 -125.44312,7.88373 -190.30897,33.14642"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1018"
+           sodipodi:nodetypes="cc" />
+        <path
+           d="m 800.89255,216.47901 -4.88699,-0.56332 3.38285,-3.5716 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1020"
+           transform="translate(-47.056004,15.603839)" />
+      </g>
+      <g
+         id="patch_52">
+        <path
+           d="M 98.320598,218.1846 C -3.5990155,218.76463 -16.763195,440.26785 64.257817,436.60942"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1038"
+           sodipodi:nodetypes="cc" />
+        <path
+           d="m 90.502005,410.69571 -4.915652,-0.1907 3.101947,-3.8181 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1040"
+           transform="rotate(-157.08391,79.162759,425.28755)" />
+      </g>
+      <g
+         id="patch_53"
+         transform="translate(-132.10621)">
+        <path
+           d="m 310.55176,433.36875 q 10.55528,0 19.76891,0"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1043" />
+        <path
+           d="m 325.92068,431.16875 4.39999,2.2 -4.39999,2.2 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1045" />
+      </g>
+      <g
+         id="patch_54"
+         transform="translate(-236.72913)">
+        <path
+           d="m 654.94826,433.36875 q 14.14447,0 26.9473,0"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1048" />
+        <path
+           d="m 677.49556,431.16875 4.4,2.2 -4.4,2.2 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1050" />
+      </g>
+      <g
+         id="patch_57">
+        <path
+           d="m 620.30358,489.99675 c 92.14004,-0.29552 198.13471,-0.23181 294.19896,-0.91553"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#245a9e;stroke-width:1.2;stroke-linecap:round"
+           id="path1063"
+           sodipodi:nodetypes="cc" />
+        <path
+           d="m 1186.7245,511.53287 4.6142,1.70569 -4.133,2.66793 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#245a9e;stroke:#245a9e;stroke-width:1.2;stroke-linecap:round"
+           id="path1065"
+           transform="rotate(7.2545497,1239.2706,-1673.9819)" />
+      </g>
+      <g
+         id="patch_59">
+        <path
+           d="m 921.70398,543.97716 c -147.21873,1.18455 -92.00877,-1.15006 -260.99428,0.61985"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1073"
+           sodipodi:nodetypes="cc" />
+        <path
+           d="m 883.21382,591.35288 -4.49655,-1.99526 4.29414,-2.40008 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1075"
+           transform="translate(-218.68781,-44.812909)" />
+      </g>
+      <g
+         id="patch_60"
+         transform="translate(-473.35515,-97.548602)">
+        <path
+           d="m 807.2125,643.07909 q 0,15.90635 0,30.47105"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1078" />
+        <path
+           d="m 809.4125,669.15014 -2.2,4.4 -2.2,-4.4 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1080" />
+      </g>
+      <g
+         id="patch_61"
+         transform="matrix(0.31099534,0,0,1.1099048,62.037726,-151.211)">
+        <path
+           d="m 676.06227,614.58 q -105.6243,0 -209.90696,0"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1083" />
+        <path
+           d="m 470.55531,616.78 -4.4,-2.2 4.4,-2.2 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1085" />
+      </g>
+      <g
+         id="patch_62"
+         transform="translate(-169.78959,-92.442432)">
+        <path
+           d="m 307.115,643.08259 q 0,5.51872 0,9.6958"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1088" />
+        <path
+           d="m 309.315,648.37839 -2.2,4.4 -2.2,-4.4 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1090" />
+      </g>
+      <g
+         id="patch_63"
+         transform="translate(-446.2001,-116.33977)">
+        <path
+           d="m 778.5125,729.03259 q 0,8.74165 0,16.14167"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1093" />
+        <path
+           d="m 780.7125,740.77426 -2.2,4.4 -2.2,-4.4 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1095" />
+      </g>
+      <g
+         id="patch_63-7"
+         transform="translate(189.91406,-219.70866)"
+         style="stroke-linecap:butt;stroke-linejoin:round">
+        <path
+           d="m 778.5125,729.03259 q 0,8.74165 0,16.14167"
+           clip-path="url(#pdfc800beb8-31)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"
+           id="path1093-8" />
+        <path
+           d="m 780.7125,740.77426 -2.2,4.4 -2.2,-4.4 z"
+           clip-path="url(#pdfc800beb8-31)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round"
+           id="path1095-4" />
+      </g>
+      <g
+         id="patch_65"
+         transform="translate(-56.31475,-93.857565)">
+        <path
+           d="m 263.91295,792.92625 q 12.35082,0 23.36001,0"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1103" />
+        <path
+           d="m 282.87296,790.72625 4.4,2.2 -4.4,2.2 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1105" />
+      </g>
+      <g
+         id="patch_72">
+        <path
+           d="m 697.03574,821.85411 c 201.04198,-1.35813 -3.50899,-324.2204 217.58711,-323.79449"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1138"
+           sodipodi:nodetypes="cc" />
+        <path
+           d="m 1218.9045,540.94304 4.849,0.82896 -3.5726,3.38183 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1140"
+           transform="rotate(17.849482,1206.9235,-461.15561)" />
+      </g>
+      <g
+         id="patch_66"
+         transform="translate(-128.54762,-93.857565)">
+        <path
+           d="m 482.75045,792.92625 q 12.35082,0 23.36001,0"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1108" />
+        <path
+           d="m 501.71046,790.72625 4.4,2.2 -4.4,2.2 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1110" />
+      </g>
+      <g
+         id="patch_67"
+         transform="translate(-250.01762,-94.921885)">
+        <path
+           d="m 683.88132,805.51474 c 0.57772,15.63675 61.29767,8.56083 61.39551,25.85823"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1113"
+           sodipodi:nodetypes="cc" />
+        <path
+           d="m 738.25875,781.20054 4.91512,0.20382 -3.11214,3.80981 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1115"
+           transform="rotate(93.918018,720.84178,808.12998)" />
+      </g>
+      <g
+         id="patch_68"
+         transform="translate(-146.73972,-113.00512)">
+        <path
+           d="m 558.23137,823.51369 c 0.50008,13.97254 -61.42641,12.48706 -61.96419,26.53433"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#aa3333;stroke-width:1.2;stroke-linecap:round"
+           id="path1118"
+           sodipodi:nodetypes="cc" />
+        <path
+           d="m 738.94965,833.88619 3.97674,2.89578 -4.70267,1.44393 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#aa3333;stroke:#aa3333;stroke-width:1.2;stroke-linecap:round"
+           id="path1120"
+           transform="rotate(96.151392,613.62721,732.77197)" />
+      </g>
+      <g
+         id="patch_69"
+         transform="translate(0,-62.510523)">
+        <path
+           d="m 495.83056,842.89718 c 0.93802,26.1553 -60.75829,16.52369 -59.45328,37.74734"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1123"
+           sodipodi:nodetypes="cc" />
+        <path
+           d="m 592.77702,880.05237 -4.90868,-0.32384 3.20427,-3.73264 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1125"
+           transform="rotate(-45.437033,513.90247,1061.8399)" />
+      </g>
+      <g
+         id="patch_70"
+         transform="translate(0,-62.005246)">
+        <path
+           d="m 349.27019,842.15143 c -0.0192,20.82494 64.0272,17.71229 63.99275,38.58797"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#aa3333;stroke-width:1.2;stroke-linecap:round"
+           id="path1128"
+           sodipodi:nodetypes="cc" />
+        <path
+           d="m 592.30726,883.88864 -4.19302,-2.57266 4.57395,-1.81082 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#aa3333;stroke:#aa3333;stroke-width:1.2;stroke-linecap:round"
+           id="path1130"
+           transform="rotate(-114.96224,500.91738,936.81575)"
+           inkscape:transform-center-x="1.4356017"
+           inkscape:transform-center-y="-0.67774664" />
+      </g>
+      <g
+         id="patch_71"
+         transform="translate(-197.47343,-71.093984)">
+        <path
+           d="m 741.04826,906.09375 q 14.14447,0 26.9473,0"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:none;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1133" />
+        <path
+           d="m 763.59556,903.89375 4.4,2.2 -4.4,2.2 z"
+           clip-path="url(#pdfc800beb8)"
+           style="fill:#444444;stroke:#444444;stroke-width:1.2;stroke-linecap:round"
+           id="path1135" />
+      </g>
+      <g
+         id="text_51"
+         transform="translate(52.440177,-21.915272)">
+        <text
+           style="font-size:7.2px;font-family:'DejaVu Sans';text-anchor:start;fill:#555555"
+           x="878.96252"
+           y="308.48212"
+           id="text1153"><tspan
+             sodipodi:role="line"
+             id="tspan30345"
+             x="878.96252"
+             y="308.48212">Notas:</tspan><tspan
+             sodipodi:role="line"
+             id="tspan30347"
+             x="878.96252"
+             y="317.48212">example.py permanece como referencia del scaffold pero no se registra en build_agent; no queda expuesto como herramienta del agente.</tspan><tspan
+             sodipodi:role="line"
+             x="878.96252"
+             y="326.48212"
+             id="tspan35821">file_reader interpreta Path(path).expanduser(): acepta rutas relativas al directorio actual o absolutas; no limita la lectura a una carpeta base.</tspan></text>
+      </g>
+      <g
+         id="text_52"
+         transform="translate(-21.942719,-539.57012)">
+        <text
+           style="font-size:7.2px;font-family:'DejaVu Sans';text-anchor:start;fill:#555555"
+           x="926.39783"
+           y="842.48151"
+           id="text1156" />
+      </g>
+      <g
+         id="text_53"
+         transform="translate(-26.651585,-0.72473181)">
+        <g
+           id="patch_74"
+           transform="translate(-1.690798,0.7556012)">
+          <path
+             d="m 337.12422,205.62031 h 64.82656 v -9.34937 h -64.82656 z"
+             style="opacity:0.8;fill:#ffffff"
+             id="path1159" />
+        </g>
+        <text
+           style="font-size:7px;font-family:'DejaVu Sans';text-anchor:middle;fill:#444444"
+           x="367.4967"
+           y="204.1398"
+           id="text1162">1) build_agent</text>
+      </g>
+      <g
+         id="text_54"
+         transform="translate(268.60775,-15.726992)">
+        <g
+           id="patch_75"
+           transform="matrix(1.0072799,0,0,1.2544076,-329.08079,-26.750208)">
+          <path
+             d="m 900.98187,186.5222 h 74.34876 v -16.99315 h -74.34876 z"
+             style="opacity:0.8;fill:#ffffff"
+             id="path1165" />
+        </g>
+        <text
+           style="font-size:7px;font-family:'DejaVu Sans';fill:#444444"
+           id="text1168"
+           x="579.65015"
+           y="192.41722"><tspan
+             sodipodi:role="line"
+             id="tspan1642"
+             x="579.65015"
+             y="192.41722">Importación de</tspan><tspan
+             sodipodi:role="line"
+             x="579.65015"
+             y="201.16722"
+             id="tspan1646">schemas + callables</tspan></text>
+        <text
+           style="font-size:7px;font-family:'DejaVu Sans';fill:#444444"
+           transform="translate(918.26859,183.87642)"
+           id="text1170" />
+      </g>
+      <g
+         id="text_55"
+         transform="translate(-52.083989,12.285216)">
+        <g
+           id="patch_76">
+          <path
+             d="m 501.94797,287.53359 h 29.35406 v -9.15468 h -29.35406 z"
+             style="opacity:0.8;fill:#ffffff"
+             id="path1173" />
+        </g>
+        <text
+           style="font-size:7px;font-family:'DejaVu Sans';text-anchor:middle;fill:#444444"
+           x="516.625"
+           y="284.88782"
+           id="text1176">registra</text>
+      </g>
+      <g
+         id="text_56"
+         transform="translate(-108.63309,70.921844)">
+        <g
+           id="patch_77">
+          <path
+             d="m 598.62398,287.53359 h 29.72704 v -9.15468 h -29.72704 z"
+             style="opacity:0.8;fill:#ffffff"
+             id="path1179" />
+        </g>
+        <text
+           style="font-size:7px;font-family:'DejaVu Sans';text-anchor:middle;fill:#245a9e"
+           x="613.48749"
+           y="284.88782"
+           id="text1182">schema</text>
+      </g>
+      <g
+         id="text_57"
+         transform="translate(-298.92861,92.321978)">
+        <g
+           id="patch_78">
+          <path
+             d="m 788.92828,287.53359 h 29.39344 v -9.15468 h -29.39344 z"
+             style="opacity:0.8;fill:#ffffff"
+             id="path1185" />
+        </g>
+        <text
+           style="font-size:7px;font-family:'DejaVu Sans';text-anchor:middle;fill:#2f6b3b"
+           x="803.625"
+           y="284.88782"
+           id="text1188">callable</text>
+      </g>
+      <g
+         id="text_58">
+        <g
+           id="patch_79"
+           transform="matrix(1.1474142,0,0,1,-147.96073,-22.132105)">
+          <path
+             d="m 153.41359,315.10922 h 73.49782 v -9.15469 h -73.49782 z"
+             style="opacity:0.8;fill:#ffffff"
+             id="path1191" />
+        </g>
+        <text
+           style="font-size:7px;font-family:'DejaVu Sans';text-anchor:middle;fill:#444444"
+           x="70.6651"
+           y="290.83157"
+           id="text1194">2) agent.run(message)</text>
+      </g>
+      <g
+         id="text_60"
+         transform="translate(-122.24143,-47.93823)">
+        <g
+           id="patch_81">
+          <path
+             d="m 868.41164,531.41672 h 95.00422 v -9.15469 h -95.00422 z"
+             style="opacity:0.8;fill:#ffffff"
+             id="path1203" />
+        </g>
+        <text
+           style="font-size:7px;font-family:'DejaVu Sans';text-anchor:middle;fill:#245a9e"
+           x="915.91376"
+           y="528.77094"
+           id="text1206">messages + ToolSchema[]</text>
+      </g>
+      <g
+         id="text_61"
+         transform="translate(-369.93773,-46.60786)">
+        <g
+           id="patch_82">
+          <path
+             d="m 1141.702,569.73609 h 34.171 v -9.15468 h -34.171 z"
+             style="opacity:0.8;fill:#ffffff"
+             id="path1209" />
+        </g>
+        <text
+           style="font-size:7px;font-family:'DejaVu Sans';text-anchor:middle;fill:#444444"
+           x="1158.7875"
+           y="567.09033"
+           id="text1212">response</text>
+      </g>
+      <g
+         id="text_62"
+         transform="translate(-465.11206,-99.065145)">
+        <g
+           id="patch_83">
+          <path
+             d="m 803.22687,663.56484 h 7.97125 v -9.15468 h -7.97125 z"
+             style="opacity:0.8;fill:#ffffff"
+             id="path1215" />
+        </g>
+        <text
+           style="font-size:7px;font-family:'DejaVu Sans';text-anchor:middle;fill:#444444"
+           x="807.21252"
+           y="660.91907"
+           id="text1218">sí</text>
+      </g>
+      <g
+         id="text_63"
+         transform="translate(-329.71964,-94.298892)">
+        <g
+           id="patch_84">
+          <path
+             d="m 564.88781,619.15734 h 11.09938 v -9.15468 h -11.09938 z"
+             style="opacity:0.8;fill:#ffffff"
+             id="path1221" />
+        </g>
+        <text
+           style="font-size:7px;font-family:'DejaVu Sans';text-anchor:middle;fill:#444444"
+           x="570.4375"
+           y="616.51154"
+           id="text1224">no</text>
+      </g>
+      <g
+         id="text_64"
+         transform="translate(-263.24137,-69.133101)">
+        <g
+           id="patch_85">
+          <path
+             d="m 727.88937,791.05734 h 7.97126 v -9.15468 h -7.97126 z"
+             style="opacity:0.8;fill:#ffffff"
+             id="path1227" />
+        </g>
+        <text
+           style="font-size:7px;font-family:'DejaVu Sans';text-anchor:middle;fill:#444444"
+           x="731.875"
+           y="788.41156"
+           id="text1230">sí</text>
+      </g>
+      <g
+         id="text_65"
+         transform="translate(-306.2288,-109.56128)">
+        <g
+           id="patch_86">
+          <path
+             d="m 664.65586,830.80922 h 30.40078 v -9.15469 h -30.40078 z"
+             style="opacity:0.8;fill:#ffffff"
+             id="path1233" />
+        </g>
+        <text
+           style="font-size:7px;font-family:'DejaVu Sans';text-anchor:middle;fill:#aa3333"
+           x="679.85626"
+           y="828.16345"
+           id="text1236">no/error</text>
+      </g>
+      <g
+         id="text_66"
+         transform="translate(-304.76074,-90.165405)">
+        <g
+           id="patch_87">
+          <path
+             d="m 1044.3605,748.40019 h 56.654 v -24.83163 h -56.654 z"
+             style="opacity:0.8;fill:#ffffff"
+             id="path1239" />
+        </g>
+        <text
+           style="font-size:7px;font-family:'DejaVu Sans';fill:#444444"
+           transform="translate(1053.7864,730.07747)"
+           id="text1242">realimenta</text>
+        <text
+           style="font-size:7px;font-family:'DejaVu Sans';fill:#444444"
+           transform="translate(1045.5505,737.91594)"
+           id="text1244">resultado como</text>
+        <text
+           style="font-size:7px;font-family:'DejaVu Sans';fill:#444444"
+           transform="translate(1054.5755,745.75441)"
+           id="text1246">role='tool'</text>
+      </g>
+      <g
+         id="patch_45-36"
+         transform="rotate(-6.3131081,1790.7439,-985.1339)"
+         style="stroke-linecap:butt;stroke-linejoin:round">
+        <path
+           d="m 328.47657,209.39761 q 41.0608,4.4405 80.78775,8.73676"
+           clip-path="url(#pdfc800beb8-0)"
+           style="fill:none;stroke:#245a9e;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
+           id="path1003-0" />
+        <path
+           d="m 405.12636,215.47404 4.13796,2.66033 -4.61103,1.71416 z"
+           clip-path="url(#pdfc800beb8-0)"
+           style="fill:#245a9e;fill-opacity:1;stroke:#245a9e;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
+           id="path1005-62" />
+      </g>
+      <g
+         id="patch_45-36-7"
+         transform="rotate(-6.3131081,1958.2743,-978.6839)"
+         style="fill:#2f6b3b;fill-opacity:1;stroke:#2f6b3b;stroke-linecap:butt;stroke-linejoin:round;stroke-opacity:1">
+        <path
+           d="m 328.47657,209.39761 q 41.0608,4.4405 80.78775,8.73676"
+           clip-path="url(#pdfc800beb8-0-2)"
+           style="fill:#2f6b3b;fill-opacity:1;stroke:#2f6b3b;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
+           id="path1003-0-5" />
+        <path
+           d="m 405.12636,215.47404 4.13796,2.66033 -4.61103,1.71416 z"
+           clip-path="url(#pdfc800beb8-0-2)"
+           style="fill:#2f6b3b;fill-opacity:1;stroke:#2f6b3b;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
+           id="path1005-62-9" />
+      </g>
+    </g>
+    <g
+       id="patch_6-5"
+       transform="matrix(0.88733051,0,0,0.18913674,-949.51745,582.76787)"
+       style="stroke:#444444;stroke-width:1.20664;stroke-linecap:butt;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1" />
+  </g>
+  <defs
+     id="defs1260">
+    <clipPath
+       id="pdfc800beb8">
+      <rect
+         x="7.1999998"
+         y="7.1999998"
+         width="1722"
+         height="1146"
+         id="rect1257" />
+    </clipPath>
+  </defs>
+</svg>
