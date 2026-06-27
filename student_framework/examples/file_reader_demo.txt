@@ -1,0 +1,4 @@
+Este es un archivo de prueba para la herramienta file_reader.
+
+La herramienta recibe una ruta, lee el contenido del archivo como texto UTF-8
+y devuelve ese contenido al agente como string.

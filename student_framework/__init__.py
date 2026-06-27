@@ -16,6 +16,7 @@ from mia_agents.protocols import Agent
 from .agent import MyAgent
 from student_framework.tools.calculator import  calculator, calculator_schema
 from student_framework.tools.distance_converter import distance_converter, distance_converter_schema
+from student_framework.tools.file_reader import file_reader, file_reader_schema
 
 
 def build_agent(config: dict[str, Any] | None = None) -> Agent:
@@ -39,6 +40,7 @@ def build_agent(config: dict[str, Any] | None = None) -> Agent:
     agent = MyAgent(**kwargs)
     agent.register_tool(calculator, calculator_schema )
     agent.register_tool(distance_converter, distance_converter_schema)
+    agent.register_tool(file_reader, file_reader_schema)
     # Ejemplo de registro (elimínenlo cuando sus herramientas estén listas):
     # from student_framework.tools.example import reverse_string, reverse_string_schema
     # agent.register_tool(reverse_string, reverse_string_schema)
