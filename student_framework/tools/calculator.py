@@ -15,15 +15,17 @@ def calculator(
     b: Annotated[float, Field(description="Segundo operando.")],
     op: Annotated[Operator, Field(description="Operador: +, -, *, %.")],
 ) -> str:
+  a_int = float(a)
+  b_int = float(b)
   """Aplica una operación binaria y devuelve el resultado."""
   if op == "+":
-    result = a + b
+    result = a_int + b_int
   elif op == "-":
-    result = a - b
+    result = a_int - b_int
   elif op == "*":
-    result = a * b
+    result = a_int * b_int
   elif op == "%":
-    result = a % b
+    result = a_int % b_int
   else:
     raise ValueError(f"Operador no soportado: {op!r}")
   return str(result)
