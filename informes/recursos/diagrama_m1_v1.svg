@@ -28,15 +28,15 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="pt"
      showgrid="false"
-     inkscape:zoom="0.70710678"
-     inkscape:cx="291.32799"
-     inkscape:cy="610.23315"
+     inkscape:zoom="2.8284271"
+     inkscape:cx="575.58492"
+     inkscape:cy="259.68497"
      inkscape:window-width="2560"
      inkscape:window-height="1011"
      inkscape:window-x="0"
      inkscape:window-y="32"
      inkscape:window-maximized="1"
-     inkscape:current-layer="text_39-4"
+     inkscape:current-layer="text_15"
      showguides="false" />
   <metadata
      id="metadata650">
@@ -358,7 +358,7 @@
       </g>
       <g
          id="patch_9"
-         transform="matrix(0.61048648,0,0,0.69571161,210.04282,73.66633)">
+         transform="matrix(0.65037518,0,0,0.6951353,186.42032,73.754068)">
         <path
            d="m 412.5875,171.9375 h 179.375 v -39.39375 h -179.375 z"
            clip-path="url(#pdfc800beb8)"
@@ -753,12 +753,21 @@
          transform="translate(14.535484,25.458535)">
         <text
            style="font-size:7.5px;font-family:'DejaVu Sans';fill:#111111"
-           transform="translate(456.63867,149.90238)"
-           id="text834">llm = config['llm_client']</text>
+           id="text834"
+           x="445.77734"
+           y="151.57967"><tspan
+             sodipodi:role="line"
+             id="tspan818"
+             x="445.77734"
+             y="151.57967">llm = config.get(&quot;llm_client&quot;)</tspan><tspan
+             sodipodi:role="line"
+             id="tspan820"
+             x="445.77734"
+             y="160.95467">o LLMClient.from_env()</tspan></text>
         <text
            style="font-size:7.5px;font-family:'DejaVu Sans';fill:#111111"
            transform="translate(458.89688,158.50934)"
-           id="text836">o LLMClient.from_env()</text>
+           id="text836" />
       </g>
       <g
          id="text_16"
