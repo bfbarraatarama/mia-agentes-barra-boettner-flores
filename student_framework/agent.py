@@ -50,8 +50,8 @@ class MyAgent:
         self._max_history_messages = max_history_messages
         self._schemas: dict[str, ToolSchema] = {}
         self._tools: dict[str, Callable[..., str]] = {}
-        # TODO (M1): inicializa el estado interno para las herramientas registradas.
-        # TODO (M2): inicializa la estructura de historial conversacional.
+        self._history: list[dict[str, Any]] = []
+
 
     def register_tool(
         self,
@@ -94,20 +94,28 @@ class MyAgent:
         `LLMResponse` y exponlos en `AgentResult.input_tokens` /
         `AgentResult.output_tokens`.
         """
-        messages = [{
-            'role': 'user',
-            'content': user_message,
-        }]
+        self._history.append({'role': 'user', 'content': user_message})
+        total_in: int | None = None
+        total_out: int | None = None
+
         steps : list[AgentStep] = []
         for _ in range(self._max_iterations):
+            messages = self._clip(self._history)
             response = self._llm.chat(messages=messages, tools=list(self._schemas.values()), system= self._system)
+
+            if response.input_tokens is not None or total_in is not None:
+                total_in = (total_in or 0) + (response.input_tokens or 0)
+            if response.output_tokens is not None or total_out is not None:
+                total_out = (total_out or 0) + (response.output_tokens or 0)
 
             if not response.tool_calls:
                 return AgentResult(
                     answer=response.content,
-                    steps=steps)
+                    steps=steps,
+                    input_tokens=response.input_tokens,
+                    output_tokens=response.output_tokens)
 
-            messages.append({
+            self._history.append({
                 'role': 'assistant',
                 'content': response.content,
                 'tool_calls': [ { 'id': tool.id, 'name': tool.name, 'arguments': tool.arguments } for tool in response.tool_calls ]
@@ -139,7 +147,7 @@ class MyAgent:
 
                 steps.append(step)
 
-                messages.append({
+                self._history.append({
                     "role": "tool",
                     "tool_call_id": tool_call.id,
                     "name": tool_call.name,
@@ -147,7 +155,7 @@ class MyAgent:
                 })          
 
 
-        return AgentResult(answer='', steps=steps)
+        return AgentResult(answer='', steps=steps, input_tokens=total_in, output_tokens=total_out)
 
     def structured_call(
         self,
