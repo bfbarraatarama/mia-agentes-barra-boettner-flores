@@ -16,6 +16,8 @@ from typing import Any, Callable
 from mia_agents.protocols import LLMClient
 from mia_agents.types import AgentResult, ToolSchema, AgentStep
 import json
+from mia_agents.tool_schema import final_result_tool_schema, FINAL_RESULT_TOOL_NAME
+from pydantic import ValidationError
 
 class MyAgent:
     def __init__(
@@ -155,25 +157,51 @@ class MyAgent:
         schema: Any,
         max_repair_attempts: int = 2,
     ) -> Any:
-        """Pide al LLM una respuesta validada contra `schema` (M2).
+        
+        final_tool = final_result_tool_schema(schema)
+        messages = [{"role": "user", "content": prompt}]
+        last_error: str = "Sin respuesta"
 
-        Obligatorio: herramienta sintética `final_result` (ver
-        `mia_agents.final_result_tool_schema` / `FINAL_RESULT_TOOL_NAME`).
-        El agente ofrece esa tool al LLM, valida los `arguments` del
-        `tool_call` y reintenta con contexto de reparación si el modelo
-        responde con texto libre o con argumentos inválidos.
+        for _ in range(max_repair_attempts + 1):
+            response = self._llm.chat(
+                messages=messages,
+                tools=[final_tool],
+                system=self._system,
+            )
 
-        Implementa esto en el M2:
-          - Pasa `tools=[final_result_tool_schema(schema)]` en cada
-            llamada a `chat` dentro de este método.
-          - Termina solo cuando llega un `tool_call` a `final_result`
-            cuyos argumentos validan con `schema.model_validate(...)`.
-          - Reintenta hasta `max_repair_attempts` incluyendo el fallo en
-            los mensajes (respuesta previa, mensaje `tool`, o user de
-            reparación).
-          - Si tras los reintentos sigue fallando, levanta una excepción
-            limpia (no devuelvas valores parciales ni `None` sin avisar).
+            final_call = next(
+                (tc for tc in response.tool_calls if tc.name == FINAL_RESULT_TOOL_NAME),
+                None,
+            )
 
-        El M1 deja esto como stub; los tests de M2 verifican el contrato.
-        """
-        raise NotImplementedError("M2: implementa salida estructurada con reparación")
+            if final_call is None:
+                last_error = "El modelo respondió con texto libre en lugar de invocar final_result."
+                messages.append({"role": "assistant", "content": response.content or ""})
+                messages.append({
+                    "role": "user",
+                    "content": f"Error: {last_error} Debes invocar la herramienta final_result.",
+                })
+                continue
+
+            try:
+                args = json.loads(final_call.arguments)
+                return schema.model_validate(args)
+            except Exception as e:
+                last_error = str(e)
+                messages.append({
+                    "role": "assistant",
+                    "content": response.content,
+                    "tool_calls": [{"id": final_call.id, "name": final_call.name, "arguments": final_call.arguments}],
+                })
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": final_call.id,
+                    "name": FINAL_RESULT_TOOL_NAME,
+                    "content": f"Error de validación: {last_error}",
+                })
+                messages.append({
+                    "role": "user",
+                    "content": f"La respuesta no es válida: {last_error}. Intenta de nuevo con el formato correcto.",
+                })
+
+        raise ValueError(f"structured_call falló tras {max_repair_attempts + 1} intentos: {last_error}")
