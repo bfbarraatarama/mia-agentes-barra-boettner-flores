@@ -70,6 +70,12 @@ class MyAgent:
         self._schemas[schema.name] = schema
         self._tools[schema.name] = tool
 
+    def _clip(self, history: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Recorta el historial a una ventana deslizante de los últimos mensajes"""
+        if self._max_history_messages <= 0:
+            return []
+        return history[-self._max_history_messages:]
+
     def run(self, user_message: str) -> AgentResult:
         """Ejecuta el bucle del agente hasta una respuesta final o hasta max_iterations.
 
@@ -112,8 +118,8 @@ class MyAgent:
                 return AgentResult(
                     answer=response.content,
                     steps=steps,
-                    input_tokens=response.input_tokens,
-                    output_tokens=response.output_tokens)
+                    input_tokens=total_in,
+                    output_tokens=total_out)
 
             self._history.append({
                 'role': 'assistant',
