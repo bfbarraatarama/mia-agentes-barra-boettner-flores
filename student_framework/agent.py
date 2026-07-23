@@ -284,7 +284,14 @@ class MyAgent:
                 messages.append({
                     "role": "assistant",
                     "content": response.content,
-                    "tool_calls": [{"id": final_call.id, "name": final_call.name, "arguments": final_call.arguments}],
+                    "tool_calls": [{
+                        "id": final_call.id,
+                        "type": "function",
+                        "function": {
+                            "name": final_call.name,
+                            "arguments": final_call.arguments,
+                        },
+                    }],
                 })
                 messages.append({
                     "role": "tool",
