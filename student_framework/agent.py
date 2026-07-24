@@ -202,7 +202,17 @@ class MyAgent:
             self._history.append({
                 'role': 'assistant',
                 'content': response.content,
-                'tool_calls': [ { 'id': tool.id, 'name': tool.name, 'arguments': tool.arguments } for tool in response.tool_calls ]
+                'tool_calls': [
+                    {
+                        'id': tool.id,
+                        'type': 'function',
+                        'function': {
+                            'name': tool.name,
+                            'arguments': tool.arguments,
+                        },
+                    }
+                    for tool in response.tool_calls
+                ],
             })
 
             for tool_call in response.tool_calls:
