@@ -78,6 +78,82 @@ class MyAgent:
             return []
         return history[-self._max_history_messages:]
 
+    def _is_transient_error(self, error: Exception) -> bool:
+        """Indica si un error parece temporal y puede reintentarse."""
+
+        if isinstance(error, (TimeoutError, ConnectionError)):
+            return True
+
+        error_name = type(error).__name__.lower()
+
+        transient_names = (
+            "timeout",
+            "connection",
+            "ratelimit",
+            "rate_limit",
+            "throttling",
+            "serviceunavailable",
+        )
+
+        if any(name in error_name for name in transient_names):
+            return True
+
+        status_code = getattr(error, "status_code", None)
+
+        if status_code == 429:
+            return True
+
+        if isinstance(status_code, int) and 500 <= status_code <= 599:
+            return True
+
+        return False    
+
+    def _chat_with_retry(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        tools: list[ToolSchema] | None = None,
+        system: str | None = None,
+        max_retries: int = 2,
+    ):
+        """Llama al LLM y reintenta únicamente ante errores transitorios."""
+
+        for attempt in range(max_retries + 1):
+            try:
+                return self._llm.chat(
+                    messages=messages,
+                    tools=tools,
+                    system=system,
+                )
+
+            except Exception as error:
+                if not self._is_transient_error(error):
+                    raise
+
+                if attempt == max_retries:
+                    raise
+
+    def _tool_with_retry(
+        self,
+        tool_function: Callable[..., str],
+        kwargs: dict[str, Any],
+        max_retries: int = 2,
+    ) -> str:
+        """Ejecuta una herramienta y reintenta ante errores transitorios."""
+
+        for attempt in range(max_retries + 1):
+            try:
+                return str(tool_function(**kwargs))
+
+            except Exception as error:
+                if not self._is_transient_error(error):
+                    raise
+
+                if attempt == max_retries:
+                    raise
+
+        raise RuntimeError("No se pudo ejecutar la herramienta.")                
+
     def run(self, user_message: str) -> AgentResult:
         """Ejecuta el bucle del agente hasta una respuesta final o hasta max_iterations.
 
@@ -109,7 +185,7 @@ class MyAgent:
         steps : list[AgentStep] = []
         for _ in range(self._max_iterations):
             messages = self._clip(self._history)
-            response = self._llm.chat(messages=messages, tools=list(self._schemas.values()), system= self._system)
+            response = self._chat_with_retry(messages=messages, tools=list(self._schemas.values()), system= self._system)
 
             if response.input_tokens is not None or total_in is not None:
                 total_in = (total_in or 0) + (response.input_tokens or 0)
@@ -141,7 +217,10 @@ class MyAgent:
                     if tool_function is None:
                         error = f"Herramienta desconocida: {tool_call.name}"
                     else:
-                        tool_output = str(tool_function(**kwargs))
+                        tool_output = self._tool_with_retry(
+                                tool_function=tool_function,
+                                kwargs=kwargs,
+                            )
 
                 except Exception as e:
                     error = str(e)
@@ -177,7 +256,7 @@ class MyAgent:
         last_error: str = "Sin respuesta"
 
         for _ in range(max_repair_attempts + 1):
-            response = self._llm.chat(
+            response = self._chat_with_retry(
                 messages=self._clip(messages),
                 tools=[final_tool],
                 system=self._system,
