@@ -473,6 +473,88 @@ class MyAgent:
 
         return AgentResult(answer='', steps=steps, input_tokens=total_in, output_tokens=total_out)
 
+
+    def _structured_call_messages(
+        self,
+        initial_message: dict[str, Any],
+        repair_blocks: list[list[dict[str, Any]]],
+    ) -> list[dict[str, Any]]:
+        """Construye el contexto de structured_call sin fragmentar bloques.
+
+        El bloque de reparación más reciente tiene prioridad. Después se
+        conserva el mensaje inicial y, si todavía hay espacio, se agregan
+        bloques anteriores completos desde el más reciente.
+
+        Cuando el bloque más reciente no entra completo, se usa su último
+        mensaje user como representación compacta y autosuficiente.
+        """
+
+        if not repair_blocks:
+            return [initial_message]
+
+        latest_block = repair_blocks[-1]
+
+        if len(latest_block) > self._max_history_messages:
+            repair_message = latest_block[-1]
+
+            if self._max_history_messages >= 2:
+                return [
+                    initial_message,
+                    repair_message,
+                ]
+
+            return [repair_message]
+
+        selected_blocks = [latest_block]
+        remaining_messages = (
+            self._max_history_messages
+            - len(latest_block)
+        )
+
+        include_initial_message = remaining_messages >= 1
+
+        if include_initial_message:
+            remaining_messages -= 1
+
+        for block in reversed(repair_blocks[:-1]):
+            if len(block) > remaining_messages:
+                break
+
+            selected_blocks.append(block)
+            remaining_messages -= len(block)
+
+        selected_blocks.reverse()
+
+        messages: list[dict[str, Any]] = []
+
+        if include_initial_message:
+            messages.append(initial_message)
+
+        for block in selected_blocks:
+            messages.extend(block)
+
+        return messages
+
+
+    def _structured_call_repair_message(
+        self,
+        *,
+        prompt: str,
+        error: str,
+        instruction: str,
+    ) -> dict[str, str]:
+        """Construye un mensaje de reparación autosuficiente."""
+
+        return {
+            "role": "user",
+            "content": (
+                f"Solicitud original:\n{prompt}\n\n"
+                f"Error detectado: {error}\n"
+                f"{instruction}"
+            ),
+        }
+
+
     def structured_call(
         self,
         prompt: str,
@@ -480,13 +562,27 @@ class MyAgent:
         max_repair_attempts: int = 2,
     ) -> Any:
         
+        if self._max_history_messages < 1:
+            raise ValueError(
+                "max_history_messages debe ser al menos 1 para structured_call()."
+            )
+
         final_tool = final_result_tool_schema(schema)
-        messages = [{"role": "user", "content": prompt}]
+        initial_message = {
+            "role": "user",
+            "content": prompt,
+        }
+        repair_blocks: list[list[dict[str, Any]]] = []
         last_error: str = "Sin respuesta"
 
         for _ in range(max_repair_attempts + 1):
+            messages = self._structured_call_messages(
+                initial_message=initial_message,
+                repair_blocks=repair_blocks,
+            )
+
             response = self._chat_with_retry(
-                messages=self._clip(messages),
+                messages=messages,
                 tools=[final_tool],
                 system=self._system,
             )
@@ -498,11 +594,20 @@ class MyAgent:
 
             if final_call is None:
                 last_error = "El modelo respondió con texto libre en lugar de invocar final_result."
-                messages.append({"role": "assistant", "content": response.content or ""})
-                messages.append({
-                    "role": "user",
-                    "content": f"Error: {last_error} Debes invocar la herramienta final_result.",
-                })
+
+                repair_blocks.append([
+                    {
+                        "role": "assistant",
+                        "content": response.content or "",
+                    },
+                    self._structured_call_repair_message(
+                        prompt=prompt,
+                        error=last_error,
+                        instruction=(
+                            "Tenés que invocar la herramienta final_result."
+                        ),
+                    ),
+                ])
                 continue
 
             try:
@@ -510,27 +615,35 @@ class MyAgent:
                 return schema.model_validate(args)
             except (json.JSONDecodeError, ValidationError) as e:
                 last_error = str(e)
-                messages.append({
-                    "role": "assistant",
-                    "content": response.content,
-                    "tool_calls": [{
-                        "id": final_call.id,
-                        "type": "function",
-                        "function": {
-                            "name": final_call.name,
-                            "arguments": final_call.arguments,
-                        },
-                    }],
-                })
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": final_call.id,
-                    "name": FINAL_RESULT_TOOL_NAME,
-                    "content": f"Error de validación: {last_error}",
-                })
-                messages.append({
-                    "role": "user",
-                    "content": f"La respuesta no es válida: {last_error}. Intenta de nuevo con el formato correcto.",
-                })
+
+                repair_blocks.append([
+                    {
+                        "role": "assistant",
+                        "content": response.content,
+                        "tool_calls": [{
+                            "id": final_call.id,
+                            "type": "function",
+                            "function": {
+                                "name": final_call.name,
+                                "arguments": final_call.arguments,
+                            },
+                        }],
+                    },
+                    {
+                        "role": "tool",
+                        "tool_call_id": final_call.id,
+                        "name": FINAL_RESULT_TOOL_NAME,
+                        "content": (
+                            f"Error de validación: {last_error}"
+                        ),
+                    },
+                    self._structured_call_repair_message(
+                        prompt=prompt,
+                        error=last_error,
+                        instruction=(
+                            "Intentá de nuevo e invocá final_result con el formato correcto."
+                        ),
+                    ),
+                ])
 
         raise ValueError(f"structured_call falló tras {max_repair_attempts + 1} intentos: {last_error}")
