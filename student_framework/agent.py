@@ -295,6 +295,60 @@ class MyAgent:
 
         raise RuntimeError("No se pudo ejecutar la herramienta.")                
 
+
+    def _prepare_run_tool_context(
+        self,
+        *,
+        active_turn_start: int,
+        tool_call_count: int,
+    ) -> int | None:
+        """Libera espacio para una nueva ronda de herramientas.
+
+        Devuelve el índice actualizado del comienzo del turno activo.
+        Devuelve None si el turno no puede continuar dentro del límite.
+        """
+
+        messages_to_add = 1 + tool_call_count
+        target_length = (
+            self._max_history_messages
+            - messages_to_add
+        )
+
+        if target_length < 0:
+            return None
+
+        history_length_before_trim = len(self._history)
+
+        history_was_trimmed = self._trim_run_history(
+            target_length=target_length,
+            protected_start=active_turn_start,
+        )
+
+        if not history_was_trimmed:
+            return None
+
+        removed_messages = (
+            history_length_before_trim
+            - len(self._history)
+        )
+
+        return active_turn_start - removed_messages
+
+
+    def _trim_closed_run_history(self) -> None:
+        """Reserva espacio para el próximo mensaje user."""
+
+        history_was_trimmed = self._trim_run_history(
+            target_length=self._max_history_messages - 1,
+        )
+
+        if not history_was_trimmed:
+            raise RuntimeError(
+                "No se pudo reducir el historial cerrado "
+                "hasta la longitud objetivo."
+            )
+
+
     def run(self, user_message: str) -> AgentResult:
         """Ejecuta el bucle del agente hasta una respuesta final o hasta max_iterations.
 
@@ -350,14 +404,7 @@ class MyAgent:
                     "content": response.content,
                 })
 
-                history_was_trimmed = self._trim_run_history(
-                    target_length=self._max_history_messages - 1,
-                )
-
-                if not history_was_trimmed:
-                    raise RuntimeError(
-                        "No se pudo reducir el historial cerrado hasta la longitud objetivo."
-                    )
+                self._trim_closed_run_history()
 
                 return AgentResult(
                     answer=response.content,
@@ -366,24 +413,12 @@ class MyAgent:
                     output_tokens=total_out,
                 )
 
-            # Verificación de espacio antes de ejecutar herramientas
-            messages_to_add = 1 + len(response.tool_calls)
-            target_length = (
-                self._max_history_messages
-                - messages_to_add
+            prepared_turn_start = self._prepare_run_tool_context(
+                active_turn_start=active_turn_start,
+                tool_call_count=len(response.tool_calls),
             )
 
-            history_length_before_trim = len(self._history)
-
-            history_was_trimmed = (
-                target_length >= 0
-                and self._trim_run_history(
-                    target_length=target_length,
-                    protected_start=active_turn_start,
-                )
-            )
-
-            if not history_was_trimmed:
+            if prepared_turn_start is None:
                 error_message = (
                     "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages="
                     f"{self._max_history_messages}."
@@ -394,14 +429,7 @@ class MyAgent:
                     "content": error_message,
                 })
 
-                closed_history_was_trimmed = self._trim_run_history(
-                    target_length=self._max_history_messages - 1,
-                )
-
-                if not closed_history_was_trimmed:
-                    raise RuntimeError(
-                        "No se pudo reducir el historial cerrado hasta la longitud objetivo."
-                    )
+                self._trim_closed_run_history()
 
                 return AgentResult(
                     answer=error_message,
@@ -411,11 +439,7 @@ class MyAgent:
                     error=error_message,
                 )
 
-            removed_messages = (
-                history_length_before_trim
-                - len(self._history)
-            )
-            active_turn_start -= removed_messages
+            active_turn_start = prepared_turn_start
 
             # Expansión del historial con llamados a herramientas
             self._history.append({
