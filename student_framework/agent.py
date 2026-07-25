@@ -495,7 +495,24 @@ class MyAgent:
                 })          
 
 
-        return AgentResult(answer='', steps=steps, input_tokens=total_in, output_tokens=total_out)
+        message = (
+            f"Se alcanzó el límite de {self._max_iterations} iteraciones sin obtener una respuesta final."
+        )
+
+        self._history.append({
+            "role": "assistant",
+            "content": message,
+        })
+
+        self._trim_closed_run_history()
+
+        return AgentResult(
+            answer=message,
+            steps=steps,
+            error=message,
+            input_tokens=total_in,
+            output_tokens=total_out,
+        )
 
 
     def _structured_call_messages(
