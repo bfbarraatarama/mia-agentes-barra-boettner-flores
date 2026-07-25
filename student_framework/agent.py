@@ -78,6 +78,147 @@ class MyAgent:
             return []
         return history[-self._max_history_messages:]
 
+
+    def _trim_run_history(
+        self,
+        target_length: int,
+        protected_start: int | None = None,
+    ) -> bool:
+        """Reduce el historial de run hasta una longitud objetivo.
+
+        Mientras exista exceso, elimina primero las trazas intermedias
+        completas, desde la más antigua. Cuando ya no quedan trazas
+        eliminables, alterna la eliminación del user más antiguo y de
+        la respuesta final más antigua.
+
+        Los mensajes ubicados desde protected_start permanecen
+        protegidos.
+
+        Devuelve True si fue posible alcanzar la longitud objetivo.
+        """
+
+        if target_length < 0:
+            raise ValueError("target_length no puede ser negativo.")
+
+        if protected_start is None:
+            protected_start = len(self._history)
+
+        if not 0 <= protected_start <= len(self._history):
+            raise ValueError("protected_start está fuera del historial.")
+
+        def oldest_trace_range(stop: int) -> tuple[int, int] | None:
+            """Encuentra la traza completa más antigua antes de stop."""
+
+            index = 0
+
+            while index < stop:
+                if self._history[index].get("role") != "user":
+                    index += 1
+                    continue
+
+                final_index: int | None = None
+                cursor = index + 1
+
+                while cursor < stop:
+                    message = self._history[cursor]
+
+                    if message.get("role") == "user":
+                        break
+
+                    if (
+                        message.get("role") == "assistant"
+                        and not message.get("tool_calls")
+                    ):
+                        final_index = cursor
+                        break
+
+                    cursor += 1
+
+                if final_index is not None:
+                    if final_index > index + 1:
+                        return index + 1, final_index
+
+                    index = final_index + 1
+                    continue
+
+                index += 1
+
+            return None
+
+        def oldest_user_index(stop: int) -> int | None:
+            """Encuentra el user eliminable más antiguo."""
+
+            return next(
+                (
+                    index
+                    for index, message in enumerate(
+                        self._history[:stop]
+                    )
+                    if message.get("role") == "user"
+                ),
+                None,
+            )
+
+        def oldest_final_response_index(stop: int) -> int | None:
+            """Encuentra la respuesta final eliminable más antigua."""
+
+            return next(
+                (
+                    index
+                    for index, message in enumerate(
+                        self._history[:stop]
+                    )
+                    if (
+                        message.get("role") == "assistant"
+                        and not message.get("tool_calls")
+                    )
+                ),
+                None,
+            )
+
+        while len(self._history) > target_length:
+            trace_range = oldest_trace_range(protected_start)
+
+            if trace_range is None:
+                break
+
+            start, end = trace_range
+            removed_messages = end - start
+
+            del self._history[start:end]
+            protected_start -= removed_messages
+
+        remove_user_next = True
+
+        while len(self._history) > target_length:
+            if remove_user_next:
+                removable_index = oldest_user_index(protected_start)
+
+                if removable_index is None:
+                    removable_index = oldest_final_response_index(
+                        protected_start
+                    )
+            else:
+                removable_index = oldest_final_response_index(
+                    protected_start
+                )
+
+                if removable_index is None:
+                    removable_index = oldest_user_index(protected_start)
+
+            if removable_index is None:
+                return False
+
+            removed_role = self._history[removable_index].get("role")
+
+            del self._history[removable_index]
+            protected_start -= 1
+
+            remove_user_next = removed_role != "user"
+
+        return True
+
+
     def _is_transient_error(self, error: Exception) -> bool:
         """Indica si un error parece temporal y puede reintentarse."""
 
@@ -178,7 +319,18 @@ class MyAgent:
         `LLMResponse` y exponlos en `AgentResult.input_tokens` /
         `AgentResult.output_tokens`.
         """
-        self._history.append({'role': 'user', 'content': user_message})
+
+        if self._max_history_messages < 1:
+            raise ValueError(
+                "max_history_messages debe ser al menos 1 para run()."
+            )
+
+        self._history.append({
+            "role": "user",
+            "content": user_message,
+        })
+        active_turn_start = len(self._history) - 1
+
         total_in: int | None = None
         total_out: int | None = None
 
@@ -198,6 +350,15 @@ class MyAgent:
                     "content": response.content,
                 })
 
+                history_was_trimmed = self._trim_run_history(
+                    target_length=self._max_history_messages - 1,
+                )
+
+                if not history_was_trimmed:
+                    raise RuntimeError(
+                        "No se pudo reducir el historial cerrado hasta la longitud objetivo."
+                    )
+
                 return AgentResult(
                     answer=response.content,
                     steps=steps,
@@ -205,6 +366,58 @@ class MyAgent:
                     output_tokens=total_out,
                 )
 
+            # Verificación de espacio antes de ejecutar herramientas
+            messages_to_add = 1 + len(response.tool_calls)
+            target_length = (
+                self._max_history_messages
+                - messages_to_add
+            )
+
+            history_length_before_trim = len(self._history)
+
+            history_was_trimmed = (
+                target_length >= 0
+                and self._trim_run_history(
+                    target_length=target_length,
+                    protected_start=active_turn_start,
+                )
+            )
+
+            if not history_was_trimmed:
+                error_message = (
+                    "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages="
+                    f"{self._max_history_messages}."
+                )
+
+                self._history.append({
+                    "role": "assistant",
+                    "content": error_message,
+                })
+
+                closed_history_was_trimmed = self._trim_run_history(
+                    target_length=self._max_history_messages - 1,
+                )
+
+                if not closed_history_was_trimmed:
+                    raise RuntimeError(
+                        "No se pudo reducir el historial cerrado hasta la longitud objetivo."
+                    )
+
+                return AgentResult(
+                    answer=error_message,
+                    steps=steps,
+                    input_tokens=total_in,
+                    output_tokens=total_out,
+                    error=error_message,
+                )
+
+            removed_messages = (
+                history_length_before_trim
+                - len(self._history)
+            )
+            active_turn_start -= removed_messages
+
+            # Expansión del historial con llamados a herramientas
             self._history.append({
                 'role': 'assistant',
                 'content': response.content,
