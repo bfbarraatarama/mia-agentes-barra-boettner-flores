@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="1330" xmlns="http://www.w3.org/2000/svg"
+     font-family="'Segoe UI','Helvetica Neue',Arial,sans-serif">
+
+  <defs>
+    <marker id="arr"  markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0,9 3.5,0 7" fill="#555"/>
+    </marker>
+    <marker id="arrG" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0,9 3.5,0 7" fill="#1E8449"/>
+    </marker>
+    <marker id="arrR" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0,9 3.5,0 7" fill="#922B21"/>
+    </marker>
+    <marker id="arrP" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0,9 3.5,0 7" fill="#7D3C98"/>
+    </marker>
+    <marker id="arrB" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0,9 3.5,0 7" fill="#2471A3"/>
+    </marker>
+  </defs>
+
+  <!-- background -->
+  <rect width="800" height="1330" fill="#FAFAFA" stroke="#CCC" stroke-width="1" rx="6"/>
+
+  <!-- ─── LEGEND ─────────────────────────────────────────── -->
+  <rect x="20" y="10" width="760" height="40" fill="#F2F3F4" rx="4" stroke="#CCC" stroke-width="0.8"/>
+  <rect x="34"  y="22" width="13" height="13" fill="#5BA85A" rx="2"/>
+  <text x="52"  y="33" font-size="9.5" fill="#333">Lógica agente</text>
+  <rect x="147" y="22" width="13" height="13" fill="#2471A3" rx="2"/>
+  <text x="165" y="33" font-size="9.5" fill="#333">Operación de memoria</text>
+  <rect x="316" y="22" width="13" height="13" fill="#E8A040" rx="2"/>
+  <text x="334" y="33" font-size="9.5" fill="#333">Llamada LLM</text>
+  <rect x="423" y="22" width="13" height="13" fill="#7D3C98" rx="2"/>
+  <text x="441" y="33" font-size="9.5" fill="#333">Gestión de contexto</text>
+  <rect x="564" y="22" width="13" height="13" fill="#1E8449" rx="2"/>
+  <text x="582" y="33" font-size="9.5" fill="#333">Retorno exitoso</text>
+  <polygon points="697,28 710,22 723,28 710,35" fill="#FCF3CF" stroke="#D4AC0D" stroke-width="1"/>
+  <text x="727" y="33" font-size="9.5" fill="#333">Decisión</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!--  PARTE A                                              -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <text x="400" y="66" text-anchor="middle" font-size="13" font-weight="bold" fill="#17202A">
+    Flujo general de run()  con memoria conversacional
+  </text>
+  <text x="400" y="82" text-anchor="middle" font-size="10" fill="#777">
+    student_framework/agent.py  ·  MyAgent.run()
+  </text>
+
+  <!-- START -->
+  <circle cx="400" cy="98" r="9" fill="#333"/>
+  <line x1="400" y1="107" x2="400" y2="123" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Entry block -->
+  <rect x="225" y="123" width="350" height="50" fill="#EBF5FB" rx="6" stroke="#2471A3" stroke-width="2"/>
+  <text x="400" y="143" text-anchor="middle" font-size="11" font-weight="bold" fill="#1A5276">run(user_message)</text>
+  <text x="400" y="161" text-anchor="middle" font-size="9.5" fill="#2471A3">Inicia una nueva llamada a run</text>
+  <line x1="400" y1="173" x2="400" y2="190" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Agregar mensaje del usuario -->
+  <rect x="225" y="190" width="350" height="60" fill="#5BA85A" rx="6"/>
+  <text x="400" y="210" text-anchor="middle" font-size="11" font-weight="bold" fill="white">Agregar mensaje del usuario</text>
+  <text x="400" y="228" text-anchor="middle" font-size="9.5" fill="#D5F5E3">Se agrega a self._history</text>
+  <text x="400" y="243" text-anchor="middle" font-size="9.5" fill="#D5F5E3">y se marca active_turn_start</text>
+  <line x1="400" y1="250" x2="400" y2="267" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- LOOP border -->
+  <rect x="18" y="265" width="584" height="445" fill="none" rx="8"
+        stroke="#AAA" stroke-width="1.5" stroke-dasharray="9,5"/>
+  <text x="38" y="283" font-size="9" fill="#AAA" font-style="italic">Bucle  (máx. max_iterations)</text>
+
+  <!-- _clip -->
+  <rect x="225" y="290" width="350" height="68" fill="#2471A3" rx="6"/>
+  <text x="400" y="309" text-anchor="middle" font-size="11" font-weight="bold" fill="white">Construir contexto para el LLM</text>
+  <text x="400" y="327" text-anchor="middle" font-size="9.5" fill="white" font-family="Consolas,monospace">_clip(self._history)</text>
+  <text x="400" y="344" text-anchor="middle" font-size="9" fill="#AED6F1">selecciona los últimos max_history_messages para enviar al LLM.</text>
+  <text x="400" y="358" text-anchor="middle" font-size="9" fill="#AED6F1">(No modifica self._history.)</text>
+  <line x1="400" y1="364" x2="400" y2="381" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- LLM -->
+  <rect x="225" y="381" width="350" height="50" fill="#E8A040" rx="6"/>
+  <text x="400" y="401" text-anchor="middle" font-size="11" font-weight="bold" fill="white">Llamar al LLM con tools registradas</text>
+  <text x="400" y="419" text-anchor="middle" font-size="9.5" fill="white" font-family="Consolas,monospace">_chat_with_retry(messages, tools, system)</text>
+  <line x1="400" y1="431" x2="400" y2="448" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Decision 1: tool_calls?  center (400,470) hw=110 hh=28 -->
+  <polygon points="400,442 510,470 400,498 290,470" fill="#FEF9E7" stroke="#D4AC0D" stroke-width="1.5"/>
+  <text x="400" y="465" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#7D6608">¿El LLM devuelve</text>
+  <text x="400" y="479" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#7D6608">tool_calls?</text>
+
+  <!-- D1 SÍ (down) -->
+  <line x1="400" y1="498" x2="400" y2="515" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="413" y="511" font-size="9.5" fill="#555" font-weight="bold">SÍ</text>
+
+  <!-- D1 NO (right) -->
+  <line x1="510" y1="470" x2="614" y2="470" stroke="#1E8449" stroke-width="1.5" marker-end="url(#arrG)"/>
+  <text x="557" y="462" text-anchor="middle" font-size="9.5" fill="#1E8449" font-weight="bold">NO</text>
+  <rect x="614" y="444" width="166" height="52" fill="#1E8449" rx="6"/>
+  <text x="697" y="464" text-anchor="middle" font-size="10.5" font-weight="bold" fill="white">Respuesta final</text>
+  <text x="697" y="482" text-anchor="middle" font-size="9.5" fill="#A9DFBF">return AgentResult</text>
+
+  <!-- _prepare_run_tool_context -->
+  <rect x="225" y="515" width="350" height="68" fill="#7D3C98" rx="6"/>
+  <text x="400" y="535" text-anchor="middle" font-size="11" font-weight="bold" fill="white">Verificar y reservar espacio</text>
+  <text x="400" y="553" text-anchor="middle" font-size="9.5" fill="#E8DAEF">para mensajes de herramientas</text>
+  <text x="400" y="570" text-anchor="middle" font-size="9" fill="#D7BDE2" font-family="Consolas,monospace">_prepare_run_tool_context()  →  _trim_run_history()</text>
+  <line x1="400" y1="583" x2="400" y2="600" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Decision 2: context ok?  center (400,622) hw=115 hh=28 -->
+  <polygon points="400,594 515,622 400,650 285,622" fill="#FEF9E7" stroke="#D4AC0D" stroke-width="1.5"/>
+  <text x="400" y="617" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#7D6608">¿Fue posible liberar</text>
+  <text x="400" y="631" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#7D6608">el espacio necesario?</text>
+
+  <!-- D2 SÍ (down) -->
+  <line x1="400" y1="650" x2="400" y2="667" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="413" y="663" font-size="9.5" fill="#555" font-weight="bold">SÍ</text>
+
+  <!-- D2 NO (right) -->
+  <line x1="515" y1="622" x2="614" y2="622" stroke="#922B21" stroke-width="1.5" marker-end="url(#arrR)"/>
+  <text x="560" y="614" text-anchor="middle" font-size="9.5" fill="#922B21" font-weight="bold">NO</text>
+  <rect x="614" y="596" width="166" height="52" fill="#922B21" rx="6"/>
+  <text x="697" y="616" text-anchor="middle" font-size="10.5" font-weight="bold" fill="white">Error</text>
+  <text x="697" y="634" text-anchor="middle" font-size="9.5" fill="#FADBD8">return AgentResult (error)</text>
+
+  <!-- Agregar mensajes y ejecutar herramientas -->
+  <rect x="225" y="667" width="350" height="60" fill="#5BA85A" rx="6"/>
+  <text x="400" y="686" text-anchor="middle" font-size="11" font-weight="bold" fill="white">Ejecutar herramientas y registrar resultados</text>
+  <text x="400" y="703" text-anchor="middle" font-size="9.5" fill="#D5F5E3">Se agregan al historial:</text>
+  <text x="400" y="719" text-anchor="middle" font-size="9.5" fill="#D5F5E3" font-family="Consolas,monospace">assistant (tool_call)  +  tool (resultados)</text>
+
+  <!-- Loop back arrow -->
+  <line x1="575" y1="697" x2="760" y2="697" stroke="#555" stroke-width="1.2" stroke-dasharray="5,3"/>
+  <line x1="760" y1="697" x2="760" y2="320" stroke="#555" stroke-width="1.2" stroke-dasharray="5,3"/>
+  <line x1="760" y1="320" x2="575" y2="320" stroke="#555" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#arr)"/>
+  <text x="772" y="522" text-anchor="start" font-size="8.5" fill="#888" font-style="italic"
+        transform="rotate(90,772,522)">Siguiente iteración del bucle</text>
+
+  <!-- Arrow to max_iterations block -->
+  <line x1="400" y1="727" x2="400" y2="746" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Max iterations block -->
+  <rect x="225" y="746" width="350" height="52" fill="#717D7E" rx="6"/>
+  <text x="400" y="766" text-anchor="middle" font-size="10.5" font-weight="bold" fill="white">Al finalizar el bucle sin obtener respuesta final</text>
+  <text x="400" y="784" text-anchor="middle" font-size="9.5" fill="#EAECEE" font-family="Consolas,monospace">return AgentResult (max_iterations)</text>
+
+  <!-- ─── DIVIDER ─────────────────────────────────────────── -->
+  <line x1="20" y1="816" x2="780" y2="816" stroke="#CCC" stroke-width="1.2"/>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!--  PARTE B — _trim_run_history                         -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <text x="400" y="838" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#17202A">
+    Funcionamiento interno de  _trim_run_history(target_length,  protected_start)
+  </text>
+  <text x="400" y="855" text-anchor="middle" font-size="10" fill="#777">
+    student_framework/agent.py  ·  MyAgent._trim_run_history()
+  </text>
+
+  <!-- Entrada -->
+  <rect x="265" y="867" width="270" height="50" fill="#F5EEF8" rx="6" stroke="#7D3C98" stroke-width="1.5"/>
+  <text x="400" y="887" text-anchor="middle" font-size="11" font-weight="bold" fill="#4A235A">Entrada</text>
+  <text x="400" y="904" text-anchor="middle" font-size="9.5" fill="#7D3C98" font-family="Consolas,monospace">target_length   ·   protected_start</text>
+  <line x1="400" y1="917" x2="400" y2="934" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Calcular target_end -->
+  <rect x="265" y="934" width="270" height="44" fill="#7D3C98" rx="6"/>
+  <text x="400" y="953" text-anchor="middle" font-size="11" font-weight="bold" fill="white">Calcular tamaño actual</text>
+  <text x="400" y="969" text-anchor="middle" font-size="9.5" fill="#E8DAEF" font-family="Consolas,monospace">target_end = len(history)</text>
+  <line x1="400" y1="978" x2="400" y2="995" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Decision main: historial > target?  center (400,1018) hw=130 hh=28 -->
+  <polygon points="400,990 530,1018 400,1046 270,1018" fill="#F5EEF8" stroke="#7D3C98" stroke-width="1.5"/>
+  <text x="400" y="1013" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#4A235A">¿El historial aún supera</text>
+  <text x="400" y="1027" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#4A235A">el tamaño objetivo?</text>
+
+  <!-- NO (left) → Fin -->
+  <line x1="270" y1="1018" x2="192" y2="1018" stroke="#1E8449" stroke-width="1.5" marker-end="url(#arrG)"/>
+  <text x="229" y="1010" text-anchor="middle" font-size="9.5" fill="#1E8449" font-weight="bold">NO</text>
+  <rect x="22" y="1000" width="168" height="36" fill="#1E8449" rx="6"/>
+  <text x="106" y="1015" text-anchor="middle" font-size="10.5" font-weight="bold" fill="white">Fin</text>
+  <text x="106" y="1029" text-anchor="middle" font-size="9" fill="#A9DFBF">Historial ajustado</text>
+
+  <!-- YES (down) -->
+  <line x1="400" y1="1046" x2="400" y2="1063" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="413" y="1059" font-size="9.5" fill="#555" font-weight="bold">SÍ</text>
+
+  <!-- Phase 1 label -->
+  <text x="400" y="1078" text-anchor="middle" font-size="9.5" fill="#7D3C98" font-weight="bold" font-style="italic">
+    Fase 1 — eliminar trazas de herramientas
+  </text>
+
+  <!-- Phase 1 Block A: Buscar traza -->
+  <rect x="225" y="1084" width="350" height="52" fill="#D7BDE2" rx="6" stroke="#7D3C98" stroke-width="1.3"/>
+  <text x="400" y="1104" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#4A235A">Buscar la traza completa más antigua</text>
+  <text x="400" y="1122" text-anchor="middle" font-size="9" fill="#555">Traza de herramienta antes de protected_start</text>
+  <line x1="400" y1="1136" x2="400" y2="1153" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Phase 1 Block B: Eliminar traza -->
+  <rect x="225" y="1153" width="350" height="68" fill="#7D3C98" rx="6"/>
+  <text x="400" y="1172" text-anchor="middle" font-size="10.5" font-weight="bold" fill="white">Eliminar traza del historial</text>
+  <text x="400" y="1190" text-anchor="middle" font-size="9.5" fill="#E8DAEF" font-family="Consolas,monospace">history[start:end]  →  assistant tool_call + tool results</text>
+  <text x="400" y="1208" text-anchor="middle" font-size="9.5" fill="#D7BDE2">Actualizar target_end</text>
+
+  <!-- Loop back arrow Phase 1 (purple dashed, x=745) -->
+  <line x1="575" y1="1187" x2="745" y2="1187" stroke="#7D3C98" stroke-width="1.2" stroke-dasharray="5,3"/>
+  <line x1="745" y1="1187" x2="745" y2="1018" stroke="#7D3C98" stroke-width="1.2" stroke-dasharray="5,3"/>
+  <line x1="745" y1="1018" x2="533" y2="1018" stroke="#7D3C98" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#arrP)"/>
+
+  <!-- Arrow Phase 1 → Phase 2 + label -->
+  <line x1="400" y1="1221" x2="400" y2="1244" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="340" y="1238" text-anchor="middle" font-size="8.5" fill="#888" font-style="italic">si no hay traza</text>
+
+  <!-- Phase 2 label -->
+  <text x="400" y="1258" text-anchor="middle" font-size="9.5" fill="#2471A3" font-weight="bold" font-style="italic">
+    Fase 2 — eliminar mensajes conversacionales
+  </text>
+
+  <!-- Phase 2 Block -->
+  <rect x="225" y="1264" width="350" height="72" fill="#2471A3" rx="6"/>
+  <text x="400" y="1284" text-anchor="middle" font-size="10.5" font-weight="bold" fill="white">Eliminar el mensaje conversacional más antiguo</text>
+  <text x="400" y="1302" text-anchor="middle" font-size="9.5" fill="#AED6F1">Alternando entre  user  y  assistant final</text>
+  <text x="400" y="1319" text-anchor="middle" font-size="9" fill="#85C1E9">(siempre antes de protected_start)  ·  Actualizar target_end</text>
+
+  <!-- Loop back arrow Phase 2 (blue dashed, x=752) -->
+  <line x1="575" y1="1300" x2="752" y2="1300" stroke="#2471A3" stroke-width="1.2" stroke-dasharray="5,3"/>
+  <line x1="752" y1="1300" x2="752" y2="1018" stroke="#2471A3" stroke-width="1.2" stroke-dasharray="5,3"/>
+  <line x1="752" y1="1018" x2="533" y2="1018" stroke="#2471A3" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#arrB)"/>
+
+</svg>
