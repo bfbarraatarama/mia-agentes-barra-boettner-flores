@@ -193,11 +193,17 @@ class MyAgent:
                 total_out = (total_out or 0) + (response.output_tokens or 0)
 
             if not response.tool_calls:
+                self._history.append({
+                    "role": "assistant",
+                    "content": response.content,
+                })
+
                 return AgentResult(
                     answer=response.content,
                     steps=steps,
                     input_tokens=total_in,
-                    output_tokens=total_out)
+                    output_tokens=total_out,
+                )
 
             self._history.append({
                 'role': 'assistant',
