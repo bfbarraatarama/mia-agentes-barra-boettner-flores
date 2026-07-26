@@ -78,6 +78,147 @@ class MyAgent:
             return []
         return history[-self._max_history_messages:]
 
+
+    def _trim_run_history(
+        self,
+        target_length: int,
+        protected_start: int | None = None,
+    ) -> bool:
+        """Reduce el historial de run hasta una longitud objetivo.
+
+        Mientras exista exceso, elimina primero las trazas intermedias
+        completas, desde la más antigua. Cuando ya no quedan trazas
+        eliminables, alterna la eliminación del user más antiguo y de
+        la respuesta final más antigua.
+
+        Los mensajes ubicados desde protected_start permanecen
+        protegidos.
+
+        Devuelve True si fue posible alcanzar la longitud objetivo.
+        """
+
+        if target_length < 0:
+            raise ValueError("target_length no puede ser negativo.")
+
+        if protected_start is None:
+            protected_start = len(self._history)
+
+        if not 0 <= protected_start <= len(self._history):
+            raise ValueError("protected_start está fuera del historial.")
+
+        def oldest_trace_range(stop: int) -> tuple[int, int] | None:
+            """Encuentra la traza completa más antigua antes de stop."""
+
+            index = 0
+
+            while index < stop:
+                if self._history[index].get("role") != "user":
+                    index += 1
+                    continue
+
+                final_index: int | None = None
+                cursor = index + 1
+
+                while cursor < stop:
+                    message = self._history[cursor]
+
+                    if message.get("role") == "user":
+                        break
+
+                    if (
+                        message.get("role") == "assistant"
+                        and not message.get("tool_calls")
+                    ):
+                        final_index = cursor
+                        break
+
+                    cursor += 1
+
+                if final_index is not None:
+                    if final_index > index + 1:
+                        return index + 1, final_index
+
+                    index = final_index + 1
+                    continue
+
+                index += 1
+
+            return None
+
+        def oldest_user_index(stop: int) -> int | None:
+            """Encuentra el user eliminable más antiguo."""
+
+            return next(
+                (
+                    index
+                    for index, message in enumerate(
+                        self._history[:stop]
+                    )
+                    if message.get("role") == "user"
+                ),
+                None,
+            )
+
+        def oldest_final_response_index(stop: int) -> int | None:
+            """Encuentra la respuesta final eliminable más antigua."""
+
+            return next(
+                (
+                    index
+                    for index, message in enumerate(
+                        self._history[:stop]
+                    )
+                    if (
+                        message.get("role") == "assistant"
+                        and not message.get("tool_calls")
+                    )
+                ),
+                None,
+            )
+
+        while len(self._history) > target_length:
+            trace_range = oldest_trace_range(protected_start)
+
+            if trace_range is None:
+                break
+
+            start, end = trace_range
+            removed_messages = end - start
+
+            del self._history[start:end]
+            protected_start -= removed_messages
+
+        remove_user_next = True
+
+        while len(self._history) > target_length:
+            if remove_user_next:
+                removable_index = oldest_user_index(protected_start)
+
+                if removable_index is None:
+                    removable_index = oldest_final_response_index(
+                        protected_start
+                    )
+            else:
+                removable_index = oldest_final_response_index(
+                    protected_start
+                )
+
+                if removable_index is None:
+                    removable_index = oldest_user_index(protected_start)
+
+            if removable_index is None:
+                return False
+
+            removed_role = self._history[removable_index].get("role")
+
+            del self._history[removable_index]
+            protected_start -= 1
+
+            remove_user_next = removed_role != "user"
+
+        return True
+
+
     def _is_transient_error(self, error: Exception) -> bool:
         """Indica si un error parece temporal y puede reintentarse."""
 
@@ -154,6 +295,60 @@ class MyAgent:
 
         raise RuntimeError("No se pudo ejecutar la herramienta.")                
 
+
+    def _prepare_run_tool_context(
+        self,
+        *,
+        active_turn_start: int,
+        tool_call_count: int,
+    ) -> int | None:
+        """Libera espacio para una nueva ronda de herramientas.
+
+        Devuelve el índice actualizado del comienzo del turno activo.
+        Devuelve None si el turno no puede continuar dentro del límite.
+        """
+
+        messages_to_add = 1 + tool_call_count
+        target_length = (
+            self._max_history_messages
+            - messages_to_add
+        )
+
+        if target_length < 0:
+            return None
+
+        history_length_before_trim = len(self._history)
+
+        history_was_trimmed = self._trim_run_history(
+            target_length=target_length,
+            protected_start=active_turn_start,
+        )
+
+        if not history_was_trimmed:
+            return None
+
+        removed_messages = (
+            history_length_before_trim
+            - len(self._history)
+        )
+
+        return active_turn_start - removed_messages
+
+
+    def _trim_closed_run_history(self) -> None:
+        """Reserva espacio para el próximo mensaje user."""
+
+        history_was_trimmed = self._trim_run_history(
+            target_length=self._max_history_messages - 1,
+        )
+
+        if not history_was_trimmed:
+            raise RuntimeError(
+                "No se pudo reducir el historial cerrado "
+                "hasta la longitud objetivo."
+            )
+
+
     def run(self, user_message: str) -> AgentResult:
         """Ejecuta el bucle del agente hasta una respuesta final o hasta max_iterations.
 
@@ -178,7 +373,18 @@ class MyAgent:
         `LLMResponse` y exponlos en `AgentResult.input_tokens` /
         `AgentResult.output_tokens`.
         """
-        self._history.append({'role': 'user', 'content': user_message})
+
+        if self._max_history_messages < 1:
+            raise ValueError(
+                "max_history_messages debe ser al menos 1 para run()."
+            )
+
+        self._history.append({
+            "role": "user",
+            "content": user_message,
+        })
+        active_turn_start = len(self._history) - 1
+
         total_in: int | None = None
         total_out: int | None = None
 
@@ -198,6 +404,8 @@ class MyAgent:
                     "content": response.content,
                 })
 
+                self._trim_closed_run_history()
+
                 return AgentResult(
                     answer=response.content,
                     steps=steps,
@@ -205,6 +413,35 @@ class MyAgent:
                     output_tokens=total_out,
                 )
 
+            prepared_turn_start = self._prepare_run_tool_context(
+                active_turn_start=active_turn_start,
+                tool_call_count=len(response.tool_calls),
+            )
+
+            if prepared_turn_start is None:
+                error_message = (
+                    "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages="
+                    f"{self._max_history_messages}."
+                )
+
+                self._history.append({
+                    "role": "assistant",
+                    "content": error_message,
+                })
+
+                self._trim_closed_run_history()
+
+                return AgentResult(
+                    answer=error_message,
+                    steps=steps,
+                    input_tokens=total_in,
+                    output_tokens=total_out,
+                    error=error_message,
+                )
+
+            active_turn_start = prepared_turn_start
+
+            # Expansión del historial con llamados a herramientas
             self._history.append({
                 'role': 'assistant',
                 'content': response.content,
@@ -260,6 +497,88 @@ class MyAgent:
 
         return AgentResult(answer='', steps=steps, input_tokens=total_in, output_tokens=total_out)
 
+
+    def _structured_call_messages(
+        self,
+        initial_message: dict[str, Any],
+        repair_blocks: list[list[dict[str, Any]]],
+    ) -> list[dict[str, Any]]:
+        """Construye el contexto de structured_call sin fragmentar bloques.
+
+        El bloque de reparación más reciente tiene prioridad. Después se
+        conserva el mensaje inicial y, si todavía hay espacio, se agregan
+        bloques anteriores completos desde el más reciente.
+
+        Cuando el bloque más reciente no entra completo, se usa su último
+        mensaje user como representación compacta y autosuficiente.
+        """
+
+        if not repair_blocks:
+            return [initial_message]
+
+        latest_block = repair_blocks[-1]
+
+        if len(latest_block) > self._max_history_messages:
+            repair_message = latest_block[-1]
+
+            if self._max_history_messages >= 2:
+                return [
+                    initial_message,
+                    repair_message,
+                ]
+
+            return [repair_message]
+
+        selected_blocks = [latest_block]
+        remaining_messages = (
+            self._max_history_messages
+            - len(latest_block)
+        )
+
+        include_initial_message = remaining_messages >= 1
+
+        if include_initial_message:
+            remaining_messages -= 1
+
+        for block in reversed(repair_blocks[:-1]):
+            if len(block) > remaining_messages:
+                break
+
+            selected_blocks.append(block)
+            remaining_messages -= len(block)
+
+        selected_blocks.reverse()
+
+        messages: list[dict[str, Any]] = []
+
+        if include_initial_message:
+            messages.append(initial_message)
+
+        for block in selected_blocks:
+            messages.extend(block)
+
+        return messages
+
+
+    def _structured_call_repair_message(
+        self,
+        *,
+        prompt: str,
+        error: str,
+        instruction: str,
+    ) -> dict[str, str]:
+        """Construye un mensaje de reparación autosuficiente."""
+
+        return {
+            "role": "user",
+            "content": (
+                f"Solicitud original:\n{prompt}\n\n"
+                f"Error detectado: {error}\n"
+                f"{instruction}"
+            ),
+        }
+
+
     def structured_call(
         self,
         prompt: str,
@@ -267,13 +586,27 @@ class MyAgent:
         max_repair_attempts: int = 2,
     ) -> Any:
         
+        if self._max_history_messages < 1:
+            raise ValueError(
+                "max_history_messages debe ser al menos 1 para structured_call()."
+            )
+
         final_tool = final_result_tool_schema(schema)
-        messages = [{"role": "user", "content": prompt}]
+        initial_message = {
+            "role": "user",
+            "content": prompt,
+        }
+        repair_blocks: list[list[dict[str, Any]]] = []
         last_error: str = "Sin respuesta"
 
         for _ in range(max_repair_attempts + 1):
+            messages = self._structured_call_messages(
+                initial_message=initial_message,
+                repair_blocks=repair_blocks,
+            )
+
             response = self._chat_with_retry(
-                messages=self._clip(messages),
+                messages=messages,
                 tools=[final_tool],
                 system=self._system,
             )
@@ -285,11 +618,20 @@ class MyAgent:
 
             if final_call is None:
                 last_error = "El modelo respondió con texto libre en lugar de invocar final_result."
-                messages.append({"role": "assistant", "content": response.content or ""})
-                messages.append({
-                    "role": "user",
-                    "content": f"Error: {last_error} Debes invocar la herramienta final_result.",
-                })
+
+                repair_blocks.append([
+                    {
+                        "role": "assistant",
+                        "content": response.content or "",
+                    },
+                    self._structured_call_repair_message(
+                        prompt=prompt,
+                        error=last_error,
+                        instruction=(
+                            "Tenés que invocar la herramienta final_result."
+                        ),
+                    ),
+                ])
                 continue
 
             try:
@@ -297,27 +639,35 @@ class MyAgent:
                 return schema.model_validate(args)
             except (json.JSONDecodeError, ValidationError) as e:
                 last_error = str(e)
-                messages.append({
-                    "role": "assistant",
-                    "content": response.content,
-                    "tool_calls": [{
-                        "id": final_call.id,
-                        "type": "function",
-                        "function": {
-                            "name": final_call.name,
-                            "arguments": final_call.arguments,
-                        },
-                    }],
-                })
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": final_call.id,
-                    "name": FINAL_RESULT_TOOL_NAME,
-                    "content": f"Error de validación: {last_error}",
-                })
-                messages.append({
-                    "role": "user",
-                    "content": f"La respuesta no es válida: {last_error}. Intenta de nuevo con el formato correcto.",
-                })
+
+                repair_blocks.append([
+                    {
+                        "role": "assistant",
+                        "content": response.content,
+                        "tool_calls": [{
+                            "id": final_call.id,
+                            "type": "function",
+                            "function": {
+                                "name": final_call.name,
+                                "arguments": final_call.arguments,
+                            },
+                        }],
+                    },
+                    {
+                        "role": "tool",
+                        "tool_call_id": final_call.id,
+                        "name": FINAL_RESULT_TOOL_NAME,
+                        "content": (
+                            f"Error de validación: {last_error}"
+                        ),
+                    },
+                    self._structured_call_repair_message(
+                        prompt=prompt,
+                        error=last_error,
+                        instruction=(
+                            "Intentá de nuevo e invocá final_result con el formato correcto."
+                        ),
+                    ),
+                ])
 
         raise ValueError(f"structured_call falló tras {max_repair_attempts + 1} intentos: {last_error}")
