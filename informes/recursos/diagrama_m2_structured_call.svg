@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="1030" xmlns="http://www.w3.org/2000/svg"
+     font-family="'Segoe UI','Helvetica Neue',Arial,sans-serif">
+
+  <defs>
+    <!-- Arrow markers -->
+    <marker id="arr"  markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0,9 3.5,0 7" fill="#555"/>
+    </marker>
+    <marker id="arrG" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0,9 3.5,0 7" fill="#1E8449"/>
+    </marker>
+    <marker id="arrR" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0,9 3.5,0 7" fill="#C0392B"/>
+    </marker>
+    <marker id="arrBl" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0,9 3.5,0 7" fill="#2471A3"/>
+    </marker>
+  </defs>
+
+  <!-- ═══════════ BACKGROUND ═══════════ -->
+  <rect width="800" height="1030" fill="#FAFAFA" stroke="#CCC" stroke-width="1" rx="6"/>
+
+  <!-- ═══════════ HEADER ═══════════ -->
+  <text x="400" y="28" text-anchor="middle" font-size="15" font-weight="bold" fill="#17202A">
+    Flujo de structured_call
+  </text>
+  <text x="400" y="48" text-anchor="middle" font-size="10" fill="#666">
+    student_framework/agent.py  ·  MyAgent.structured_call()
+  </text>
+
+  <!-- ═══════════ LEGEND ═══════════ -->
+  <rect x="20" y="60" width="760" height="46" fill="#F2F3F4" rx="4" stroke="#CCC" stroke-width="0.8"/>
+  <!-- item 1 -->
+  <rect x="34"  y="73" width="13" height="13" fill="#5BA85A" rx="2"/>
+  <text x="52"  y="84" font-size="9.5" fill="#333">Lógica agente</text>
+  <!-- item 2 -->
+  <rect x="138" y="73" width="13" height="13" fill="#2471A3" rx="2"/>
+  <text x="156" y="84" font-size="9.5" fill="#333">Scaffold (mia_agents)</text>
+  <!-- item 3 -->
+  <rect x="290" y="73" width="13" height="13" fill="#E8A040" rx="2"/>
+  <text x="308" y="84" font-size="9.5" fill="#333">Llamada LLM</text>
+  <!-- item 4 -->
+  <rect x="395" y="73" width="13" height="13" fill="#C0392B" rx="2"/>
+  <text x="413" y="84" font-size="9.5" fill="#333">Reparación</text>
+  <!-- item 5 -->
+  <rect x="492" y="73" width="13" height="13" fill="#1E8449" rx="2"/>
+  <text x="510" y="84" font-size="9.5" fill="#333">Éxito</text>
+  <!-- item 6: diamond -->
+  <polygon points="595,79.5 608,73 621,79.5 608,86" fill="#FCF3CF" stroke="#D4AC0D" stroke-width="1"/>
+  <text x="627" y="84" font-size="9.5" fill="#333">Decisión</text>
+  <!-- item 7: dashed -->
+  <line x1="696" y1="76" x2="716" y2="76" stroke="#C0392B" stroke-width="1.4" stroke-dasharray="4,3"/>
+  <text x="720" y="84" font-size="9.5" fill="#333">Retry</text>
+
+  <!-- ═══════════ START ═══════════ -->
+  <circle cx="400" cy="123" r="11" fill="#333"/>
+  <line x1="400" y1="134" x2="400" y2="150" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ENTRY BOX -->
+  <rect x="215" y="150" width="370" height="55" fill="#EBF5FB" rx="6" stroke="#2471A3" stroke-width="2"/>
+  <text x="400" y="170" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#1A5276">ENTRADA</text>
+  <text x="400" y="188" text-anchor="middle" font-size="9.5" fill="#1A5276" font-family="Consolas,monospace">
+    structured_call(prompt, schema, max_repair_attempts=2)
+  </text>
+  <line x1="400" y1="205" x2="400" y2="222" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- STEP 1: Create final_result schema -->
+  <rect x="215" y="222" width="370" height="78" fill="#2471A3" rx="6"/>
+  <text x="400" y="241" text-anchor="middle" font-size="10.5" font-weight="bold" fill="white">
+    1.  Crear herramienta sintética  (solo schema)
+  </text>
+  <text x="400" y="257" text-anchor="middle" font-size="9.5" fill="#D6EAF8" font-family="Consolas,monospace">
+    final_result_tool_schema(schema)
+  </text>
+  <text x="400" y="272" text-anchor="middle" font-size="9" fill="#AED6F1">
+    → ToolSchema("final_result",  parameters = schema.model_json_schema())
+  </text>
+  <text x="400" y="289" text-anchor="middle" font-size="8.5" fill="#D6EAF8" font-style="italic">
+    Define el contrato de salida;  no ejecuta un callable
+  </text>
+  <line x1="400" y1="300" x2="400" y2="316" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ═══════════ LOOP BORDER ═══════════ -->
+  <!-- Encompasses x=8..792, y=314..835 -->
+  <rect x="8" y="314" width="784" height="521" fill="none" rx="8"
+        stroke="#AAA" stroke-width="1.5" stroke-dasharray="9,5"/>
+  <text x="28" y="333" font-size="9.5" fill="#AAA" font-style="italic">
+    Bucle de reparación  (máx.  max_repair_attempts + 1  iteraciones  =  3  por defecto)
+  </text>
+
+  <!-- STEP 2: Build messages context -->
+  <rect x="215" y="328" width="370" height="67" fill="#5BA85A" rx="6"/>
+  <text x="400" y="349" text-anchor="middle" font-size="10.5" font-weight="bold" fill="white">
+    2.  Construir contexto de mensajes
+  </text>
+  <text x="400" y="366" text-anchor="middle" font-size="9.5" fill="#D5F5E3" font-family="Consolas,monospace">
+    _structured_call_messages(
+  </text>
+  <text x="400" y="383" text-anchor="middle" font-size="9.5" fill="#D5F5E3" font-family="Consolas,monospace">
+    &#160;&#160;initial_message,  repair_blocks)
+  </text>
+  <line x1="400" y1="395" x2="400" y2="413" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- STEP 3: Call LLM -->
+  <rect x="215" y="413" width="370" height="62" fill="#E8A040" rx="6"/>
+  <text x="400" y="434" text-anchor="middle" font-size="10.5" font-weight="bold" fill="white">
+    3.  Llamar al LLM
+  </text>
+  <text x="400" y="451" text-anchor="middle" font-size="9.5" fill="white" font-family="Consolas,monospace">
+    _chat_with_retry(messages,  tools=[final_tool],
+  </text>
+  <text x="400" y="467" text-anchor="middle" font-size="9.5" fill="white" font-family="Consolas,monospace">
+    &#160;&#160;system=self._system)
+  </text>
+  <line x1="400" y1="475" x2="400" y2="494" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- DECISION 1: final_result in tool_calls? -->
+  <!-- center (400, 525), half_w=98, half_h=31 -->
+  <polygon points="400,494 498,525 400,556 302,525" fill="#FEF9E7" stroke="#D4AC0D" stroke-width="1.5"/>
+  <text x="400" y="519" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#7D6608">
+    ¿El LLM invocó
+  </text>
+  <text x="400" y="534" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#7D6608">
+    final_result ?
+  </text>
+
+  <!-- D1 YES → down -->
+  <line x1="400" y1="556" x2="400" y2="578" stroke="#1E8449" stroke-width="1.5" marker-end="url(#arrG)"/>
+  <text x="413" y="571" font-size="9.5" fill="#1E8449" font-weight="bold">SÍ</text>
+
+  <!-- D1 NO → left to Repair 1 -->
+  <line x1="302" y1="525" x2="213" y2="525" stroke="#C0392B" stroke-width="1.5" marker-end="url(#arrR)"/>
+  <text x="252" y="517" text-anchor="middle" font-size="9.5" fill="#C0392B" font-weight="bold">NO</text>
+
+  <!-- REPAIR BLOCK 1 (text libre) -->
+  <rect x="18" y="479" width="193" height="112" fill="#FDEDEC" rx="6" stroke="#E74C3C" stroke-width="1.5"/>
+  <text x="114" y="498" text-anchor="middle" font-size="10" font-weight="bold" fill="#922B21">Reparación  Tipo 1</text>
+  <text x="114" y="513" text-anchor="middle" font-size="8.5" fill="#555">Texto libre detectado</text>
+  <text x="114" y="528" text-anchor="middle" font-size="8.5" fill="#555" font-family="Consolas,monospace">repair_blocks.append([</text>
+  <text x="114" y="542" text-anchor="middle" font-size="8.5" fill="#555" font-family="Consolas,monospace">&#160;&#160;assistant(content),</text>
+  <text x="114" y="556" text-anchor="middle" font-size="8.5" fill="#555" font-family="Consolas,monospace">&#160;&#160;user(repair_msg)])</text>
+  <text x="114" y="582" text-anchor="middle" font-size="8" fill="#C0392B" font-style="italic">→ siguiente iteración</text>
+
+  <!-- STEP 4: Parse and validate -->
+  <rect x="215" y="578" width="370" height="62" fill="#5BA85A" rx="6"/>
+  <text x="400" y="599" text-anchor="middle" font-size="10.5" font-weight="bold" fill="white">
+    4.  Parsear y validar argumentos
+  </text>
+  <text x="400" y="616" text-anchor="middle" font-size="9.5" fill="#D5F5E3" font-family="Consolas,monospace">
+    args = json.loads(final_call.arguments)
+  </text>
+  <text x="400" y="632" text-anchor="middle" font-size="9.5" fill="#D5F5E3" font-family="Consolas,monospace">
+    schema.model_validate(args)
+  </text>
+  <line x1="400" y1="640" x2="400" y2="658" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- DECISION 2: valid? -->
+  <!-- center (400, 689), half_w=98, half_h=31 -->
+  <polygon points="400,658 498,689 400,720 302,689" fill="#FEF9E7" stroke="#D4AC0D" stroke-width="1.5"/>
+  <text x="400" y="683" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#7D6608">
+    ¿Los argumentos son JSON válido
+  </text>
+  <text x="400" y="698" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#7D6608">
+    y cumplen el schema ?
+  </text>
+
+  <!-- D2 YES → down to SUCCESS -->
+  <line x1="400" y1="720" x2="400" y2="742" stroke="#1E8449" stroke-width="1.5" marker-end="url(#arrG)"/>
+  <text x="413" y="735" font-size="9.5" fill="#1E8449" font-weight="bold">SÍ</text>
+
+  <!-- D2 NO → left to Repair 2 -->
+  <line x1="302" y1="689" x2="213" y2="689" stroke="#C0392B" stroke-width="1.5" marker-end="url(#arrR)"/>
+  <text x="252" y="681" text-anchor="middle" font-size="9.5" fill="#C0392B" font-weight="bold">NO</text>
+
+  <!-- REPAIR BLOCK 2 (validation error) -->
+  <rect x="18" y="645" width="193" height="128" fill="#FDEDEC" rx="6" stroke="#E74C3C" stroke-width="1.5"/>
+  <text x="114" y="664" text-anchor="middle" font-size="10" font-weight="bold" fill="#922B21">Reparación  Tipo 2</text>
+  <text x="114" y="680" text-anchor="middle" font-size="8.5" fill="#555">JSONDecodeError / ValidationError</text>
+  <text x="114" y="695" text-anchor="middle" font-size="8.5" fill="#555" font-family="Consolas,monospace">repair_blocks.append([</text>
+  <text x="114" y="709" text-anchor="middle" font-size="8.5" fill="#555" font-family="Consolas,monospace">&#160;&#160;assistant(tool_call),</text>
+  <text x="114" y="723" text-anchor="middle" font-size="8.5" fill="#555" font-family="Consolas,monospace">&#160;&#160;tool(error_msg),</text>
+  <text x="114" y="737" text-anchor="middle" font-size="8.5" fill="#555" font-family="Consolas,monospace">&#160;&#160;user(repair_msg)])</text>
+  <text x="114" y="763" text-anchor="middle" font-size="8" fill="#C0392B" font-style="italic">→ siguiente iteración</text>
+
+  <!-- SUCCESS BOX -->
+  <rect x="215" y="742" width="370" height="58" fill="#1E8449" rx="8"/>
+  <text x="400" y="766" text-anchor="middle" font-size="11" font-weight="bold" fill="white">
+    ✓  RETORNO EXITOSO
+  </text>
+  <text x="400" y="785" text-anchor="middle" font-size="9.5" fill="#A9DFBF" font-family="Consolas,monospace">
+    return schema.model_validate(args)
+  </text>
+
+  <!-- Note inside loop at bottom -->
+  <text x="400" y="818" text-anchor="middle" font-size="8.5" fill="#AAA" font-style="italic">
+    si ningún intento tuvo éxito  →  al salir del bucle se lanza excepción
+  </text>
+
+  <!-- ═══════════ EXHAUSTION PATH (outside loop) ═══════════ -->
+  <line x1="400" y1="835" x2="400" y2="858" stroke="#C0392B" stroke-width="1.5" marker-end="url(#arrR)"/>
+
+  <!-- ValueError box -->
+  <rect x="215" y="858" width="370" height="62" fill="#922B21" rx="6"/>
+  <text x="400" y="879" text-anchor="middle" font-size="10.5" font-weight="bold" fill="white">
+    ✗  FALLO  —  raise ValueError
+  </text>
+  <text x="400" y="896" text-anchor="middle" font-size="9" fill="#F5B7B1" font-family="Consolas,monospace">
+    f"structured_call falló tras N intentos: {last_error}"
+  </text>
+  <text x="400" y="912" text-anchor="middle" font-size="8.5" fill="#FADBD8">
+    last_error:  texto libre,  JSON inválido  o  ValidationError
+  </text>
+
+  <!-- END circle -->
+  <line x1="400" y1="920" x2="400" y2="940" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <circle cx="400" cy="952" r="12" fill="none" stroke="#333" stroke-width="2"/>
+  <circle cx="400" cy="952" r="7" fill="#333"/>
+
+  <!-- ═══════════ RETRY PATHS (dashed, left side) ═══════════ -->
+  <!--
+    Both repair blocks feed back to Step 2 via a shared vertical line at x=9.
+    Horizontal connectors from each repair block's left side go to the vertical.
+    The vertical runs from y=762 (below repair 2) up to y=362 (mid Step 2).
+    Arrow points right from (9,362) into Step 2 box.
+  -->
+
+  <!-- Shared vertical retry line: x=9, y=362..762 -->
+  <line x1="9" y1="362" x2="9" y2="762" stroke="#C0392B" stroke-width="1.2" stroke-dasharray="5,3"/>
+
+  <!-- Connector from Repair 1 left side → vertical -->
+  <!-- Repair 1 mid-y = 479 + 56 = 535 -->
+  <line x1="18" y1="535" x2="9" y2="535" stroke="#C0392B" stroke-width="1.2" stroke-dasharray="5,3"/>
+
+  <!-- Connector from Repair 2 left side → vertical -->
+  <!-- Repair 2 mid-y = 645 + 64 = 709 -->
+  <line x1="18" y1="709" x2="9" y2="709" stroke="#C0392B" stroke-width="1.2" stroke-dasharray="5,3"/>
+
+  <!-- Arrow from top of vertical into Step 2 -->
+  <line x1="9" y1="362" x2="215" y2="362" stroke="#C0392B" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#arrR)"/>
+
+  <!-- "retry" label rotated on vertical line -->
+  <text x="9" y="560" text-anchor="middle" font-size="8" fill="#C0392B"
+        font-style="italic" transform="rotate(-90,9,560)">retry</text>
+
+  <!-- ═══════════ SIDE ANNOTATIONS ═══════════ -->
+  <!-- Annotation for Step 2: explains context budget -->
+  <rect x="593" y="325" width="185" height="72" fill="#F9FBE7" rx="4" stroke="#AABB33" stroke-width="1"/>
+  <text x="685" y="341" text-anchor="middle" font-size="8.5" fill="#555" font-weight="bold">_structured_call_messages</text>
+  <text x="685" y="354" text-anchor="middle" font-size="8" fill="#666">Prioridad del contexto:</text>
+  <text x="685" y="367" text-anchor="middle" font-size="8" fill="#666">1. Último repair block (completo)</text>
+  <text x="685" y="380" text-anchor="middle" font-size="8" fill="#666">2. Mensaje inicial (si hay espacio)</text>
+  <text x="685" y="393" text-anchor="middle" font-size="8" fill="#666">3. Bloques anteriores (completos)</text>
+  <line x1="585" y1="361" x2="585" y2="361" stroke="none"/>
+  <!-- Connector line from annotation to Step 2 box right edge -->
+  <line x1="593" y1="361" x2="585" y2="361" stroke="#AABB33" stroke-width="1"/>
+  <line x1="585" y1="361" x2="585" y2="362" stroke="#AABB33" stroke-width="1"/>
+
+  <!-- Annotation for Repair 2: explains 3-message structure -->
+  <rect x="593" y="655" width="185" height="62" fill="#FEF5E7" rx="4" stroke="#E8A040" stroke-width="1"/>
+  <text x="685" y="671" text-anchor="middle" font-size="8.5" fill="#555" font-weight="bold">Repair Tipo 2 — 3 mensajes</text>
+  <text x="685" y="684" text-anchor="middle" font-size="8" fill="#666">assistant: tool_call fallido</text>
+  <text x="685" y="697" text-anchor="middle" font-size="8" fill="#666">tool: error de validación</text>
+  <text x="685" y="710" text-anchor="middle" font-size="8" fill="#666">user: prompt + error + instrucción</text>
+  <line x1="593" y1="683" x2="585" y2="683" stroke="#E8A040" stroke-width="1"/>
+
+</svg>
