@@ -544,7 +544,7 @@ class LLMClient:
         # falsos positivos cuando las credenciales AWS están en el
         # entorno por otras razones (S3, CI/CD, etc.).
         if os.environ.get("OLLAMA_HOST"):
-            return LLMClient(OllamaProvider())
+            return LLMClient(OllamaProvider(model="llama3.1", num_ctx=32768))
         if os.environ.get("BEDROCK_MODEL_ID"):
             return LLMClient(BedrockProvider())
         raise RuntimeError("Define OLLAMA_HOST o BEDROCK_MODEL_ID")
