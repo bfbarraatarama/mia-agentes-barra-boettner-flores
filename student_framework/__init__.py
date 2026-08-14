@@ -14,6 +14,7 @@ from mia_agents.llm_client import LLMClient
 from mia_agents.protocols import Agent
 
 from .agent import MyAgent
+
 from student_framework.tools.calculator import  calculator, calculator_schema
 from student_framework.tools.distance_converter import distance_converter, distance_converter_schema
 from student_framework.tools.file_reader import file_reader, file_reader_schema
@@ -33,16 +34,24 @@ def build_agent(config: dict[str, Any] | None = None) -> Agent:
     config = config or {} #NO CAMBIAR
     llm = config.get("llm_client") or LLMClient.from_env() #NO CAMBIAR
     kwargs: dict[str, Any] = {"llm_client": llm} #NO CAMBIAR
-    
+
+    if "system_prompt" in config:
+        kwargs["system_prompt"] = config["system_prompt"]
+
     if "max_history_messages" in config:
         kwargs["max_history_messages"] = config["max_history_messages"]
 
+    if "max_iterations" in config:
+        kwargs["max_iterations"] = config["max_iterations"]
+
     agent = MyAgent(**kwargs)
-    agent.register_tool(calculator, calculator_schema )
-    agent.register_tool(distance_converter, distance_converter_schema)
-    agent.register_tool(file_reader, file_reader_schema)
-    # Ejemplo de registro (elimínenlo cuando sus herramientas estén listas):
-    # from student_framework.tools.example import reverse_string, reverse_string_schema
-    # agent.register_tool(reverse_string, reverse_string_schema)
+
+    if config.get("register_default_tools", True):
+        agent.register_tool(calculator, calculator_schema)
+        agent.register_tool(
+            distance_converter,
+            distance_converter_schema,
+        )
+        agent.register_tool(file_reader, file_reader_schema)
 
     return agent
