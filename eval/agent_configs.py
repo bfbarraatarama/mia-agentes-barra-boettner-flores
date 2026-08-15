@@ -10,8 +10,8 @@ from student_framework.escape_room import ESCAPE_ROOM_MINIMAL_SYSTEM_PROMPT
 MINIMAL_AGENT_CONFIG: dict[str, Any] = {
     "system_prompt": ESCAPE_ROOM_MINIMAL_SYSTEM_PROMPT,
     "register_default_tools": False,
-    "max_iterations": 100,
-    "max_history_messages": 50,
+    "max_iterations": 40,
+    "max_history_messages": 100,
 }
 
 

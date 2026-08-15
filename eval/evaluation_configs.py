@@ -15,16 +15,20 @@ M3_EVALUATION: dict[str, Any] = {
             "agent_config": "minimal",
             "llm_config": "qwen2.5:7b",
         },
+        {
+            "agent_config": "minimal",
+            "llm_config": "nova-lite",
+        },
     ],
     "scenarios": [
-        "study-with-key",
-        "color-locks",
-        "apartment-keys",
-        "library-search",
-        "office-sequence",
-        "extreme-archive",
-        "vault-combination",
-        "backtracking-vault",
+        "study-with-key"
+    #    "color-locks",
+    #    "apartment-keys",
+    #    "library-search",
+    #    "office-sequence",
+    #    "extreme-archive",
+    #    "vault-combination",
+    #    "backtracking-vault",
     ],
     "runs_per_case": 5,
     "metrics": [
