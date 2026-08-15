@@ -72,7 +72,14 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     _add_scaffold_to_path()
 
+    from mia_agents._env import load_env_files
     from mia_agents.llm_client import BedrockProvider, LLMClient
+
+    # Sin esto, `_missing_required_env()` mira un entorno donde el `.env`
+    # todavía no se cargó: el script abortaba pidiendo BEDROCK_MODEL_ID
+    # aunque estuviera configurado. `LLMClient.from_env()` hace esta misma
+    # llamada, pero acá construimos el provider a mano.
+    load_env_files()
 
     args = _build_parser().parse_args(argv)
     missing = _missing_required_env()

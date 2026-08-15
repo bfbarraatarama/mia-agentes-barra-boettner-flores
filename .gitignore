@@ -3,3 +3,8 @@
 **/__pycache__/
 **/.DS_Store
 .idea
+
+# Credenciales del proveedor LLM. La plantilla versionada es .env.example.
+.env
+.env.*
+!.env.example
