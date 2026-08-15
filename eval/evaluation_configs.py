@@ -20,6 +20,9 @@ M3_EVALUATION: dict[str, Any] = {
             "llm_config": "nova-lite",
         },
     ],
+    "experiment_configs": [
+        "single_attempt",
+    ],
     "scenarios": [
         "study-with-key"
     #    "color-locks",
@@ -30,7 +33,7 @@ M3_EVALUATION: dict[str, Any] = {
     #    "vault-combination",
     #    "backtracking-vault",
     ],
-    "runs_per_case": 5,
+    "trials_per_case": 5,
     "metrics": [
         "success_rate",
     ],

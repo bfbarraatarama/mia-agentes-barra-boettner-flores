@@ -28,25 +28,27 @@ SUCCESS_RATE_PLOT_PATH = RESULTS_DIR / "success_rate.png"
 
 
 def print_progress(
-    completed_runs: int,
-    total_runs: int,
+    completed_trials: int,
+    total_trials: int,
     agent_config: str,
     llm_config: str,
+    experiment_config_name: str,
     scenario: str,
-    run_index: int,
-    runs_count: int,
+    trial_index: int,
+    trials_count: int,
     achieved: bool,
 ) -> None:
     """Muestra el progreso de la evaluación."""
 
-    percentage = 100 * completed_runs / total_runs
+    percentage = 100 * completed_trials / total_trials
     status = "SUCCESS" if achieved else "FAIL"
 
     print(
-        f"[{completed_runs}/{total_runs} | {percentage:5.1f}%] "
+        f"[{completed_trials}/{total_trials} | {percentage:5.1f}%] "
         f"[{status}] "
-        f"{agent_config} / {llm_config} / {scenario} "
-        f"(run {run_index}/{runs_count})",
+        f"{agent_config} / {llm_config} / "
+        f"{experiment_config_name} / {scenario} "
+        f"(trial {trial_index}/{trials_count})",
         flush=True,
     )
 
