@@ -1,0 +1,150 @@
+{
+  "eval_id": "m3-baseline-eval-001",
+  "run_id": "m3-baseline-run-001",
+  "results": [
+    {
+      "agent_config": "minimal",
+      "llm_config": "llama3.1",
+      "trial_config": "single_attempt",
+      "scenario": "study-with-key",
+      "metrics": {
+        "success_rate": 0.0
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "llama3.1",
+      "trial_config": "single_attempt",
+      "scenario": "color-locks",
+      "metrics": {
+        "success_rate": 0.0
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "llama3.1",
+      "trial_config": "single_attempt",
+      "scenario": "apartment-keys",
+      "metrics": {
+        "success_rate": 0.6
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "llama3.1",
+      "trial_config": "single_attempt",
+      "scenario": "library-search",
+      "metrics": {
+        "success_rate": 0.0
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "llama3.1",
+      "trial_config": "single_attempt",
+      "scenario": "office-sequence",
+      "metrics": {
+        "success_rate": 0.0
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "llama3.1",
+      "trial_config": "single_attempt",
+      "scenario": "extreme-archive",
+      "metrics": {
+        "success_rate": 0.0
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "llama3.1",
+      "trial_config": "single_attempt",
+      "scenario": "vault-combination",
+      "metrics": {
+        "success_rate": 0.0
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "llama3.1",
+      "trial_config": "single_attempt",
+      "scenario": "backtracking-vault",
+      "metrics": {
+        "success_rate": 0.0
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "qwen2.5:7b",
+      "trial_config": "single_attempt",
+      "scenario": "study-with-key",
+      "metrics": {
+        "success_rate": 1.0
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "qwen2.5:7b",
+      "trial_config": "single_attempt",
+      "scenario": "color-locks",
+      "metrics": {
+        "success_rate": 0.4
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "qwen2.5:7b",
+      "trial_config": "single_attempt",
+      "scenario": "apartment-keys",
+      "metrics": {
+        "success_rate": 0.2
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "qwen2.5:7b",
+      "trial_config": "single_attempt",
+      "scenario": "library-search",
+      "metrics": {
+        "success_rate": 0.0
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "qwen2.5:7b",
+      "trial_config": "single_attempt",
+      "scenario": "office-sequence",
+      "metrics": {
+        "success_rate": 0.0
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "qwen2.5:7b",
+      "trial_config": "single_attempt",
+      "scenario": "extreme-archive",
+      "metrics": {
+        "success_rate": 0.2
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "qwen2.5:7b",
+      "trial_config": "single_attempt",
+      "scenario": "vault-combination",
+      "metrics": {
+        "success_rate": 0.0
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "qwen2.5:7b",
+      "trial_config": "single_attempt",
+      "scenario": "backtracking-vault",
+      "metrics": {
+        "success_rate": 0.0
+      }
+    }
+  ]
+}

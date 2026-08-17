@@ -6,8 +6,8 @@ from mia_agents.testing import MockLLMClient
 from mia_agents.types import LLMResponse, ToolCall
 from mia_world import Item, Room, Scenario, World
 
-from eval import experiment
-from eval.experiment_configs import CONTINUATION_MESSAGE
+from eval import experiment, run_execution
+from eval.trial_configs import CONTINUATION_MESSAGE
 
 
 def test_run_trial_continues_after_incomplete_final_response(
@@ -68,14 +68,14 @@ def test_run_trial_continues_after_incomplete_final_response(
     monkeypatch.setattr(
         experiment,
         "build_llm_client",
-        lambda name: mock,
+        lambda config: mock,
     )
 
     trial = experiment.run_trial(
         scenario_spec="test-trial-continuation",
-        agent_config_name="minimal",
-        llm_config_name="llama3.1",
-        experiment_config={
+        agent_config=experiment.AGENT_CONFIGS["minimal"],
+        llm_config=experiment.LLM_CONFIGS["llama3.1"],
+        trial_config={
             "max_attempts": 2,
             "continuation_message": CONTINUATION_MESSAGE,
         },
@@ -180,14 +180,14 @@ def test_run_trial_stops_when_max_attempts_is_reached(
     monkeypatch.setattr(
         experiment,
         "build_llm_client",
-        lambda name: mock,
+        lambda config: mock,
     )
 
     trial = experiment.run_trial(
         scenario_spec="test-max-attempts",
-        agent_config_name="minimal",
-        llm_config_name="llama3.1",
-        experiment_config={
+        agent_config=experiment.AGENT_CONFIGS["minimal"],
+        llm_config=experiment.LLM_CONFIGS["llama3.1"],
+        trial_config={
             "max_attempts": 1,
             "continuation_message": CONTINUATION_MESSAGE,
         },
@@ -253,11 +253,6 @@ def test_run_trial_stops_after_run_error(
     agent_config = dict(experiment.AGENT_CONFIGS["minimal"])
     agent_config["max_iterations"] = 1
 
-    monkeypatch.setitem(
-        experiment.AGENT_CONFIGS,
-        "minimal",
-        agent_config,
-    )
     monkeypatch.setattr(
         experiment,
         "_resolve_scenario",
@@ -266,14 +261,14 @@ def test_run_trial_stops_after_run_error(
     monkeypatch.setattr(
         experiment,
         "build_llm_client",
-        lambda name: mock,
+        lambda config: mock,
     )
 
     trial = experiment.run_trial(
         scenario_spec="test-run-error",
-        agent_config_name="minimal",
-        llm_config_name="llama3.1",
-        experiment_config={
+        agent_config=agent_config,
+        llm_config=experiment.LLM_CONFIGS["llama3.1"],
+        trial_config={
             "max_attempts": 2,
             "continuation_message": CONTINUATION_MESSAGE,
         },
@@ -339,11 +334,6 @@ def test_run_trial_succeeds_when_goal_is_reached_despite_run_error(
     agent_config = dict(experiment.AGENT_CONFIGS["minimal"])
     agent_config["max_iterations"] = 1
 
-    monkeypatch.setitem(
-        experiment.AGENT_CONFIGS,
-        "minimal",
-        agent_config,
-    )
     monkeypatch.setattr(
         experiment,
         "_resolve_scenario",
@@ -352,14 +342,14 @@ def test_run_trial_succeeds_when_goal_is_reached_despite_run_error(
     monkeypatch.setattr(
         experiment,
         "build_llm_client",
-        lambda name: mock,
+        lambda config: mock,
     )
 
     trial = experiment.run_trial(
         scenario_spec="test-goal-before-run-error",
-        agent_config_name="minimal",
-        llm_config_name="llama3.1",
-        experiment_config={
+        agent_config=agent_config,
+        llm_config=experiment.LLM_CONFIGS["llama3.1"],
+        trial_config={
             "max_attempts": 2,
             "continuation_message": CONTINUATION_MESSAGE,
         },
@@ -374,10 +364,10 @@ def test_run_trial_succeeds_when_goal_is_reached_despite_run_error(
     assert trial["attempts"][0]["agent_result"]["error"] is not None
 
 
-def test_run_experiment_uses_independent_trials(
+def test_run_case_uses_independent_trials(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Cada trial de un experimento usa un World y un agente independientes."""
+    """Cada trial de un caso usa un World y un agente independientes."""
 
     def make_scenario() -> Scenario:
         return Scenario(
@@ -442,6 +432,7 @@ def test_run_experiment_uses_independent_trials(
 
     worlds = []
     agents = []
+    completed_trials = []
 
     real_make_world_tools = experiment.make_world_tools
     real_build_agent = experiment.build_agent
@@ -463,7 +454,7 @@ def test_run_experiment_uses_independent_trials(
     monkeypatch.setattr(
         experiment,
         "build_llm_client",
-        lambda name: next(mock_iterator),
+        lambda config: next(mock_iterator),
     )
     monkeypatch.setattr(
         experiment,
@@ -476,21 +467,28 @@ def test_run_experiment_uses_independent_trials(
         recording_build_agent,
     )
 
-    result = experiment.run_experiment(
+    result = experiment.run_case(
         scenario_spec="test-independent-trials",
         agent_config_name="minimal",
         llm_config_name="llama3.1",
-        experiment_config={
+        agent_config=experiment.AGENT_CONFIGS["minimal"],
+        llm_config=experiment.LLM_CONFIGS["llama3.1"],
+        trial_config={
             "max_attempts": 1,
             "continuation_message": CONTINUATION_MESSAGE,
         },
-        trials_count=2,
+        trial_indices=[3, 5],
+        trial_callback=completed_trials.append,
     )
 
-    assert result["requested_trials"] == 2
+    assert result["requested_trial_indices"] == [3, 5]
     assert len(result["trials"]) == 2
 
-    assert [trial["trial_index"] for trial in result["trials"]] == [1, 2]
+    assert [trial["trial_index"] for trial in result["trials"]] == [3, 5]
+    assert [
+        trial["trial_index"]
+        for trial in completed_trials
+    ] == [3, 5]
     assert all(trial["goal_achieved"] for trial in result["trials"])
 
     assert len(worlds) == 2
@@ -503,4 +501,196 @@ def test_run_experiment_uses_independent_trials(
 
     assert mocks[0].call_count == 2
     assert mocks[1].call_count == 2
-    
+
+
+def test_build_pending_run_plan_skips_completed_trials() -> None:
+    """El plan se deriva del manifest y excluye trials persistidos."""
+
+    manifest = {
+        "run": {
+            "systems": [
+                {
+                    "agent_config": "agent-a",
+                    "llm_config": "llm-a",
+                },
+            ],
+            "trial_configs": [
+                "experiment-a",
+            ],
+            "scenarios": [
+                "scenario-a",
+            ],
+            "trials_per_case": 3,
+        },
+        "agent_configs": {
+            "agent-a": {
+                "max_iterations": 10,
+            },
+        },
+        "llm_configs": {
+            "llm-a": {
+                "provider": "test",
+            },
+        },
+        "trial_configs": {
+            "experiment-a": {
+                "max_attempts": 1,
+            },
+        },
+    }
+
+    run_result = {
+        "results": [
+            {
+                "agent_config": "agent-a",
+                "llm_config": "llm-a",
+                "trial_config": "experiment-a",
+                "scenario": "scenario-a",
+                "trials": [
+                    {
+                        "trial_index": 2,
+                    },
+                ],
+            },
+        ],
+    }
+
+    plan = run_execution._build_pending_run_plan(
+        manifest,
+        run_result,
+    )
+
+    assert plan == {
+        "cases": [
+            {
+                "agent_config": "agent-a",
+                "llm_config": "llm-a",
+                "trial_config": "experiment-a",
+                "scenario": "scenario-a",
+                "trial_indices": [1, 3],
+            },
+        ],
+        "agent_configs": {
+            "agent-a": {
+                "max_iterations": 10,
+            },
+        },
+        "llm_configs": {
+            "llm-a": {
+                "provider": "test",
+            },
+        },
+        "trial_configs": {
+            "experiment-a": {
+                "max_attempts": 1,
+            },
+        },
+    }
+
+
+def test_execute_pending_trials_reads_run_and_executes_pending_trials(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    """El motor parte del estado persistido y ejecuta solo pendientes."""
+
+    manifest = {
+        "run": {
+            "systems": [
+                {
+                    "agent_config": "agent-a",
+                    "llm_config": "llm-a",
+                },
+            ],
+            "trial_configs": [
+                "experiment-a",
+            ],
+            "scenarios": [
+                "scenario-a",
+            ],
+            "trials_per_case": 2,
+        },
+        "agent_configs": {
+            "agent-a": {
+                "max_iterations": 10,
+            },
+        },
+        "llm_configs": {
+            "llm-a": {
+                "provider": "test",
+            },
+        },
+        "trial_configs": {
+            "experiment-a": {
+                "max_attempts": 1,
+            },
+        },
+    }
+
+    persisted = {
+        "results": [
+            {
+                "agent_config": "agent-a",
+                "llm_config": "llm-a",
+                "trial_config": "experiment-a",
+                "scenario": "scenario-a",
+                "trials": [
+                    {
+                        "trial_index": 1,
+                        "goal_achieved": False,
+                        "goal_reason": "anterior",
+                        "attempts": [],
+                    },
+                ],
+            },
+        ],
+    }
+
+    monkeypatch.setattr(
+        run_execution.persistence,
+        "load_run_manifest",
+        lambda run_id, *, results_dir: manifest,
+    )
+    monkeypatch.setattr(
+        run_execution.persistence,
+        "load_run_results",
+        lambda run_id, *, results_dir: persisted,
+    )
+
+    writes = []
+
+    monkeypatch.setattr(
+        run_execution.persistence,
+        "write_run_results",
+        lambda run_id, data, *, results_dir: writes.append(data),
+    )
+
+    def fake_run_case(**kwargs):
+        assert kwargs["trial_indices"] == [2]
+
+        kwargs["trial_callback"]({
+            "trial_index": 2,
+            "goal_achieved": True,
+            "goal_reason": "controlado",
+            "attempts": [],
+        })
+
+    monkeypatch.setattr(
+        run_execution,
+        "run_case",
+        fake_run_case,
+    )
+
+    result = run_execution._execute_pending_trials(
+        "test-run",
+        results_dir=tmp_path,
+    )
+
+    assert [
+        trial["trial_index"]
+        for trial in result["results"][0]["trials"]
+    ] == [1, 2]
+
+    assert writes
+    assert writes[-1] == result
+    assert "metrics" not in result["results"][0]

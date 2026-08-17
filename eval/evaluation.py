@@ -1,85 +1,129 @@
-"""Ejecución de evaluaciones para M3."""
+"""Evaluación derivada de corridas persistidas de M3."""
 
 from __future__ import annotations
-from collections.abc import Callable
 
+from pathlib import Path
 from typing import Any
 
-from eval.experiment import run_experiment
-from eval.experiment_configs import EXPERIMENT_CONFIGS
+from eval import persistence
 from eval.metrics import METRICS
+from eval.run_execution import is_run_complete
 
 
-def run_evaluation(
-    config: dict[str, Any],
-    progress_callback: Callable[
-        [int, int, str, str, str, str, int, int, bool],
-        None,
-    ] | None = None,
+def _resolve_metrics(
+    evaluation_config: dict[str, Any],
 ) -> dict[str, Any]:
-    """Ejecuta una configuración de evaluación y calcula sus métricas."""
+    """Resuelve las métricas declaradas por una evaluación."""
 
-    results = []
-    completed_trials = 0
-    total_trials = (
-        len(config["systems"])
-        * len(config["experiment_configs"])
-        * len(config["scenarios"])
-        * config["trials_per_case"]
+    resolved = {}
+
+    for metric_name in evaluation_config["metrics"]:
+        if metric_name not in METRICS:
+            raise ValueError(
+                f"Métrica de evaluación desconocida: {metric_name!r}."
+            )
+
+        resolved[metric_name] = METRICS[metric_name]
+
+    return resolved
+
+
+def create_evaluation(
+    eval_id: str,
+    run_id: str,
+    evaluation_config: dict[str, Any],
+    *,
+    runs_dir: Path = persistence.RUNS_DIR,
+    evaluations_dir: Path = persistence.EVALUATIONS_DIR,
+) -> None:
+    """Crea una evaluación nueva sobre una corrida completa."""
+
+    try:
+        manifest = persistence.load_run_manifest(
+            run_id,
+            results_dir=runs_dir,
+        )
+        run_result = persistence.load_run_results(
+            run_id,
+            results_dir=runs_dir,
+        )
+    except FileNotFoundError as error:
+        raise FileNotFoundError(
+            f"No se puede crear el eval_id {eval_id!r}: "
+            f"el run_id {run_id!r} no tiene ambos artefactos."
+        ) from error
+
+    if not is_run_complete(
+        manifest,
+        run_result,
+    ):
+        raise ValueError(
+            f"No se puede crear el eval_id {eval_id!r}: "
+            f"el run_id {run_id!r} no está completo."
+        )
+
+    persistence.initialize_evaluation(
+        eval_id=eval_id,
+        run_id=run_id,
+        evaluation_config=evaluation_config,
+        results_dir=evaluations_dir,
     )
 
-    for system in config["systems"]:
-        for experiment_config_name in config["experiment_configs"]:
-            for scenario_spec in config["scenarios"]:
-                def on_trial_complete(
-                    trial_index: int,
-                    trials_count: int,
-                    achieved: bool,
-                ) -> None:
-                    nonlocal completed_trials
 
-                    completed_trials += 1
+def start_evaluation(
+    eval_id: str,
+    run_id: str,
+    evaluation_config: dict[str, Any],
+    *,
+    runs_dir: Path = persistence.RUNS_DIR,
+    evaluations_dir: Path = persistence.EVALUATIONS_DIR,
+) -> dict[str, Any]:
+    """Crea y ejecuta una evaluación sobre una corrida completa."""
 
-                    if progress_callback is not None:
-                        progress_callback(
-                            completed_trials,
-                            total_trials,
-                            system["agent_config"],
-                            system["llm_config"],
-                            experiment_config_name,
-                            scenario_spec,
-                            trial_index,
-                            trials_count,
-                            achieved,
-                        )
+    metric_functions = _resolve_metrics(
+        evaluation_config
+    )
 
-                experiment = run_experiment(
-                    scenario_spec=scenario_spec,
-                    agent_config_name=system["agent_config"],
-                    llm_config_name=system["llm_config"],
-                    experiment_config=EXPERIMENT_CONFIGS[
-                        experiment_config_name
-                    ],
-                    trials_count=config["trials_per_case"],
-                    progress_callback=on_trial_complete,
-                )
+    create_evaluation(
+        eval_id=eval_id,
+        run_id=run_id,
+        evaluation_config=evaluation_config,
+        runs_dir=runs_dir,
+        evaluations_dir=evaluations_dir,
+    )
 
-                metric_results = {
-                    metric_name: METRICS[metric_name](
-                        experiment["trials"]
-                    )
-                    for metric_name in config["metrics"]
-                }
+    run_result = persistence.load_run_results(
+        run_id,
+        results_dir=runs_dir,
+    )
 
-                evaluated_experiment = dict(experiment)
-                evaluated_experiment[
-                    "experiment_config_name"
-                ] = experiment_config_name
-                evaluated_experiment["metrics"] = metric_results
+    results = []
 
-                results.append(evaluated_experiment)
+    for case in run_result["results"]:
+        metrics = {
+            metric_name: metric_function(case["trials"])
+            for metric_name, metric_function
+            in metric_functions.items()
+        }
 
-    return {
-        "evaluation_config": config,
+        results.append({
+            "agent_config": case["agent_config"],
+            "llm_config": case["llm_config"],
+            "trial_config": case["trial_config"],
+            "scenario": case["scenario"],
+            "metrics": metrics,
+        })
+
+    evaluation_result = {
+        "eval_id": eval_id,
+        "run_id": run_id,
         "results": results,
     }
+
+    persistence.write_evaluation_results(
+        eval_id,
+        evaluation_result,
+        results_dir=evaluations_dir,
+    )
+
+    return evaluation_result

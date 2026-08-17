@@ -37,20 +37,20 @@ def print_success_rate_summary(
     """Muestra el success rate por sistema, configuración y escenario."""
 
     print(
-        "Success rate por sistema, configuración de experimentación "
+        "Success rate por sistema, configuración de trial "
         "y escenario:"
     )
 
     for result in evaluation_result["results"]:
         agent_config = result["agent_config"]
         llm_config = result["llm_config"]
-        experiment_config_name = result["experiment_config_name"]
+        trial_config_name = result["trial_config"]
         scenario = result["scenario"]
         success_rate = result["metrics"]["success_rate"]
 
         print(
             f"- {agent_config} / {llm_config} / "
-            f"{experiment_config_name} / {scenario}: {success_rate:.3f}"
+            f"{trial_config_name} / {scenario}: {success_rate:.3f}"
         )
 
 
@@ -63,7 +63,7 @@ def plot_success_rate(
     results = evaluation_result["results"]
 
     systems = []
-    experiment_config_names = []
+    trial_config_names = []
     scenarios = []
 
     for result in results:
@@ -75,16 +75,15 @@ def plot_success_rate(
         if system not in systems:
             systems.append(system)
 
-        if result["experiment_config_name"] not in experiment_config_names:
-            experiment_config_names.append(result["experiment_config_name"])
+        if result["trial_config"] not in trial_config_names:
+            trial_config_names.append(result["trial_config"])
 
         if result["scenario"] not in scenarios:
             scenarios.append(result["scenario"])
-
     rates = {
         (
             (result["agent_config"], result["llm_config"]),
-            result["experiment_config_name"],
+            result["trial_config"],
             result["scenario"],
         ): result["metrics"]["success_rate"]
         for result in results
@@ -92,7 +91,7 @@ def plot_success_rate(
 
     x_positions = list(range(len(scenarios)))
     bar_width = 0.8 / (
-        len(systems) * len(experiment_config_names)
+        len(systems) * len(trial_config_names)
     )
 
     fig, ax = plt.subplots(figsize=(12, 6))
@@ -100,7 +99,7 @@ def plot_success_rate(
     series_index = 0
 
     for system in systems:
-        for experiment_config_name in experiment_config_names:
+        for trial_config_name in trial_config_names:
             positions = [
                 x
                 - 0.4
@@ -110,13 +109,13 @@ def plot_success_rate(
             ]
 
             values = [
-                rates[(system, experiment_config_name, scenario)]
+                rates[(system, trial_config_name, scenario)]
                 for scenario in scenarios
             ]
 
             label = (
                 f"{system[0]} / {system[1]} / "
-                f"{experiment_config_name}"
+                f"{trial_config_name}"
             )
 
             ax.bar(
@@ -138,7 +137,7 @@ def plot_success_rate(
         rotation=30,
         ha="right",
     )
-    ax.legend(title="Sistema / configuración de experimentación")
+    ax.legend(title="Sistema / configuración de trial")
 
     fig.tight_layout()
 

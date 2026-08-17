@@ -4,6 +4,8 @@ from typing import Any
 
 from mia_agents._env import load_env_files
 from mia_agents.llm_client import BedrockProvider, LLMClient, OllamaProvider
+from mia_agents.protocols import ToolSpecInput
+from mia_agents.types import LLMResponse
 
 
 PROVIDERS = {
@@ -31,11 +33,40 @@ LLM_CONFIGS: dict[str, dict[str, Any]] = {
 }
 
 
-def build_llm_client(config_name: str) -> LLMClient:
+class _ConfiguredLLMClient(LLMClient):
+    """LLMClient que fija los parámetros efectivos de inferencia."""
+
+    def __init__(
+        self,
+        provider,
+        temperature: float,
+    ) -> None:
+        super().__init__(provider)
+        self._temperature = temperature
+
+    def chat(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[ToolSpecInput] | None = None,
+        system: str | None = None,
+        temperature: float = 0.2,
+        response_format: dict[str, Any] | None = None,
+    ) -> LLMResponse:
+        return super().chat(
+            messages=messages,
+            tools=tools,
+            system=system,
+            temperature=self._temperature,
+            response_format=response_format,
+        )
+
+
+def build_llm_client(config: dict[str, Any]) -> LLMClient:
     load_env_files()
 
-    config = dict(LLM_CONFIGS[config_name])
+    config = dict(config)
     provider_name = config.pop("provider")
+    temperature = config.pop("temperature", 0.2)
 
     if provider_name not in PROVIDERS:
         raise ValueError(
@@ -43,6 +74,7 @@ def build_llm_client(config_name: str) -> LLMClient:
             f"Options: {sorted(PROVIDERS)}."
         )
 
-    return LLMClient(
-        PROVIDERS[provider_name](**config)
+    return _ConfiguredLLMClient(
+        PROVIDERS[provider_name](**config),
+        temperature=temperature,
     )

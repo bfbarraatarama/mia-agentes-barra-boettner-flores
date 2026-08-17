@@ -27,7 +27,7 @@ from mia_world import (
 )
 from student_framework import build_agent
 from eval.agent_configs import AGENT_CONFIGS
-from eval.experiment_configs import EXPERIMENT_CONFIGS
+from eval.trial_configs import TRIAL_CONFIGS
 from eval.llm_configs import LLM_CONFIGS, build_llm_client
 
 
@@ -91,12 +91,11 @@ def _resolve_scenario(spec: str) -> Scenario:
         f"Disponibles: {options}."
     )
 
-
 def run_trial(
     scenario_spec: str,
-    agent_config_name: str,
-    llm_config_name: str,
-    experiment_config: dict[str, Any],
+    agent_config: dict[str, Any],
+    llm_config: dict[str, Any],
+    trial_config: dict[str, Any],
     trial_index: int,
 ) -> dict[str, Any]:
     """Ejecuta un trial independiente sobre un escenario."""
@@ -105,15 +104,15 @@ def run_trial(
     world = scenario.initial_world
     trace_events: list[dict[str, Any]] = []
 
-    llm_client = build_llm_client(llm_config_name)
+    llm_client = build_llm_client(llm_config)
 
-    agent_config = dict(AGENT_CONFIGS[agent_config_name])
-    agent_config["llm_client"] = llm_client
-    agent_config["trace_callback"] = lambda event: trace_events.append(
+    agent_build_config = dict(agent_config)
+    agent_build_config["llm_client"] = llm_client
+    agent_build_config["trace_callback"] = lambda event: trace_events.append(
         _serialize_trace_event(event)
     )
 
-    agent = build_agent(agent_config)
+    agent = build_agent(agent_build_config)
 
     for tool, schema in make_world_tools(world):
         agent.register_tool(tool, schema)
@@ -123,7 +122,7 @@ def run_trial(
 
     for attempt_index in range(
         1,
-        experiment_config["max_attempts"] + 1,
+        trial_config["max_attempts"] + 1,
     ):
         trace_start = len(trace_events)
         result = agent.run(user_message)
@@ -143,7 +142,7 @@ def run_trial(
         if achieved or result.error is not None:
             break
 
-        user_message = experiment_config["continuation_message"]
+        user_message = trial_config["continuation_message"]
 
     final_attempt = attempts[-1]
 
@@ -155,44 +154,41 @@ def run_trial(
     }
 
 
-def run_experiment(
+def run_case(
     scenario_spec: str,
     agent_config_name: str,
     llm_config_name: str,
-    experiment_config: dict[str, Any],
-    trials_count: int,
-    progress_callback: Callable[[int, int, bool], None] | None = None,
+    agent_config: dict[str, Any],
+    llm_config: dict[str, Any],
+    trial_config: dict[str, Any],
+    trial_indices: list[int],
+    trial_callback: Callable[[dict[str, Any]], None] | None = None,
 ):
-
     trials = []
     scenario_metadata = _resolve_scenario(scenario_spec)
 
-    for trial_index in range(1, trials_count + 1):
+    for trial_index in trial_indices:
         trial = run_trial(
             scenario_spec=scenario_spec,
-            agent_config_name=agent_config_name,
-            llm_config_name=llm_config_name,
-            experiment_config=experiment_config,
+            agent_config=agent_config,
+            llm_config=llm_config,
+            trial_config=trial_config,
             trial_index=trial_index,
         )
 
         trials.append(trial)
 
-        if progress_callback is not None:
-            progress_callback(
-                trial_index,
-                trials_count,
-                trial["goal_achieved"],
-            )
+        if trial_callback is not None:
+            trial_callback(trial)
 
     output = {
         "agent_config": agent_config_name,
         "llm_config": llm_config_name,
-        "experiment_config": dict(experiment_config),
+        "trial_config": dict(trial_config),
         "scenario": scenario_metadata.id,
         "difficulty": scenario_metadata.difficulty,
         "goal": scenario_metadata.goal,
-        "requested_trials": trials_count,
+        "requested_trial_indices": list(trial_indices),
         "trials": trials,
     }
     return output
@@ -200,7 +196,7 @@ def run_experiment(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Ejecuta una evaluación individual de M3."
+        description="Ejecuta un caso individual de M3."
     )
     parser.add_argument(
         "--scenario",
@@ -220,28 +216,30 @@ def main(argv: list[str] | None = None) -> int:
         help="Configuración del LLM a utilizar.",
     )
     parser.add_argument(
-        "--experiment-config",
-        choices=sorted(EXPERIMENT_CONFIGS),
+        "--trial-config",
+        choices=sorted(TRIAL_CONFIGS),
         default="single_attempt",
-        help="Configuración de experimentación a utilizar.",
+        help="Configuración de trial a utilizar.",
     )
     parser.add_argument(
         "--trials",
         type=int,
         default=1,
-        help="Número de trials independientes del experimento.",
+        help="Número de trials independientes del caso.",
     )
     args = parser.parse_args(argv)
 
     if args.trials < 1:
         parser.error("--trials debe ser al menos 1.")
 
-    output = run_experiment(
+    output = run_case(
         scenario_spec=args.scenario,
         agent_config_name=args.agent_config,
         llm_config_name=args.llm_config,
-        experiment_config=EXPERIMENT_CONFIGS[args.experiment_config],
-        trials_count=args.trials,
+        agent_config=AGENT_CONFIGS[args.agent_config],
+        llm_config=LLM_CONFIGS[args.llm_config],
+        trial_config=TRIAL_CONFIGS[args.trial_config],
+        trial_indices=list(range(1, args.trials + 1)),
     )
 
     print(json.dumps(output, indent=2, ensure_ascii=False))

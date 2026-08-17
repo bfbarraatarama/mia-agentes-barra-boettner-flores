@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
 # Permite ejecutar exactamente:
 #     python eval/run.py
@@ -13,66 +14,95 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 
-from eval.evaluation import run_evaluation
-from eval.evaluation_configs import M3_EVALUATION
-from eval.report import (
-    plot_success_rate,
-    print_success_rate_summary,
-    save_evaluation_result,
-)
+from eval.evaluation import start_evaluation
+from eval.evaluation_configs import M3_EVALUATION_CONFIG
+from eval.persistence import EVALUATIONS_DIR, RUNS_DIR
+from eval.run_configs import M3_BASELINE_RUN_CONFIG
+from eval.run_execution import resume_run, start_run
+from eval.report import plot_success_rate, print_success_rate_summary
 
 
-RESULTS_DIR = REPO_ROOT / "eval" / "results"
-RESULTS_PATH = RESULTS_DIR / "evaluation.json"
-SUCCESS_RATE_PLOT_PATH = RESULTS_DIR / "success_rate.png"
+RUN_ID = "m3-baseline-run-001"
+EVAL_ID = "m3-baseline-eval-001"
+
+RUN_CONFIG = M3_BASELINE_RUN_CONFIG
+EVALUATION_CONFIG = M3_EVALUATION_CONFIG
 
 
 def print_progress(
     completed_trials: int,
     total_trials: int,
-    agent_config: str,
-    llm_config: str,
-    experiment_config_name: str,
-    scenario: str,
-    trial_index: int,
-    trials_count: int,
-    achieved: bool,
+    case: dict[str, str],
+    trial: dict[str, Any],
 ) -> None:
-    """Muestra el progreso de la evaluación."""
+    """Muestra el progreso de la corrida."""
 
     percentage = 100 * completed_trials / total_trials
-    status = "SUCCESS" if achieved else "FAIL"
+    status = "SUCCESS" if trial["goal_achieved"] else "FAIL"
 
     print(
         f"[{completed_trials}/{total_trials} | {percentage:5.1f}%] "
         f"[{status}] "
-        f"{agent_config} / {llm_config} / "
-        f"{experiment_config_name} / {scenario} "
-        f"(trial {trial_index}/{trials_count})",
+        f"{case['agent_config']} / {case['llm_config']} / "
+        f"{case['trial_config']} / {case['scenario']} "
+        f"(trial {trial['trial_index']})",
         flush=True,
     )
 
+
 def main() -> int:
-    result = run_evaluation(
-        M3_EVALUATION,
+    start_run(
+        run_id=RUN_ID,
+        run_config=RUN_CONFIG,
         progress_callback=print_progress,
     )
 
-    save_evaluation_result(
-        result,
-        RESULTS_PATH,
+    # Para reanudar una corrida interrumpida, comentar start_run(...)
+    # y utilizar en su lugar:
+    #
+    # resume_run(
+    #     run_id=RUN_ID,
+    #     progress_callback=print_progress,
+    # )
+
+    evaluation_result = start_evaluation(
+        eval_id=EVAL_ID,
+        run_id=RUN_ID,
+        evaluation_config=EVALUATION_CONFIG,
     )
 
-    print_success_rate_summary(result)
+    success_rate_plot_path = (
+        EVALUATIONS_DIR / f"{EVAL_ID}.success_rate.png"
+    )
 
+    print_success_rate_summary(
+        evaluation_result
+    )
     plot_success_rate(
-        result,
-        SUCCESS_RATE_PLOT_PATH,
+        evaluation_result,
+        success_rate_plot_path,
     )
 
     print()
-    print(f"Resultados completos: {RESULTS_PATH}")
-    print(f"Gráfico de success rate: {SUCCESS_RATE_PLOT_PATH}")
+    print(
+        "Manifest del run: "
+        f"{RUNS_DIR / f'{RUN_ID}.manifest.json'}"
+    )
+    print(
+        "Resultados del run: "
+        f"{RUNS_DIR / f'{RUN_ID}.json'}"
+    )
+    print(
+        "Manifest de la evaluación: "
+        f"{EVALUATIONS_DIR / f'{EVAL_ID}.manifest.json'}"
+    )
+    print(
+        "Resultados de la evaluación: "
+        f"{EVALUATIONS_DIR / f'{EVAL_ID}.json'}"
+    )
+    print(
+        f"Gráfico de success rate: {success_rate_plot_path}"
+    )
 
     return 0
 
