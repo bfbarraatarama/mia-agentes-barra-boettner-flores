@@ -34,6 +34,27 @@ from eval.llm_configs import LLM_CONFIGS, build_llm_client
 SCENARIOS_DIR = REPO_ROOT / "scenarios"
 
 
+def _serialize_trace_event(
+    event: dict[str, Any],
+) -> dict[str, Any]:
+    """Convierte un evento de traza a estructuras serializables."""
+
+    serialized = dict(event)
+
+    response = serialized.get("response")
+    if response is not None:
+        serialized["response"] = asdict(response)
+
+    error = serialized.get("error")
+    if error is not None:
+        serialized["error"] = {
+            "type": type(error).__name__,
+            "message": str(error),
+        }
+
+    return serialized
+
+
 def _resolve_scenario(spec: str) -> Scenario:
     """Resuelve un escenario por path, id o dificultad."""
 
@@ -82,11 +103,15 @@ def run_trial(
 
     scenario = _resolve_scenario(scenario_spec)
     world = scenario.initial_world
+    trace_events: list[dict[str, Any]] = []
 
     llm_client = build_llm_client(llm_config_name)
 
     agent_config = dict(AGENT_CONFIGS[agent_config_name])
     agent_config["llm_client"] = llm_client
+    agent_config["trace_callback"] = lambda event: trace_events.append(
+        _serialize_trace_event(event)
+    )
 
     agent = build_agent(agent_config)
 
@@ -100,7 +125,10 @@ def run_trial(
         1,
         experiment_config["max_attempts"] + 1,
     ):
+        trace_start = len(trace_events)
         result = agent.run(user_message)
+        trace = trace_events[trace_start:]
+
         achieved, reason = check_goal(world, scenario.goal)
 
         attempts.append({
@@ -109,6 +137,7 @@ def run_trial(
             "goal_achieved": achieved,
             "goal_reason": reason,
             "agent_result": asdict(result),
+            "trace": trace,
         })
 
         if achieved or result.error is not None:

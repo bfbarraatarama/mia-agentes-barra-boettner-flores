@@ -92,6 +92,30 @@ def test_run_trial_continues_after_incomplete_final_response(
     assert trial["attempts"][1]["user_message"] == CONTINUATION_MESSAGE
     assert trial["attempts"][1]["goal_achieved"] is True
 
+    first_trace = trial["attempts"][0]["trace"]
+    second_trace = trial["attempts"][1]["trace"]
+
+    assert [
+        event["type"]
+        for event in first_trace
+    ] == [
+        "llm_call",
+    ]
+
+    assert [
+        event["type"]
+        for event in second_trace
+    ] == [
+        "llm_call",
+        "tool_execution",
+        "llm_call",
+    ]
+
+    assert first_trace[0]["response"]["content"] == "Listo."
+    assert second_trace[-1]["response"]["content"] == "Ahora sí."
+
+    json.dumps(trial, ensure_ascii=False)
+
     assert mock.call_count == 3
     assert mock.calls[1]["messages"] == [
         {
