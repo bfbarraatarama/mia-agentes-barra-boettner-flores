@@ -496,7 +496,7 @@ def write_evaluation_results(
         results_path,
         evaluation_result,
     )
-    
+
 
 def initialize_evaluation(
     eval_id: str,
@@ -544,5 +544,6 @@ def initialize_evaluation(
             "eval_id": eval_id,
             "run_id": run_id,
             "results": [],
+            "analyses": {},
         },
     )

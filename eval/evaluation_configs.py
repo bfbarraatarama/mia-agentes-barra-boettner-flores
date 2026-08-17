@@ -9,4 +9,9 @@ M3_EVALUATION_CONFIG: dict[str, Any] = {
     "metrics": [
         "success_rate",
     ],
+    "analyses": [
+        "error_analysis",
+        # "cost_analysis",
+        # "qualitative_analysis",
+    ],
 }

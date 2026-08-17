@@ -1,12 +1,9 @@
-"""Análisis de errores sobre resultados de evaluación M3.
+"""Análisis de errores sobre evidencia persistida de M3.
 
-Lee un archivo evaluation.json (o cualquier archivo del mismo formato) y
-clasifica cada corrida fallida. Genera un .md con el 100% de los runs fallidos.
+Lee los artefactos de un run persistido y clasifica cada trial fallido.
+Genera un .md con el 100% de los trials fallidos.
 
-Compatible con ambas estructuras de resultados:
-  - Estructura antigua: result["runs"]   (un agente por run)
-  - Estructura nueva:   result["trials"] (un trial con varios attempts)
-    En este caso se clasifica usando el último attempt de cada trial.
+Cada trial se clasifica usando su último attempt.
 
 Taxonomía de modos de fallo:
     context_overflow   — se quedó sin ventana de historial (max_history_messages)
@@ -19,9 +16,10 @@ Taxonomía de modos de fallo:
     planning_failure   — exploró correctamente pero no llegó al objetivo
 
 Uso:
-    python eval/error_analysis.py
-    python eval/error_analysis.py --results eval/results/evaluation.json
-    python eval/error_analysis.py --no-save   (solo imprime, no guarda .md)
+    python eval/error_analysis.py --run-id <run_id>
+    python eval/error_analysis.py \
+        --run-id <run_id> \
+        --output <ruta.md>
 """
 
 from __future__ import annotations
@@ -32,8 +30,7 @@ from collections import defaultdict
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_RESULTS = REPO_ROOT / "eval" / "results" / "evaluation.json"
-DEFAULT_OUTPUT = REPO_ROOT / "eval" / "results" / "error_analysis.md"
+RUNS_DIR = REPO_ROOT / "eval" / "results" / "runs"
 
 MULTI_ROOM_SCENARIOS = {
     "apartment-keys",
@@ -65,14 +62,14 @@ _FALSE_SUCCESS_MARKERS = [
 ]
 
 
-def classify_run(run: dict, scenario: str) -> tuple[str, str]:
-    """Clasifica un run fallido. Devuelve (modo, razón breve)."""
+def classify_trial(trial: dict, scenario: str) -> tuple[str, str]:
+    """Clasifica un trial fallido. Devuelve (modo, razón breve)."""
 
-    answer = run["agent_result"].get("answer") or ""
+    answer = trial["agent_result"].get("answer") or ""
     answer_lower = answer.lower()
-    agent_error = run["agent_result"].get("error") or ""
-    steps = run["agent_result"].get("steps") or []
-    goal_reason = run.get("goal_reason", "")
+    agent_error = trial["agent_result"].get("error") or ""
+    steps = trial["agent_result"].get("steps") or []
+    goal_reason = trial.get("goal_reason", "")
 
     # 1. context_overflow
     if "max_history_messages" in agent_error or "max_history_messages" in answer:
@@ -116,60 +113,57 @@ def classify_run(run: dict, scenario: str) -> tuple[str, str]:
     return "planning_failure", f"exploró {n_steps} pasos sin alcanzar el objetivo"
 
 
-def analyze(results_path: Path) -> dict:
-    with open(results_path, encoding="utf-8") as f:
-        data = json.load(f)
+def analyze_errors(
+    run_manifest: dict,
+    run_result: dict,
+) -> dict:
+    """Analiza todos los trials fallidos de un run."""
+
+    run_id = run_manifest["run_id"]
 
     total = 0
     successes = 0
     classified_failures: list[dict] = []
 
     failures_by_mode: dict[str, int] = defaultdict(int)
-    failures_by_model: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-    failures_by_scenario: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    failures_by_model: dict[str, dict[str, int]] = defaultdict(
+        lambda: defaultdict(int)
+    )
+    failures_by_scenario: dict[str, dict[str, int]] = defaultdict(
+        lambda: defaultdict(int)
+    )
     examples_by_mode: dict[str, list[dict]] = defaultdict(list)
 
-    for result in data["results"]:
+    scenario_metadata = run_manifest["scenario_metadata"]
+
+    for result in run_result["results"]:
         model = result["llm_config"]
         scenario = result["scenario"]
-        difficulty = result["difficulty"]
+        difficulty = scenario_metadata[scenario]["difficulty"]
 
-        # Soporta estructura antigua (runs) y nueva (trials/attempts)
-        if "runs" in result:
-            items = [
-                {
-                    "index": r["run_index"],
-                    "goal_achieved": r["goal_achieved"],
-                    "agent_result": r["agent_result"],
-                    "goal_reason": r.get("goal_reason", ""),
-                    "n_attempts": 1,
-                }
-                for r in result["runs"]
-            ]
-        else:
-            items = [
-                {
-                    "index": t["trial_index"],
-                    "goal_achieved": t["goal_achieved"],
-                    "agent_result": t["attempts"][-1]["agent_result"],
-                    "goal_reason": t["attempts"][-1].get("goal_reason", "") or t.get("goal_reason", ""),
-                    "n_attempts": len(t["attempts"]),
-                }
-                for t in result["trials"]
-            ]
-
-        for item in items:
+        for trial in result["trials"]:
             total += 1
-            if item["goal_achieved"]:
+
+            if trial["goal_achieved"]:
                 successes += 1
                 continue
 
-            run_for_classify = {
-                "agent_result": item["agent_result"],
-                "goal_reason": item["goal_reason"],
+            final_attempt = trial["attempts"][-1]
+
+            trial_for_classify = {
+                "agent_result": final_attempt["agent_result"],
+                "goal_reason": (
+                    final_attempt.get("goal_reason", "")
+                    or trial.get("goal_reason", "")
+                ),
             }
-            mode, reason = classify_run(run_for_classify, scenario)
-            steps = item["agent_result"].get("steps") or []
+
+            mode, reason = classify_trial(
+                trial_for_classify,
+                scenario,
+            )
+
+            steps = final_attempt["agent_result"].get("steps") or []
 
             failures_by_mode[mode] += 1
             failures_by_model[model][mode] += 1
@@ -179,15 +173,18 @@ def analyze(results_path: Path) -> dict:
                 "model": model,
                 "scenario": scenario,
                 "difficulty": difficulty,
-                "run_index": item["index"],
-                "n_attempts": item["n_attempts"],
+                "trial_index": trial["trial_index"],
+                "n_attempts": len(trial["attempts"]),
                 "mode": mode,
                 "reason": reason,
-                "goal_reason": item["goal_reason"],
+                "goal_reason": trial_for_classify["goal_reason"],
                 "n_steps": len(steps),
-                "answer_preview": (item["agent_result"].get("answer") or "")[:200].strip(),
-                "agent_error": item["agent_result"].get("error"),
+                "answer_preview": (
+                    final_attempt["agent_result"].get("answer") or ""
+                )[:200].strip(),
+                "agent_error": final_attempt["agent_result"].get("error"),
             }
+
             classified_failures.append(failure_record)
 
             if len(examples_by_mode[mode]) < 2:
@@ -196,22 +193,38 @@ def analyze(results_path: Path) -> dict:
     failures = total - successes
 
     return {
-        "baseline": str(results_path),
-        "total_runs": total,
+        "run_id": run_id,
+        "total_trials": total,
         "successes": successes,
         "failures": failures,
         "success_rate": round(successes / total, 3) if total else 0,
-        "coverage": f"{len(classified_failures)}/{failures} runs fallidos clasificados",
+        "coverage": (
+            f"{len(classified_failures)}/{failures} "
+            "trials fallidos clasificados"
+        ),
         "failures_by_mode": dict(
-            sorted(failures_by_mode.items(), key=lambda x: -x[1])
+            sorted(
+                failures_by_mode.items(),
+                key=lambda item: -item[1],
+            )
         ),
         "failures_by_model": {
-            m: dict(sorted(v.items(), key=lambda x: -x[1]))
-            for m, v in failures_by_model.items()
+            model: dict(
+                sorted(
+                    modes.items(),
+                    key=lambda item: -item[1],
+                )
+            )
+            for model, modes in failures_by_model.items()
         },
         "failures_by_scenario": {
-            s: dict(sorted(v.items(), key=lambda x: -x[1]))
-            for s, v in failures_by_scenario.items()
+            scenario: dict(
+                sorted(
+                    modes.items(),
+                    key=lambda item: -item[1],
+                )
+            )
+            for scenario, modes in failures_by_scenario.items()
         },
         "examples_by_mode": dict(examples_by_mode),
         "all_failures": classified_failures,
@@ -219,14 +232,15 @@ def analyze(results_path: Path) -> dict:
 
 
 def print_report(analysis: dict) -> None:
-    total = analysis["total_runs"]
+    total = analysis["total_trials"]
     failures = analysis["failures"]
     successes = analysis["successes"]
 
     print("=" * 62)
-    print("ANÁLISIS DE ERRORES — BASELINE M3")
+    print("ANÁLISIS DE ERRORES — M3")
     print("=" * 62)
-    print(f"\nTotal runs:   {total}")
+    print(f"\nRun: {analysis['run_id']}")
+    print(f"\nTotal trials: {total}")
     print(f"Exitosos:     {successes}  ({100 * successes // total}%)")
     print(f"Fallidos:     {failures}  ({100 * failures // total}%)")
     print(f"Cobertura:    {analysis['coverage']}")
@@ -256,7 +270,10 @@ def print_report(analysis: dict) -> None:
     for mode, examples in analysis["examples_by_mode"].items():
         print(f"\n  [{mode}]")
         for ex in examples:
-            print(f"    {ex['model']} / {ex['scenario']} / run {ex['run_index']}  ({ex['n_steps']} pasos)")
+            print(
+                f"    {ex['model']} / {ex['scenario']} / "
+                f"trial {ex['trial_index']}  ({ex['n_steps']} pasos)"
+            )
             print(f"    razón: {ex['reason']}")
             if ex["answer_preview"]:
                 print(f"    answer: {ex['answer_preview'][:130]}")
@@ -264,15 +281,15 @@ def print_report(analysis: dict) -> None:
 
 def render_markdown(analysis: dict) -> str:
     lines = []
-    total = analysis["total_runs"]
+    total = analysis["total_trials"]
     failures = analysis["failures"]
     successes = analysis["successes"]
 
-    lines.append("# Análisis de errores — Baseline M3\n")
-    lines.append(f"**Fuente:** `{analysis['baseline']}`\n")
+    lines.append("# Análisis de errores — M3\n")
+    lines.append(f"**Run:** `{analysis['run_id']}`\n")
     lines.append(f"| | |")
     lines.append(f"|---|---|")
-    lines.append(f"| Total runs | {total} |")
+    lines.append(f"| Total trials | {total} |")
     lines.append(f"| Exitosos | {successes} ({100 * successes // total}%) |")
     lines.append(f"| Fallidos | {failures} ({100 * failures // total}%) |")
     lines.append(f"| Cobertura | {analysis['coverage']} |")
@@ -314,7 +331,10 @@ def render_markdown(analysis: dict) -> str:
     for mode, examples in analysis["examples_by_mode"].items():
         lines.append(f"### `{mode}`\n")
         for ex in examples:
-            lines.append(f"**{ex['model']} / {ex['scenario']} / run {ex['run_index']}** ({ex['n_steps']} pasos)")
+            lines.append(
+                f"**{ex['model']} / {ex['scenario']} / "
+                f"trial {ex['trial_index']}** ({ex['n_steps']} pasos)"
+            )
             lines.append(f"- Razón: {ex['reason']}")
             if ex["answer_preview"]:
                 preview = ex["answer_preview"][:200].replace("\n", " ")
@@ -322,12 +342,12 @@ def render_markdown(analysis: dict) -> str:
             lines.append("")
 
     lines.append("## Todos los fallos clasificados\n")
-    lines.append("| Run | Modelo | Escenario | Pasos | Modo | Razón |")
+    lines.append("| Trial | Modelo | Escenario | Pasos | Modo | Razón |")
     lines.append("|---|---|---|---:|---|---|")
     for f in analysis["all_failures"]:
         reason = f["reason"][:60].replace("|", "\\|")
         lines.append(
-            f"| {f['run_index']} | {f['model']} | {f['scenario']} "
+            f"| {f['trial_index']} | {f['model']} | {f['scenario']} "
             f"| {f['n_steps']} | `{f['mode']}` | {reason} |"
         )
     lines.append("")
@@ -336,37 +356,60 @@ def render_markdown(analysis: dict) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Análisis de errores del baseline M3.")
+    parser = argparse.ArgumentParser(
+        description="Análisis de errores de un run M3."
+    )
     parser.add_argument(
-        "--results",
-        type=Path,
-        default=DEFAULT_RESULTS,
-        help="Ruta al evaluation.json",
+        "--run-id",
+        required=True,
+        help="run_id cuya evidencia se analizará.",
     )
     parser.add_argument(
         "--output",
         type=Path,
-        default=DEFAULT_OUTPUT,
-        help="Ruta de salida del .md de análisis",
-    )
-    parser.add_argument(
-        "--no-save",
-        action="store_true",
-        help="Solo imprime en consola, no guarda el .md",
+        help=(
+            "Ruta opcional donde guardar el Markdown. "
+            "Si se omite, solo se imprime el análisis."
+        ),
     )
     args = parser.parse_args()
 
-    if not args.results.exists():
-        raise SystemExit(f"No se encontró el archivo: {args.results}")
+    manifest_path = RUNS_DIR / f"{args.run_id}.manifest.json"
+    results_path = RUNS_DIR / f"{args.run_id}.json"
 
-    analysis = analyze(args.results)
+    if not manifest_path.exists():
+        raise SystemExit(
+            f"No se encontró el manifest del run: {manifest_path}"
+        )
+
+    if not results_path.exists():
+        raise SystemExit(
+            f"No se encontraron los resultados del run: {results_path}"
+        )
+
+    with open(manifest_path, encoding="utf-8") as f:
+        run_manifest = json.load(f)
+
+    with open(results_path, encoding="utf-8") as f:
+        run_result = json.load(f)
+
+    analysis = analyze_errors(
+        run_manifest,
+        run_result,
+    )
     print_report(analysis)
 
-    if not args.no_save:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
+    if args.output is not None:
+        args.output.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
         with open(args.output, "w", encoding="utf-8") as f:
             f.write(render_markdown(analysis))
-        print(f"\nArtefacto guardado en: {args.output}")
+
+        print(
+            f"\nArtefacto guardado en: {args.output}"
+        )
 
 
 if __name__ == "__main__":

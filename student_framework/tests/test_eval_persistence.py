@@ -564,6 +564,7 @@ def test_create_evaluation_persists_definition_for_complete_run(
         "eval_id": "test-eval",
         "run_id": "test-run",
         "results": [],
+        "analyses": {},
     }
 
 
@@ -774,6 +775,7 @@ def test_start_evaluation_computes_and_persists_metrics(
                 },
             },
         ],
+        "analyses": {},
     }
 
     persisted = persistence.load_evaluation_results(
@@ -786,6 +788,132 @@ def test_start_evaluation_computes_and_persists_metrics(
     assert "trials" not in persisted["results"][0]
     assert "attempts" not in persisted["results"][0]
     assert "trace" not in persisted["results"][0]
+
+
+def test_start_evaluation_computes_and_persists_error_analysis(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Una evaluación puede derivar análisis del run completo."""
+
+    runs_dir = tmp_path / "runs"
+    evaluations_dir = tmp_path / "evaluations"
+    runs_dir.mkdir()
+
+    run_manifest = {
+        "run_id": "test-run",
+        "run": {
+            "systems": [
+                {
+                    "agent_config": "agent-a",
+                    "llm_config": "llm-a",
+                },
+            ],
+            "trial_configs": [
+                "trial-a",
+            ],
+            "scenarios": [
+                "scenario-a",
+            ],
+            "trials_per_case": 1,
+        },
+        "agent_configs": {},
+        "llm_configs": {},
+        "trial_configs": {},
+        "scenario_metadata": {
+            "scenario-a": {
+                "difficulty": "test",
+                "goal": {},
+            },
+        },
+    }
+
+    run_result = {
+        "results": [
+            {
+                "agent_config": "agent-a",
+                "llm_config": "llm-a",
+                "trial_config": "trial-a",
+                "scenario": "scenario-a",
+                "trials": [
+                    {
+                        "trial_index": 1,
+                        "goal_achieved": False,
+                        "goal_reason": "incompleto",
+                        "attempts": [
+                            {
+                                "goal_reason": "incompleto",
+                                "agent_result": {
+                                    "answer": "No pude resolverlo.",
+                                    "steps": [],
+                                    "error": None,
+                                },
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
+    }
+
+    (
+        runs_dir / "test-run.manifest.json"
+    ).write_text(
+        json.dumps(run_manifest),
+        encoding="utf-8",
+    )
+    (
+        runs_dir / "test-run.json"
+    ).write_text(
+        json.dumps(run_result),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        persistence,
+        "_created_at",
+        lambda: "2026-08-17T14:00:00+00:00",
+    )
+    monkeypatch.setattr(
+        persistence,
+        "_git_metadata",
+        lambda: {
+            "commit": "abc123",
+            "branch": "m3/evaluation-persistence",
+            "dirty": False,
+        },
+    )
+
+    result = evaluation.start_evaluation(
+        eval_id="test-eval",
+        run_id="test-run",
+        evaluation_config={
+            "metrics": [],
+            "analyses": [
+                "error_analysis",
+            ],
+        },
+        runs_dir=runs_dir,
+        evaluations_dir=evaluations_dir,
+    )
+
+    analysis = result["analyses"]["error_analysis"]
+
+    assert analysis["run_id"] == "test-run"
+    assert analysis["total_trials"] == 1
+    assert analysis["successes"] == 0
+    assert analysis["failures"] == 1
+    assert analysis["coverage"] == "1/1 trials fallidos clasificados"
+    assert analysis["failures_by_mode"] == {
+        "gave_up_early": 1,
+    }
+
+    persisted = persistence.load_evaluation_results(
+        "test-eval",
+        results_dir=evaluations_dir,
+    )
+
+    assert persisted == result
 
 
 def test_start_evaluation_rejects_unknown_metric_before_creation(
@@ -803,6 +931,33 @@ def test_start_evaluation_rejects_unknown_metric_before_creation(
             evaluation_config={
                 "metrics": [
                     "missing_metric",
+                ],
+            },
+            runs_dir=tmp_path / "runs",
+            evaluations_dir=tmp_path / "evaluations",
+        )
+
+    assert not (
+        tmp_path / "evaluations"
+    ).exists()
+
+
+def test_start_evaluation_rejects_unknown_analysis_before_creation(
+    tmp_path,
+) -> None:
+    """Un análisis desconocido no crea artefactos de evaluación."""
+
+    with pytest.raises(
+        ValueError,
+        match="Análisis de evaluación desconocido: 'missing_analysis'",
+    ):
+        evaluation.start_evaluation(
+            eval_id="test-eval",
+            run_id="test-run",
+            evaluation_config={
+                "metrics": [],
+                "analyses": [
+                    "missing_analysis",
                 ],
             },
             runs_dir=tmp_path / "runs",

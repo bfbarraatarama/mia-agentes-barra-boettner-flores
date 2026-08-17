@@ -19,7 +19,11 @@ from eval.evaluation_configs import M3_EVALUATION_CONFIG
 from eval.persistence import EVALUATIONS_DIR, RUNS_DIR
 from eval.run_configs import M3_BASELINE_RUN_CONFIG
 from eval.run_execution import resume_run, start_run
-from eval.report import plot_success_rate, print_success_rate_summary
+from eval.report import (
+    plot_success_rate,
+    print_success_rate_summary,
+    write_error_analysis_report,
+)
 
 
 RUN_ID = "m3-baseline-run-001"
@@ -51,19 +55,23 @@ def print_progress(
 
 
 def main() -> int:
-    start_run(
-        run_id=RUN_ID,
-        run_config=RUN_CONFIG,
-        progress_callback=print_progress,
-    )
-
-    # Para reanudar una corrida interrumpida, comentar start_run(...)
-    # y utilizar en su lugar:
+    # Para crear una corrida nueva:
+    #
+    # start_run(
+    #     run_id=RUN_ID,
+    #     run_config=RUN_CONFIG,
+    #     progress_callback=print_progress,
+    # )
+    #
+    # Para reanudar una corrida interrumpida:
     #
     # resume_run(
     #     run_id=RUN_ID,
     #     progress_callback=print_progress,
     # )
+    #
+    # Si el run ya existe y está completo, no ejecutar ninguna de
+    # las dos funciones anteriores y evaluar directamente.
 
     evaluation_result = start_evaluation(
         eval_id=EVAL_ID,
@@ -75,12 +83,21 @@ def main() -> int:
         EVALUATIONS_DIR / f"{EVAL_ID}.success_rate.png"
     )
 
+    error_analysis_path = (
+        EVALUATIONS_DIR / f"{EVAL_ID}.error_analysis.md"
+    )
+
     print_success_rate_summary(
         evaluation_result
     )
     plot_success_rate(
         evaluation_result,
         success_rate_plot_path,
+    )
+
+    write_error_analysis_report(
+        evaluation_result,
+        error_analysis_path,
     )
 
     print()
@@ -102,6 +119,9 @@ def main() -> int:
     )
     print(
         f"Gráfico de success rate: {success_rate_plot_path}"
+    )
+    print(
+        f"Análisis de errores: {error_analysis_path}"
     )
 
     return 0

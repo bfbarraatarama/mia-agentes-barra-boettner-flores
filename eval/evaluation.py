@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from eval import persistence
+from eval.analyses import ANALYSES
 from eval.metrics import METRICS
 from eval.run_execution import is_run_complete
 
@@ -24,6 +25,25 @@ def _resolve_metrics(
             )
 
         resolved[metric_name] = METRICS[metric_name]
+
+    return resolved
+
+
+def _resolve_analyses(
+    evaluation_config: dict[str, Any],
+) -> dict[str, Any]:
+    """Resuelve los análisis declarados por una evaluación."""
+
+    resolved = {}
+
+    for analysis_name in evaluation_config.get("analyses", []):
+        if analysis_name not in ANALYSES:
+            raise ValueError(
+                "Análisis de evaluación desconocido: "
+                f"{analysis_name!r}."
+            )
+
+        resolved[analysis_name] = ANALYSES[analysis_name]
 
     return resolved
 
@@ -83,6 +103,9 @@ def start_evaluation(
     metric_functions = _resolve_metrics(
         evaluation_config
     )
+    analysis_functions = _resolve_analyses(
+        evaluation_config
+    )
 
     create_evaluation(
         eval_id=eval_id,
@@ -92,6 +115,10 @@ def start_evaluation(
         evaluations_dir=evaluations_dir,
     )
 
+    run_manifest = persistence.load_run_manifest(
+        run_id,
+        results_dir=runs_dir,
+    )
     run_result = persistence.load_run_results(
         run_id,
         results_dir=runs_dir,
@@ -114,10 +141,20 @@ def start_evaluation(
             "metrics": metrics,
         })
 
+    analyses = {
+        analysis_name: analysis_function(
+            run_manifest,
+            run_result,
+        )
+        for analysis_name, analysis_function
+        in analysis_functions.items()
+    }
+
     evaluation_result = {
         "eval_id": eval_id,
         "run_id": run_id,
         "results": results,
+        "analyses": analyses,
     }
 
     persistence.write_evaluation_results(

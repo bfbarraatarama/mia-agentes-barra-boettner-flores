@@ -12,6 +12,7 @@ matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 
+from eval.error_analysis import render_markdown
 
 def save_evaluation_result(
     evaluation_result: dict[str, Any],
@@ -145,3 +146,21 @@ def plot_success_rate(
     fig.savefig(output_path, dpi=150)
 
     plt.close(fig)
+
+
+def write_error_analysis_report(
+    evaluation_result: dict[str, Any],
+    output_path: Path,
+) -> None:
+    """Escribe la representación Markdown del análisis de errores."""
+
+    analysis = evaluation_result["analyses"]["error_analysis"]
+
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    output_path.write_text(
+        render_markdown(analysis),
+        encoding="utf-8",
+    )
