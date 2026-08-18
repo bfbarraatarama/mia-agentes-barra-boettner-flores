@@ -17,7 +17,9 @@ if str(REPO_ROOT) not in sys.path:
 from eval.evaluation import start_evaluation
 from eval.persistence import RUNS_DIR, evaluation_dir
 from eval.configs.evaluation_configs import M3_EVALUATION_CONFIG
-from eval.configs.run_configs import M3_TOOL_REPAIR_COMPARISON_RUN_CONFIG
+from eval.configs.run_configs import (
+    M3_THREE_MODEL_REPAIR_COMPARISON_RUN_CONFIG,
+)
 from eval.run_execution import resume_run, start_run
 from eval.report import (
     plot_success_rate,
@@ -28,10 +30,10 @@ from eval.analyses.tool_call_repair_analysis import (
     render_markdown as render_tool_call_repair_markdown,
 )
 
-RUN_ID = "m3-tool-repair-comparison-run-002"
-EVAL_ID = "m3-tool-repair-comparison-eval-002"
+RUN_ID = "m3-three-model-repair-comparison-run-003"
+EVAL_ID = "m3-three-model-repair-comparison-eval-003"
 
-RUN_CONFIG = M3_TOOL_REPAIR_COMPARISON_RUN_CONFIG
+RUN_CONFIG = M3_THREE_MODEL_REPAIR_COMPARISON_RUN_CONFIG
 EVALUATION_CONFIG = M3_EVALUATION_CONFIG
 
 
