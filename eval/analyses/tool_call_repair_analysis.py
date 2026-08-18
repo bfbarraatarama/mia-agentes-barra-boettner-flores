@@ -21,6 +21,10 @@ def analyze_tool_call_repair(
                 "trials": 0,
                 "trials_with_repair": 0,
                 "repair_llm_calls": 0,
+                "repair_llm_responses": 0,
+                "repair_llm_errors": 0,
+                "repair_llm_calls_with_token_usage": 0,
+                "repair_llm_calls_without_token_usage": 0,
                 "repair_input_tokens": 0,
                 "repair_output_tokens": 0,
             }
@@ -30,6 +34,10 @@ def analyze_tool_call_repair(
     total_trials = 0
     trials_with_repair = 0
     repair_llm_calls = 0
+    repair_llm_responses = 0
+    repair_llm_errors = 0
+    repair_llm_calls_with_token_usage = 0
+    repair_llm_calls_without_token_usage = 0
     repair_input_tokens = 0
     repair_output_tokens = 0
 
@@ -56,17 +64,48 @@ def analyze_tool_call_repair(
                     repair_llm_calls += 1
                     system["repair_llm_calls"] += 1
 
+                    if event.get("error") is not None:
+                        repair_llm_errors += 1
+                        system["repair_llm_errors"] += 1
+
                     response = event.get("response")
-                    if response is None:
-                        continue
 
-                    input_tokens = response.get("input_tokens", 0)
-                    output_tokens = response.get("output_tokens", 0)
+                    if response is not None:
+                        repair_llm_responses += 1
+                        system["repair_llm_responses"] += 1
 
-                    repair_input_tokens += input_tokens
-                    repair_output_tokens += output_tokens
-                    system["repair_input_tokens"] += input_tokens
-                    system["repair_output_tokens"] += output_tokens
+                    input_tokens = (
+                        response.get("input_tokens")
+                        if response is not None
+                        else None
+                    )
+                    output_tokens = (
+                        response.get("output_tokens")
+                        if response is not None
+                        else None
+                    )
+
+                    if input_tokens is not None:
+                        repair_input_tokens += input_tokens
+                        system["repair_input_tokens"] += input_tokens
+
+                    if output_tokens is not None:
+                        repair_output_tokens += output_tokens
+                        system["repair_output_tokens"] += output_tokens
+
+                    if (
+                        input_tokens is not None
+                        and output_tokens is not None
+                    ):
+                        repair_llm_calls_with_token_usage += 1
+                        system[
+                            "repair_llm_calls_with_token_usage"
+                        ] += 1
+                    else:
+                        repair_llm_calls_without_token_usage += 1
+                        system[
+                            "repair_llm_calls_without_token_usage"
+                        ] += 1
 
             if trial_repair_calls > 0:
                 trials_with_repair += 1
@@ -77,11 +116,30 @@ def analyze_tool_call_repair(
         "total_trials": total_trials,
         "trials_with_repair": trials_with_repair,
         "repair_llm_calls": repair_llm_calls,
+        "repair_llm_responses": repair_llm_responses,
+        "repair_llm_errors": repair_llm_errors,
+        "repair_llm_calls_with_token_usage": (
+            repair_llm_calls_with_token_usage
+        ),
+        "repair_llm_calls_without_token_usage": (
+            repair_llm_calls_without_token_usage
+        ),
         "repair_input_tokens": repair_input_tokens,
         "repair_output_tokens": repair_output_tokens,
+        "token_usage_complete": (
+            repair_llm_calls_without_token_usage == 0
+        ),
         "systems": {
             agent_config: {
-                model: dict(values)
+                model: {
+                    **values,
+                    "token_usage_complete": (
+                        values[
+                            "repair_llm_calls_without_token_usage"
+                        ]
+                        == 0
+                    ),
+                }
                 for model, values in models.items()
             }
             for agent_config, models in systems.items()
