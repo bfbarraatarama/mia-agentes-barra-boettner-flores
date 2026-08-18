@@ -97,5 +97,5 @@ M3_TOOL_REPAIR_COMPARISON_RUN_CONFIG: dict[str, Any] = {
         "vault-combination",
         "backtracking-vault",
     ],
-    "trials_per_case": 5,
+    "trials_per_case": 10,
 }

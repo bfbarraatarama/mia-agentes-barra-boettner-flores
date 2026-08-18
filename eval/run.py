@@ -15,9 +15,9 @@ if str(REPO_ROOT) not in sys.path:
 
 
 from eval.evaluation import start_evaluation
-from eval.evaluation_configs import M3_EVALUATION_CONFIG
-from eval.persistence import EVALUATIONS_DIR, RUNS_DIR
-from eval.run_configs import M3_BASELINE_RUN_CONFIG, M3_TOOL_REPAIR_COMPARISON_RUN_CONFIG
+from eval.persistence import RUNS_DIR, evaluation_dir
+from eval.configs.evaluation_configs import M3_EVALUATION_CONFIG
+from eval.configs.run_configs import M3_TOOL_REPAIR_COMPARISON_RUN_CONFIG
 from eval.run_execution import resume_run, start_run
 from eval.report import (
     plot_success_rate,
@@ -26,8 +26,8 @@ from eval.report import (
 )
 
 
-RUN_ID = "m3-tool-repair-comparison-run-001"
-EVAL_ID = "m3-tool-repair-comparison-eval-001"
+RUN_ID = "m3-tool-repair-comparison-run-002"
+EVAL_ID = "m3-tool-repair-comparison-eval-002"
 
 RUN_CONFIG = M3_TOOL_REPAIR_COMPARISON_RUN_CONFIG
 EVALUATION_CONFIG = M3_EVALUATION_CONFIG
@@ -79,12 +79,14 @@ def main() -> int:
         evaluation_config=EVALUATION_CONFIG,
     )
 
+    evaluation_output_dir = evaluation_dir(EVAL_ID)
+
     success_rate_plot_path = (
-        EVALUATIONS_DIR / f"{EVAL_ID}.success_rate.png"
+        evaluation_output_dir / "success_rate.png"
     )
 
     error_analysis_path = (
-        EVALUATIONS_DIR / f"{EVAL_ID}.error_analysis.md"
+        evaluation_output_dir / "error_analysis.md"
     )
 
     print_success_rate_summary(
@@ -111,11 +113,11 @@ def main() -> int:
     )
     print(
         "Manifest de la evaluación: "
-        f"{EVALUATIONS_DIR / f'{EVAL_ID}.manifest.json'}"
+        f"{evaluation_output_dir / 'manifest.json'}"
     )
     print(
         "Resultados de la evaluación: "
-        f"{EVALUATIONS_DIR / f'{EVAL_ID}.json'}"
+        f"{evaluation_output_dir / 'results.json'}"
     )
     print(
         f"Gráfico de success rate: {success_rate_plot_path}"

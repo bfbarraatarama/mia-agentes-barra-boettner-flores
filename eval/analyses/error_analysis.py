@@ -129,6 +129,14 @@ def analyze_errors(
     failures_by_model: dict[str, dict[str, int]] = defaultdict(
         lambda: defaultdict(int)
     )
+    failures_by_system: dict[
+        str,
+        dict[str, dict[str, int]],
+    ] = defaultdict(
+        lambda: defaultdict(
+            lambda: defaultdict(int)
+        )
+    )
     failures_by_scenario: dict[str, dict[str, int]] = defaultdict(
         lambda: defaultdict(int)
     )
@@ -137,6 +145,7 @@ def analyze_errors(
     scenario_metadata = run_manifest["scenario_metadata"]
 
     for result in run_result["results"]:
+        agent_config = result["agent_config"]
         model = result["llm_config"]
         scenario = result["scenario"]
         difficulty = scenario_metadata[scenario]["difficulty"]
@@ -167,9 +176,11 @@ def analyze_errors(
 
             failures_by_mode[mode] += 1
             failures_by_model[model][mode] += 1
+            failures_by_system[agent_config][model][mode] += 1
             failures_by_scenario[scenario][mode] += 1
 
             failure_record = {
+                "agent_config": agent_config,
                 "model": model,
                 "scenario": scenario,
                 "difficulty": difficulty,
@@ -217,6 +228,18 @@ def analyze_errors(
             )
             for model, modes in failures_by_model.items()
         },
+        "failures_by_system": {
+            agent_config: {
+                model: dict(
+                    sorted(
+                        modes.items(),
+                        key=lambda item: -item[1],
+                    )
+                )
+                for model, modes in models.items()
+            }
+            for agent_config, models in failures_by_system.items()
+        },
         "failures_by_scenario": {
             scenario: dict(
                 sorted(
@@ -251,6 +274,17 @@ def print_report(analysis: dict) -> None:
         bar = "█" * count
         print(f"  {mode:<20} {count:>3}  ({pct:>2}%)  {bar}")
 
+    print("\n── POR SISTEMA ─────────────────────────────────────────")
+    for agent_config, models in analysis["failures_by_system"].items():
+        for model, modes in models.items():
+            total_system = sum(modes.values())
+            print(
+                f"\n  {agent_config} / {model}  "
+                f"({total_system} fallos)"
+            )
+            for mode, count in modes.items():
+                print(f"    {mode:<20} {count}")
+
     print("\n── POR MODELO ──────────────────────────────────────────")
     for model, modes in analysis["failures_by_model"].items():
         total_model = sum(modes.values())
@@ -271,8 +305,9 @@ def print_report(analysis: dict) -> None:
         print(f"\n  [{mode}]")
         for ex in examples:
             print(
-                f"    {ex['model']} / {ex['scenario']} / "
-                f"trial {ex['trial_index']}  ({ex['n_steps']} pasos)"
+                f"    {ex['agent_config']} / {ex['model']} / "
+                f"{ex['scenario']} / trial {ex['trial_index']}  "
+                f"({ex['n_steps']} pasos)"
             )
             print(f"    razón: {ex['reason']}")
             if ex["answer_preview"]:
@@ -303,6 +338,20 @@ def render_markdown(analysis: dict) -> str:
         lines.append(f"| `{mode}` | {count} | {pct}% |")
     lines.append("")
 
+    lines.append("## Por sistema\n")
+    for agent_config, models in analysis["failures_by_system"].items():
+        for model, modes in models.items():
+            total_system = sum(modes.values())
+            lines.append(
+                f"### {agent_config} / {model} "
+                f"({total_system} fallos)\n"
+            )
+            lines.append("| Modo | Runs |")
+            lines.append("|---|---:|")
+            for mode, count in modes.items():
+                lines.append(f"| `{mode}` | {count} |")
+            lines.append("")
+
     lines.append("## Por modelo\n")
     for model, modes in analysis["failures_by_model"].items():
         total_model = sum(modes.values())
@@ -332,8 +381,9 @@ def render_markdown(analysis: dict) -> str:
         lines.append(f"### `{mode}`\n")
         for ex in examples:
             lines.append(
-                f"**{ex['model']} / {ex['scenario']} / "
-                f"trial {ex['trial_index']}** ({ex['n_steps']} pasos)"
+                f"**{ex['agent_config']} / {ex['model']} / "
+                f"{ex['scenario']} / trial {ex['trial_index']}** "
+                f"({ex['n_steps']} pasos)"
             )
             lines.append(f"- Razón: {ex['reason']}")
             if ex["answer_preview"]:
@@ -342,13 +392,17 @@ def render_markdown(analysis: dict) -> str:
             lines.append("")
 
     lines.append("## Todos los fallos clasificados\n")
-    lines.append("| Trial | Modelo | Escenario | Pasos | Modo | Razón |")
-    lines.append("|---|---|---|---:|---|---|")
+    lines.append(
+        "| Trial | Configuración de agente | Modelo | "
+        "Escenario | Pasos | Modo | Razón |"
+    )
+    lines.append("|---|---|---|---|---:|---|---|")
     for f in analysis["all_failures"]:
         reason = f["reason"][:60].replace("|", "\\|")
         lines.append(
-            f"| {f['trial_index']} | {f['model']} | {f['scenario']} "
-            f"| {f['n_steps']} | `{f['mode']}` | {reason} |"
+            f"| {f['trial_index']} | {f['agent_config']} | "
+            f"{f['model']} | {f['scenario']} | {f['n_steps']} | "
+            f"`{f['mode']}` | {reason} |"
         )
     lines.append("")
 

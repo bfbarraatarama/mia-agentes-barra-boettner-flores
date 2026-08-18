@@ -12,7 +12,7 @@ matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 
-from eval.error_analysis import render_markdown
+from eval.analyses.error_analysis import render_markdown
 
 def save_evaluation_result(
     evaluation_result: dict[str, Any],

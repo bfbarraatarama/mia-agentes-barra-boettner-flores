@@ -26,9 +26,9 @@ from mia_world import (
     make_world_tools,
 )
 from student_framework import build_agent
-from eval.agent_configs import AGENT_CONFIGS
-from eval.trial_configs import TRIAL_CONFIGS
-from eval.llm_configs import LLM_CONFIGS, build_llm_client
+from eval.configs.agent_configs import AGENT_CONFIGS
+from eval.configs.trial_configs import TRIAL_CONFIGS
+from eval.configs.llm_configs import LLM_CONFIGS, build_llm_client
 
 
 SCENARIOS_DIR = REPO_ROOT / "scenarios"

@@ -1,11 +1,11 @@
 import json
-
 import pytest
+import subprocess
 
 from eval import evaluation, persistence, run_execution
-from eval.agent_configs import AGENT_CONFIGS
-from eval.run_configs import M3_RUN_CONFIG
-from eval.trial_configs import TRIAL_CONFIGS
+from eval.configs.agent_configs import AGENT_CONFIGS
+from eval.configs.run_configs import M3_RUN_CONFIG
+from eval.configs.trial_configs import TRIAL_CONFIGS
 
 
 def test_build_run_manifest_contains_reproducible_run_spec(
@@ -538,12 +538,16 @@ def test_create_evaluation_persists_definition_for_complete_run(
 
     manifest = json.loads(
         (
-            evaluations_dir / "test-eval.manifest.json"
+            evaluations_dir
+            / "test-eval"
+            / "manifest.json"
         ).read_text(encoding="utf-8")
     )
     results = json.loads(
         (
-            evaluations_dir / "test-eval.json"
+            evaluations_dir
+            / "test-eval"
+            / "results.json"
         ).read_text(encoding="utf-8")
     )
 
@@ -633,8 +637,9 @@ def test_create_evaluation_rejects_incomplete_run(
 @pytest.mark.parametrize(
     "existing_name",
     [
-        "test-eval.manifest.json",
-        "test-eval.json",
+        "manifest.json",
+        "results.json",
+        "success_rate.png",
     ],
 )
 def test_initialize_evaluation_rejects_existing_eval_id(
@@ -643,7 +648,10 @@ def test_initialize_evaluation_rejects_existing_eval_id(
 ) -> None:
     """Un eval_id existente nunca se reutiliza."""
 
-    existing_path = tmp_path / existing_name
+    evaluation_dir = tmp_path / "test-eval"
+    evaluation_dir.mkdir()
+
+    existing_path = evaluation_dir / existing_name
     existing_path.write_text(
         "contenido existente",
         encoding="utf-8",
@@ -967,3 +975,86 @@ def test_start_evaluation_rejects_unknown_analysis_before_creation(
     assert not (
         tmp_path / "evaluations"
     ).exists()
+
+
+def test_git_metadata_ignores_results_but_detects_other_changes(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Los artefactos generados no ensucian la metadata del código."""
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    def git(*args: str) -> None:
+        subprocess.run(
+            ["git", *args],
+            cwd=repo,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+    git("init")
+    git("config", "user.email", "test@example.com")
+    git("config", "user.name", "Test")
+
+    results_dir = repo / "eval" / "results"
+    results_dir.mkdir(parents=True)
+
+    result_path = results_dir / "existing.json"
+    result_path.write_text(
+        '{"value": 1}\n',
+        encoding="utf-8",
+    )
+
+    source_path = repo / "source.py"
+    source_path.write_text(
+        "VALUE = 1\n",
+        encoding="utf-8",
+    )
+
+    git("add", ".")
+    git("commit", "-m", "estado inicial")
+
+    monkeypatch.setattr(
+        persistence,
+        "REPO_ROOT",
+        repo,
+    )
+
+    result_path.write_text(
+        '{"value": 2}\n',
+        encoding="utf-8",
+    )
+    (results_dir / "new.json").write_text(
+        '{"value": 3}\n',
+        encoding="utf-8",
+    )
+
+    assert persistence._git_metadata()["dirty"] is False
+
+    source_path.write_text(
+        "VALUE = 2\n",
+        encoding="utf-8",
+    )
+
+    assert persistence._git_metadata()["dirty"] is True
+
+
+def test_evaluation_paths_use_eval_id_directory(
+    tmp_path,
+) -> None:
+    """Los artefactos persistidos de una evaluación comparten directorio."""
+
+    manifest_path, results_path = persistence._evaluation_paths(
+        "test-eval",
+        tmp_path,
+    )
+
+    assert manifest_path == (
+        tmp_path / "test-eval" / "manifest.json"
+    )
+    assert results_path == (
+        tmp_path / "test-eval" / "results.json"
+    )
