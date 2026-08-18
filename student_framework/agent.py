@@ -11,6 +11,7 @@ Los tests de conformidad en `tests/conformance/test_m1.py` y
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any, Callable
 
 from mia_agents.protocols import LLMClient
@@ -26,6 +27,7 @@ class MyAgent:
         system_prompt: str = "Eres un asistente útil.",
         max_iterations: int = 10,
         max_history_messages: int = 50,
+        trace_callback: Callable[[dict[str, Any]], None] | None = None,
     ) -> None:
         """Inicializa el agente.
 
@@ -53,6 +55,7 @@ class MyAgent:
         self._schemas: dict[str, ToolSchema] = {}
         self._tools: dict[str, Callable[..., str]] = {}
         self._history: list[dict[str, Any]] = []
+        self._trace_callback = trace_callback
 
 
     def register_tool(
@@ -260,22 +263,49 @@ class MyAgent:
         """Llama al LLM y reintenta únicamente ante errores transitorios."""
 
         for attempt in range(max_retries + 1):
+            messages_snapshot = (
+                deepcopy(messages)
+                if self._trace_callback is not None
+                else None
+            )
+
             try:
-                return self._llm.chat(
+                response = self._llm.chat(
                     messages=messages,
                     tools=tools,
                     system=system,
                 )
 
             except Exception as error:
+                if self._trace_callback is not None:
+                    self._trace_callback({
+                        "type": "llm_call",
+                        "retry_index": attempt,
+                        "messages": messages_snapshot,
+                        "error": error,
+                    })
+
                 if not self._is_transient_error(error):
                     raise
 
                 if attempt == max_retries:
                     raise
 
+            else:
+                if self._trace_callback is not None:
+                    self._trace_callback({
+                        "type": "llm_call",
+                        "retry_index": attempt,
+                        "messages": messages_snapshot,
+                        "response": response,
+                    })
+
+                return response
+
+
     def _tool_with_retry(
         self,
+        tool_name: str,
         tool_function: Callable[..., str],
         kwargs: dict[str, Any],
         max_retries: int = 2,
@@ -283,15 +313,42 @@ class MyAgent:
         """Ejecuta una herramienta y reintenta ante errores transitorios."""
 
         for attempt in range(max_retries + 1):
+            arguments_snapshot = (
+                deepcopy(kwargs)
+                if self._trace_callback is not None
+                else None
+            )
+
             try:
-                return str(tool_function(**kwargs))
+                output = str(tool_function(**kwargs))
 
             except Exception as error:
+                if self._trace_callback is not None:
+                    self._trace_callback({
+                        "type": "tool_execution",
+                        "retry_index": attempt,
+                        "tool_name": tool_name,
+                        "arguments": arguments_snapshot,
+                        "error": error,
+                    })
+
                 if not self._is_transient_error(error):
                     raise
 
                 if attempt == max_retries:
                     raise
+
+            else:
+                if self._trace_callback is not None:
+                    self._trace_callback({
+                        "type": "tool_execution",
+                        "retry_index": attempt,
+                        "tool_name": tool_name,
+                        "arguments": arguments_snapshot,
+                        "output": output,
+                    })
+
+                return output
 
         raise RuntimeError("No se pudo ejecutar la herramienta.")                
 
@@ -471,6 +528,7 @@ class MyAgent:
                         error = f"Herramienta desconocida: {tool_call.name}"
                     else:
                         tool_output = self._tool_with_retry(
+                                tool_name=tool_call.name,
                                 tool_function=tool_function,
                                 kwargs=kwargs,
                             )

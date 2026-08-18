@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "eval_id": "m3-baseline-eval-001",
+  "run_id": "m3-baseline-run-001",
+  "created_at": "2026-08-17T19:39:51+00:00",
+  "git": {
+    "commit": "2d0815f398e40d51a45b5ecdd5c35fde46be1a46",
+    "branch": "m3/evaluation-persistence",
+    "dirty": true
+  },
+  "evaluation": {
+    "metrics": [
+      "success_rate"
+    ],
+    "analyses": [
+      "error_analysis"
+    ]
+  }
+}
