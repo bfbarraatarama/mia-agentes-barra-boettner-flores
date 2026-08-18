@@ -18,7 +18,7 @@ from eval.evaluation import start_evaluation
 from eval.persistence import RUNS_DIR, evaluation_dir
 from eval.configs.evaluation_configs import M3_EVALUATION_CONFIG
 from eval.configs.run_configs import (
-    M3_THREE_MODEL_REPAIR_COMPARISON_RUN_CONFIG,
+    M3_NOVA_TOOL_REPAIR_COMPARISON_RUN_CONFIG,
 )
 from eval.run_execution import resume_run, start_run
 from eval.report import (
@@ -30,10 +30,14 @@ from eval.analyses.tool_call_repair_analysis import (
     render_markdown as render_tool_call_repair_markdown,
 )
 
-RUN_ID = "m3-three-model-repair-comparison-run-003"
+RUN_ID = "m3-nova-tool-repair-comparison-run-003"
+EVALUATION_RUN_IDS = [
+    "m3-tool-repair-comparison-run-002",
+    RUN_ID,
+]
 EVAL_ID = "m3-three-model-repair-comparison-eval-003"
 
-RUN_CONFIG = M3_THREE_MODEL_REPAIR_COMPARISON_RUN_CONFIG
+RUN_CONFIG = M3_NOVA_TOOL_REPAIR_COMPARISON_RUN_CONFIG
 EVALUATION_CONFIG = M3_EVALUATION_CONFIG
 
 
@@ -59,27 +63,32 @@ def print_progress(
 
 
 def main() -> int:
-    # Para crear una corrida nueva:
-    #
-    start_run(
-        run_id=RUN_ID,
-        run_config=RUN_CONFIG,
-        progress_callback=print_progress,
+    run_manifest_path = (
+        RUNS_DIR / f"{RUN_ID}.manifest.json"
     )
-    #
-    # Para reanudar una corrida interrumpida:
-    #
-    # resume_run(
-    #     run_id=RUN_ID,
-    #     progress_callback=print_progress,
-    # )
-    #
-    # Si el run ya existe y está completo, no ejecutar ninguna de
-    # las dos funciones anteriores y evaluar directamente.
+    run_results_path = (
+        RUNS_DIR / f"{RUN_ID}.json"
+    )
+
+    if (
+        not run_manifest_path.exists()
+        and not run_results_path.exists()
+    ):
+        start_run(
+            run_id=RUN_ID,
+            run_config=RUN_CONFIG,
+            progress_callback=print_progress,
+        )
+    else:
+        resume_run(
+            run_id=RUN_ID,
+            progress_callback=print_progress,
+        )
+
 
     evaluation_result = start_evaluation(
         eval_id=EVAL_ID,
-        run_id=RUN_ID,
+        run_ids=EVALUATION_RUN_IDS,
         evaluation_config=EVALUATION_CONFIG,
     )
 
@@ -125,14 +134,16 @@ def main() -> int:
     )
 
     print()
-    print(
-        "Manifest del run: "
-        f"{RUNS_DIR / f'{RUN_ID}.manifest.json'}"
-    )
-    print(
-        "Resultados del run: "
-        f"{RUNS_DIR / f'{RUN_ID}.json'}"
-    )
+
+    for run_id in EVALUATION_RUN_IDS:
+        print(
+            "Manifest del run: "
+            f"{RUNS_DIR / f'{run_id}.manifest.json'}"
+        )
+        print(
+            "Resultados del run: "
+            f"{RUNS_DIR / f'{run_id}.json'}"
+        )
     print(
         "Manifest de la evaluación: "
         f"{evaluation_output_dir / 'manifest.json'}"

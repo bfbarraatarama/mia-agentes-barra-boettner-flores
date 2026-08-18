@@ -7,10 +7,19 @@ from typing import Any
 
 
 def analyze_tool_call_repair(
-    run_manifest: dict[str, Any],
-    run_result: dict[str, Any],
+    run_sources: list[dict[str, Any]],
 ) -> dict[str, Any]:
     """Resume las llamadas al LLM dedicadas a reparar tool calls."""
+
+    if not run_sources:
+        raise ValueError(
+            "run_sources debe contener al menos una fuente de run."
+        )
+
+    run_ids = [
+        source["run_id"]
+        for source in run_sources
+    ]
 
     systems: dict[
         str,
@@ -41,78 +50,82 @@ def analyze_tool_call_repair(
     repair_input_tokens = 0
     repair_output_tokens = 0
 
-    for result in run_result["results"]:
-        agent_config = result["agent_config"]
-        model = result["llm_config"]
-        system = systems[agent_config][model]
+    for source in run_sources:
+        current_run_result = source["result"]
 
-        for trial in result["trials"]:
-            total_trials += 1
-            system["trials"] += 1
+        for result in current_run_result["results"]:
+            agent_config = result["agent_config"]
+            model = result["llm_config"]
+            system = systems[agent_config][model]
 
-            trial_repair_calls = 0
+            for trial in result["trials"]:
+                total_trials += 1
+                system["trials"] += 1
 
-            for attempt in trial["attempts"]:
-                for event in attempt.get("trace", []):
-                    if (
-                        event.get("type") != "llm_call"
-                        or event.get("purpose") != "tool_call_repair"
-                    ):
-                        continue
+                trial_repair_calls = 0
 
-                    trial_repair_calls += 1
-                    repair_llm_calls += 1
-                    system["repair_llm_calls"] += 1
+                for attempt in trial["attempts"]:
+                    for event in attempt.get("trace", []):
+                        if (
+                            event.get("type") != "llm_call"
+                            or event.get("purpose")
+                            != "tool_call_repair"
+                        ):
+                            continue
 
-                    if event.get("error") is not None:
-                        repair_llm_errors += 1
-                        system["repair_llm_errors"] += 1
+                        trial_repair_calls += 1
+                        repair_llm_calls += 1
+                        system["repair_llm_calls"] += 1
 
-                    response = event.get("response")
+                        if event.get("error") is not None:
+                            repair_llm_errors += 1
+                            system["repair_llm_errors"] += 1
 
-                    if response is not None:
-                        repair_llm_responses += 1
-                        system["repair_llm_responses"] += 1
+                        response = event.get("response")
 
-                    input_tokens = (
-                        response.get("input_tokens")
-                        if response is not None
-                        else None
-                    )
-                    output_tokens = (
-                        response.get("output_tokens")
-                        if response is not None
-                        else None
-                    )
+                        if response is not None:
+                            repair_llm_responses += 1
+                            system["repair_llm_responses"] += 1
 
-                    if input_tokens is not None:
-                        repair_input_tokens += input_tokens
-                        system["repair_input_tokens"] += input_tokens
+                        input_tokens = (
+                            response.get("input_tokens")
+                            if response is not None
+                            else None
+                        )
+                        output_tokens = (
+                            response.get("output_tokens")
+                            if response is not None
+                            else None
+                        )
 
-                    if output_tokens is not None:
-                        repair_output_tokens += output_tokens
-                        system["repair_output_tokens"] += output_tokens
+                        if input_tokens is not None:
+                            repair_input_tokens += input_tokens
+                            system["repair_input_tokens"] += input_tokens
 
-                    if (
-                        input_tokens is not None
-                        and output_tokens is not None
-                    ):
-                        repair_llm_calls_with_token_usage += 1
-                        system[
-                            "repair_llm_calls_with_token_usage"
-                        ] += 1
-                    else:
-                        repair_llm_calls_without_token_usage += 1
-                        system[
-                            "repair_llm_calls_without_token_usage"
-                        ] += 1
+                        if output_tokens is not None:
+                            repair_output_tokens += output_tokens
+                            system["repair_output_tokens"] += output_tokens
 
-            if trial_repair_calls > 0:
-                trials_with_repair += 1
-                system["trials_with_repair"] += 1
+                        if (
+                            input_tokens is not None
+                            and output_tokens is not None
+                        ):
+                            repair_llm_calls_with_token_usage += 1
+                            system[
+                                "repair_llm_calls_with_token_usage"
+                            ] += 1
+                        else:
+                            repair_llm_calls_without_token_usage += 1
+                            system[
+                                "repair_llm_calls_without_token_usage"
+                            ] += 1
 
-    return {
-        "run_id": run_manifest["run_id"],
+                if trial_repair_calls > 0:
+                    trials_with_repair += 1
+                    system["trials_with_repair"] += 1
+
+    analysis = {
+        "run_ids": run_ids,
         "total_trials": total_trials,
         "trials_with_repair": trials_with_repair,
         "repair_llm_calls": repair_llm_calls,
@@ -146,6 +159,11 @@ def analyze_tool_call_repair(
         },
     }
 
+    if len(run_ids) == 1:
+        analysis["run_id"] = run_ids[0]
+
+    return analysis
+
 
 def render_markdown(
     analysis: dict[str, Any],
@@ -163,9 +181,22 @@ def render_markdown(
     lines.append(
         "# Análisis de reparación de tool calls — M3\n"
     )
-    lines.append(
-        f"**Run:** `{analysis['run_id']}`\n"
-    )
+    run_ids = analysis.get("run_ids") or [
+        analysis["run_id"],
+    ]
+
+    if len(run_ids) == 1:
+        lines.append(
+            f"**Run:** `{run_ids[0]}`\n"
+        )
+    else:
+        runs = ", ".join(
+            f"`{run_id}`"
+            for run_id in run_ids
+        )
+        lines.append(
+            f"**Runs:** {runs}\n"
+        )
 
     lines.append("## Resumen\n")
     lines.append("| Métrica | Valor |")

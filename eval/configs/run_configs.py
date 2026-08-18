@@ -100,24 +100,9 @@ M3_TOOL_REPAIR_COMPARISON_RUN_CONFIG: dict[str, Any] = {
     "trials_per_case": 10,
 }
 
-M3_THREE_MODEL_REPAIR_COMPARISON_RUN_CONFIG: dict[str, Any] = {
+
+M3_NOVA_TOOL_REPAIR_COMPARISON_RUN_CONFIG: dict[str, Any] = {
     "systems": [
-        {
-            "agent_config": "minimal",
-            "llm_config": "llama3.1",
-        },
-        {
-            "agent_config": "minimal_tool_repair",
-            "llm_config": "llama3.1",
-        },
-        {
-            "agent_config": "minimal",
-            "llm_config": "qwen2.5:7b",
-        },
-        {
-            "agent_config": "minimal_tool_repair",
-            "llm_config": "qwen2.5:7b",
-        },
         {
             "agent_config": "minimal",
             "llm_config": "nova-lite",
@@ -140,5 +125,5 @@ M3_THREE_MODEL_REPAIR_COMPARISON_RUN_CONFIG: dict[str, Any] = {
         "vault-combination",
         "backtracking-vault",
     ],
-    "trials_per_case": 5,
+    "trials_per_case": 10,
 }
