@@ -1,5 +1,6 @@
 from eval.analyses.tool_call_repair_analysis import (
     analyze_tool_call_repair,
+    render_markdown,
 )
 
 
@@ -168,3 +169,59 @@ def test_tool_call_repair_analysis_counts_activity_and_tokens_by_system() -> Non
             },
         },
     }
+
+
+def test_tool_call_repair_markdown_exposes_summary_and_system_activity() -> None:
+    run_manifest = {
+        "run_id": "test-run",
+    }
+
+    run_result = {
+        "results": [
+            {
+                "agent_config": "minimal_tool_repair",
+                "llm_config": "llama3.1",
+                "trials": [
+                    {
+                        "attempts": [
+                            {
+                                "trace": [
+                                    _llm_event(
+                                        "tool_call_repair",
+                                        input_tokens=500,
+                                        output_tokens=20,
+                                    ),
+                                    _failed_llm_event(
+                                        "tool_call_repair",
+                                    ),
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
+    }
+
+    analysis = analyze_tool_call_repair(
+        run_manifest,
+        run_result,
+    )
+    markdown = render_markdown(analysis)
+
+    assert "# Análisis de reparación de tool calls — M3" in markdown
+    assert "**Run:** `test-run`" in markdown
+
+    assert "| Trials totales | 1 |" in markdown
+    assert "| Trials con reparación | 1 |" in markdown
+    assert "| Llamadas físicas de reparación | 2 |" in markdown
+    assert "| Respuestas del LLM | 1 |" in markdown
+    assert "| Errores de llamada | 1 |" in markdown
+    assert "| Llamadas con usage completo | 1 |" in markdown
+    assert "| Llamadas sin usage completo | 1 |" in markdown
+    assert "| Tokens de entrada reportados | 500 |" in markdown
+    assert "| Tokens de salida reportados | 20 |" in markdown
+    assert "| Cobertura de tokens completa | no |" in markdown
+
+    assert "## Por sistema" in markdown
+    assert "### `minimal_tool_repair` / `llama3.1`" in markdown

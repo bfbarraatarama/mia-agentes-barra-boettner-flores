@@ -24,7 +24,9 @@ from eval.report import (
     print_success_rate_summary,
     write_error_analysis_report,
 )
-
+from eval.analyses.tool_call_repair_analysis import (
+    render_markdown as render_tool_call_repair_markdown,
+)
 
 RUN_ID = "m3-tool-repair-comparison-run-002"
 EVAL_ID = "m3-tool-repair-comparison-eval-002"
@@ -89,6 +91,11 @@ def main() -> int:
         evaluation_output_dir / "error_analysis.md"
     )
 
+    tool_call_repair_analysis_path = (
+        evaluation_output_dir
+        / "tool_call_repair_analysis.md"
+    )
+
     print_success_rate_summary(
         evaluation_result
     )
@@ -100,6 +107,19 @@ def main() -> int:
     write_error_analysis_report(
         evaluation_result,
         error_analysis_path,
+    )
+
+    tool_call_repair_analysis = (
+        evaluation_result["analyses"][
+            "tool_call_repair_analysis"
+        ]
+    )
+
+    tool_call_repair_analysis_path.write_text(
+        render_tool_call_repair_markdown(
+            tool_call_repair_analysis
+        ),
+        encoding="utf-8",
     )
 
     print()
@@ -124,6 +144,10 @@ def main() -> int:
     )
     print(
         f"Análisis de errores: {error_analysis_path}"
+    )
+    print(
+        "Análisis de reparación de tool calls: "
+        f"{tool_call_repair_analysis_path}"
     )
 
     return 0

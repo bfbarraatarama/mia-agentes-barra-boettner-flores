@@ -176,3 +176,28 @@ def test_error_analysis_markdown_identifies_each_system() -> None:
         "| 1 | minimal_tool_repair | llama3.1 | study-with-key |"
         in markdown
     )
+
+
+def test_error_analysis_markdown_uses_trial_counts_and_precise_percentages() -> None:
+    analysis = {
+        "run_id": "test-run",
+        "total_trials": 320,
+        "successes": 51,
+        "failures": 269,
+        "coverage": "269/269 trials fallidos clasificados",
+        "failures_by_mode": {
+            "planning_failure": 130,
+        },
+        "failures_by_model": {},
+        "failures_by_system": {},
+        "failures_by_scenario": {},
+        "examples_by_mode": {},
+        "all_failures": [],
+    }
+
+    markdown = render_markdown(analysis)
+
+    assert "| Exitosos | 51 (15.9%) |" in markdown
+    assert "| Fallidos | 269 (84.1%) |" in markdown
+    assert "| Modo | Trials | % |" in markdown
+    assert "| Modo | Runs |" not in markdown

@@ -320,18 +320,33 @@ def render_markdown(analysis: dict) -> str:
     failures = analysis["failures"]
     successes = analysis["successes"]
 
+    success_pct = (
+        100 * successes / total
+        if total
+        else 0.0
+    )
+    failure_pct = (
+        100 * failures / total
+        if total
+        else 0.0
+    )
+
     lines.append("# Análisis de errores — M3\n")
     lines.append(f"**Run:** `{analysis['run_id']}`\n")
     lines.append(f"| | |")
     lines.append(f"|---|---|")
     lines.append(f"| Total trials | {total} |")
-    lines.append(f"| Exitosos | {successes} ({100 * successes // total}%) |")
-    lines.append(f"| Fallidos | {failures} ({100 * failures // total}%) |")
+    lines.append(
+        f"| Exitosos | {successes} ({success_pct:.1f}%) |"
+    )
+    lines.append(
+        f"| Fallidos | {failures} ({failure_pct:.1f}%) |"
+    )
     lines.append(f"| Cobertura | {analysis['coverage']} |")
     lines.append("")
 
     lines.append("## Modos de fallo\n")
-    lines.append("| Modo | Runs | % |")
+    lines.append("| Modo | Trials | % |")
     lines.append("|---|---:|---:|")
     for mode, count in analysis["failures_by_mode"].items():
         pct = round(100 * count / failures)
@@ -346,7 +361,7 @@ def render_markdown(analysis: dict) -> str:
                 f"### {agent_config} / {model} "
                 f"({total_system} fallos)\n"
             )
-            lines.append("| Modo | Runs |")
+            lines.append("| Modo | Trials |")
             lines.append("|---|---:|")
             for mode, count in modes.items():
                 lines.append(f"| `{mode}` | {count} |")
@@ -356,7 +371,7 @@ def render_markdown(analysis: dict) -> str:
     for model, modes in analysis["failures_by_model"].items():
         total_model = sum(modes.values())
         lines.append(f"### {model} ({total_model} fallos)\n")
-        lines.append("| Modo | Runs |")
+        lines.append("| Modo | Trials |")
         lines.append("|---|---:|")
         for mode, count in modes.items():
             lines.append(f"| `{mode}` | {count} |")

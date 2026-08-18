@@ -145,3 +145,126 @@ def analyze_tool_call_repair(
             for agent_config, models in systems.items()
         },
     }
+
+
+def render_markdown(
+    analysis: dict[str, Any],
+) -> str:
+    """Renderiza el análisis de reparación como Markdown."""
+
+    lines = []
+
+    token_usage_complete = (
+        "sí"
+        if analysis["token_usage_complete"]
+        else "no"
+    )
+
+    lines.append(
+        "# Análisis de reparación de tool calls — M3\n"
+    )
+    lines.append(
+        f"**Run:** `{analysis['run_id']}`\n"
+    )
+
+    lines.append("## Resumen\n")
+    lines.append("| Métrica | Valor |")
+    lines.append("|---|---:|")
+    lines.append(
+        f"| Trials totales | {analysis['total_trials']} |"
+    )
+    lines.append(
+        "| Trials con reparación | "
+        f"{analysis['trials_with_repair']} |"
+    )
+    lines.append(
+        "| Llamadas físicas de reparación | "
+        f"{analysis['repair_llm_calls']} |"
+    )
+    lines.append(
+        "| Respuestas del LLM | "
+        f"{analysis['repair_llm_responses']} |"
+    )
+    lines.append(
+        "| Errores de llamada | "
+        f"{analysis['repair_llm_errors']} |"
+    )
+    lines.append(
+        "| Llamadas con usage completo | "
+        f"{analysis['repair_llm_calls_with_token_usage']} |"
+    )
+    lines.append(
+        "| Llamadas sin usage completo | "
+        f"{analysis['repair_llm_calls_without_token_usage']} |"
+    )
+    lines.append(
+        "| Tokens de entrada reportados | "
+        f"{analysis['repair_input_tokens']} |"
+    )
+    lines.append(
+        "| Tokens de salida reportados | "
+        f"{analysis['repair_output_tokens']} |"
+    )
+    lines.append(
+        "| Cobertura de tokens completa | "
+        f"{token_usage_complete} |"
+    )
+    lines.append("")
+
+    lines.append("## Por sistema\n")
+
+    for agent_config, models in analysis["systems"].items():
+        for model, values in models.items():
+            system_usage_complete = (
+                "sí"
+                if values["token_usage_complete"]
+                else "no"
+            )
+
+            lines.append(
+                f"### `{agent_config}` / `{model}`\n"
+            )
+            lines.append("| Métrica | Valor |")
+            lines.append("|---|---:|")
+            lines.append(
+                f"| Trials | {values['trials']} |"
+            )
+            lines.append(
+                "| Trials con reparación | "
+                f"{values['trials_with_repair']} |"
+            )
+            lines.append(
+                "| Llamadas físicas de reparación | "
+                f"{values['repair_llm_calls']} |"
+            )
+            lines.append(
+                "| Respuestas del LLM | "
+                f"{values['repair_llm_responses']} |"
+            )
+            lines.append(
+                "| Errores de llamada | "
+                f"{values['repair_llm_errors']} |"
+            )
+            lines.append(
+                "| Llamadas con usage completo | "
+                f"{values['repair_llm_calls_with_token_usage']} |"
+            )
+            lines.append(
+                "| Llamadas sin usage completo | "
+                f"{values['repair_llm_calls_without_token_usage']} |"
+            )
+            lines.append(
+                "| Tokens de entrada reportados | "
+                f"{values['repair_input_tokens']} |"
+            )
+            lines.append(
+                "| Tokens de salida reportados | "
+                f"{values['repair_output_tokens']} |"
+            )
+            lines.append(
+                "| Cobertura de tokens completa | "
+                f"{system_usage_complete} |"
+            )
+            lines.append("")
+
+    return "\n".join(lines)
