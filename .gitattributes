@@ -1,5 +1,20 @@
-eval/results/runs/*.json -diff linguist-generated
-eval/results/runs/*.manifest.json diff -linguist-generated
-eval/results/evaluations/*/results.json -diff linguist-generated
+# Politica de almacenamiento de artefactos experimentales (issue #36).
+#
+# Criterio: la evidencia primaria de un run se regenera entera en cada corrida,
+# puede superar los 90 MB y no tiene diff util linea por linea. Los manifests y
+# los resultados derivados son chicos y su revision textual si aporta.
+
+# --- Evidencia primaria de runs -> Git LFS ---
+eval/results/runs/*.json filter=lfs diff=lfs merge=lfs -text linguist-generated
+
+# Los manifests caen bajo el glob anterior, porque en gitattributes `*` tambien
+# matchea el punto. Se excluyen explicitamente: son metadata chica y revisable.
+eval/results/runs/*.manifest.json !filter !diff !merge text -linguist-generated
+
+# --- Resultados derivados de una evaluacion -> Git convencional ---
+# ~200 KB. Se marcan como generados para que GitHub colapse el diff por defecto,
+# pero se conserva el diff textual: es donde se leen los cambios de metricas.
+eval/results/evaluations/*/results.json linguist-generated
+
+# Graficos generados por la evaluacion.
 eval/results/evaluations/*/success_rate.png linguist-generated
-eval/results/runs/m3-tool-repair-comparison-run-002.json filter=lfs diff=lfs merge=lfs -text

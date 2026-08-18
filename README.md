@@ -18,3 +18,40 @@ La documentación de cada etapa completada se complementará con un informe en `
 Informes actuales
 - [m1.md](informes/m1.md)
 - [m2.md](informes/m2.md)
+
+## Resultados experimentales y Git LFS
+
+La evidencia primaria de cada corrida experimental se versiona bajo `eval/results/`.
+Los raw runs conservan los traces completos de todos los trials y pueden superar los
+90 MB, por lo que se almacenan mediante **Git LFS**. La política está expresada por
+path en `.gitattributes` y se aplica automáticamente a los runs futuros:
+
+| Artefacto | Almacenamiento |
+|---|---|
+| `eval/results/runs/<run_id>.json` | Git LFS |
+| `eval/results/runs/<run_id>.manifest.json` | Git convencional |
+| `eval/results/evaluations/<eval_id>/results.json` | Git convencional |
+| `eval/results/evaluations/<eval_id>/*.md`, `*.png` | Git convencional |
+
+### Requisito para trabajar con los resultados
+
+Git LFS debe estar instalado **antes** de clonar el repositorio:
+
+```bash
+sudo apt install git-lfs   # o: brew install git-lfs
+git lfs install
+```
+
+Si ya clonaste sin tenerlo, los raw runs aparecen como archivos de ~130 bytes con un
+pointer en lugar del JSON. Se materializan con:
+
+```bash
+git lfs install
+git lfs pull
+```
+
+Para verificar qué archivos administra LFS:
+
+```bash
+git lfs ls-files
+```
