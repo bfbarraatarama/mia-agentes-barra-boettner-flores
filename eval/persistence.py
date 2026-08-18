@@ -12,10 +12,10 @@ import subprocess
 from tempfile import NamedTemporaryFile
 from typing import Any
 
-from eval.agent_configs import AGENT_CONFIGS
 from eval.experiment import _resolve_scenario
-from eval.trial_configs import TRIAL_CONFIGS
-from eval.llm_configs import LLM_CONFIGS, PROVIDERS
+from eval.configs.agent_configs import AGENT_CONFIGS
+from eval.configs.trial_configs import TRIAL_CONFIGS
+from eval.configs.llm_configs import LLM_CONFIGS, PROVIDERS
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -84,7 +84,7 @@ def _git_output(*args: str) -> str:
 
 
 def _git_metadata() -> dict[str, Any]:
-    """Obtiene metadata de trazabilidad del estado actual del repositorio."""
+    """Obtiene metadata de trazabilidad del código y configuración."""
 
     return {
         "commit": _git_output("rev-parse", "HEAD"),
@@ -97,6 +97,9 @@ def _git_metadata() -> dict[str, Any]:
             _git_output(
                 "status",
                 "--porcelain",
+                "--",
+                ".",
+                ":(exclude)eval/results",
             )
         ),
     }
@@ -236,17 +239,32 @@ def _run_paths(
     )
 
 
+def evaluation_dir(
+    eval_id: str,
+    *,
+    results_dir: Path = EVALUATIONS_DIR,
+) -> Path:
+    """Devuelve el directorio de artefactos de una evaluación."""
+
+    _validate_eval_id(eval_id)
+
+    return results_dir / eval_id
+
+
 def _evaluation_paths(
     eval_id: str,
     results_dir: Path,
 ) -> tuple[Path, Path]:
     """Devuelve las rutas del manifest y los resultados de una evaluación."""
 
-    _validate_eval_id(eval_id)
+    output_dir = evaluation_dir(
+        eval_id,
+        results_dir=results_dir,
+    )
 
     return (
-        results_dir / f"{eval_id}.manifest.json",
-        results_dir / f"{eval_id}.json",
+        output_dir / "manifest.json",
+        output_dir / "results.json",
     )
 
 
@@ -512,19 +530,14 @@ def initialize_evaluation(
         results_dir,
     )
 
-    existing_paths = [
-        path
-        for path in (manifest_path, results_path)
-        if path.exists()
-    ]
+    output_dir = evaluation_dir(
+        eval_id,
+        results_dir=results_dir,
+    )
 
-    if existing_paths:
-        existing_names = ", ".join(
-            path.name
-            for path in existing_paths
-        )
+    if output_dir.exists():
         raise FileExistsError(
-            f"El eval_id {eval_id!r} ya existe: {existing_names}."
+            f"El eval_id {eval_id!r} ya existe: {output_dir.name}."
         )
 
     manifest = build_evaluation_manifest(

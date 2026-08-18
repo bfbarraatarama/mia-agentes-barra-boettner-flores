@@ -15,21 +15,23 @@ if str(REPO_ROOT) not in sys.path:
 
 
 from eval.evaluation import start_evaluation
-from eval.evaluation_configs import M3_EVALUATION_CONFIG
-from eval.persistence import EVALUATIONS_DIR, RUNS_DIR
-from eval.run_configs import M3_BASELINE_RUN_CONFIG
+from eval.persistence import RUNS_DIR, evaluation_dir
+from eval.configs.evaluation_configs import M3_EVALUATION_CONFIG
+from eval.configs.run_configs import M3_TOOL_REPAIR_COMPARISON_RUN_CONFIG
 from eval.run_execution import resume_run, start_run
 from eval.report import (
     plot_success_rate,
     print_success_rate_summary,
     write_error_analysis_report,
 )
+from eval.analyses.tool_call_repair_analysis import (
+    render_markdown as render_tool_call_repair_markdown,
+)
 
+RUN_ID = "m3-tool-repair-comparison-run-002"
+EVAL_ID = "m3-tool-repair-comparison-eval-002"
 
-RUN_ID = "m3-baseline-run-001"
-EVAL_ID = "m3-baseline-eval-001"
-
-RUN_CONFIG = M3_BASELINE_RUN_CONFIG
+RUN_CONFIG = M3_TOOL_REPAIR_COMPARISON_RUN_CONFIG
 EVALUATION_CONFIG = M3_EVALUATION_CONFIG
 
 
@@ -57,11 +59,11 @@ def print_progress(
 def main() -> int:
     # Para crear una corrida nueva:
     #
-    # start_run(
-    #     run_id=RUN_ID,
-    #     run_config=RUN_CONFIG,
-    #     progress_callback=print_progress,
-    # )
+    start_run(
+        run_id=RUN_ID,
+        run_config=RUN_CONFIG,
+        progress_callback=print_progress,
+    )
     #
     # Para reanudar una corrida interrumpida:
     #
@@ -79,12 +81,19 @@ def main() -> int:
         evaluation_config=EVALUATION_CONFIG,
     )
 
+    evaluation_output_dir = evaluation_dir(EVAL_ID)
+
     success_rate_plot_path = (
-        EVALUATIONS_DIR / f"{EVAL_ID}.success_rate.png"
+        evaluation_output_dir / "success_rate.png"
     )
 
     error_analysis_path = (
-        EVALUATIONS_DIR / f"{EVAL_ID}.error_analysis.md"
+        evaluation_output_dir / "error_analysis.md"
+    )
+
+    tool_call_repair_analysis_path = (
+        evaluation_output_dir
+        / "tool_call_repair_analysis.md"
     )
 
     print_success_rate_summary(
@@ -100,6 +109,19 @@ def main() -> int:
         error_analysis_path,
     )
 
+    tool_call_repair_analysis = (
+        evaluation_result["analyses"][
+            "tool_call_repair_analysis"
+        ]
+    )
+
+    tool_call_repair_analysis_path.write_text(
+        render_tool_call_repair_markdown(
+            tool_call_repair_analysis
+        ),
+        encoding="utf-8",
+    )
+
     print()
     print(
         "Manifest del run: "
@@ -111,17 +133,21 @@ def main() -> int:
     )
     print(
         "Manifest de la evaluación: "
-        f"{EVALUATIONS_DIR / f'{EVAL_ID}.manifest.json'}"
+        f"{evaluation_output_dir / 'manifest.json'}"
     )
     print(
         "Resultados de la evaluación: "
-        f"{EVALUATIONS_DIR / f'{EVAL_ID}.json'}"
+        f"{evaluation_output_dir / 'results.json'}"
     )
     print(
         f"Gráfico de success rate: {success_rate_plot_path}"
     )
     print(
         f"Análisis de errores: {error_analysis_path}"
+    )
+    print(
+        "Análisis de reparación de tool calls: "
+        f"{tool_call_repair_analysis_path}"
     )
 
     return 0

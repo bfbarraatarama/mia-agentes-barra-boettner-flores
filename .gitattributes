@@ -1,0 +1,5 @@
+eval/results/runs/*.json -diff linguist-generated
+eval/results/runs/*.manifest.json diff -linguist-generated
+eval/results/evaluations/*/results.json -diff linguist-generated
+eval/results/evaluations/*/success_rate.png linguist-generated
+eval/results/runs/m3-tool-repair-comparison-run-002.json filter=lfs diff=lfs merge=lfs -text

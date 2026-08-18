@@ -7,8 +7,7 @@ from mia_agents.types import LLMResponse, ToolCall
 from mia_world import Item, Room, Scenario, World
 
 from eval import experiment, run_execution
-from eval.trial_configs import CONTINUATION_MESSAGE
-
+from eval.configs.trial_configs import CONTINUATION_MESSAGE
 
 def test_run_trial_continues_after_incomplete_final_response(
     monkeypatch: pytest.MonkeyPatch,

@@ -12,9 +12,17 @@ MINIMAL_AGENT_CONFIG: dict[str, Any] = {
     "register_default_tools": False,
     "max_iterations": 40,
     "max_history_messages": 100,
+    "tool_call_repair_max_attempts": 0,
+}
+
+
+MINIMAL_TOOL_REPAIR_AGENT_CONFIG: dict[str, Any] = {
+    **MINIMAL_AGENT_CONFIG,
+    "tool_call_repair_max_attempts": 3,
 }
 
 
 AGENT_CONFIGS: dict[str, dict[str, Any]] = {
     "minimal": MINIMAL_AGENT_CONFIG,
+    "minimal_tool_repair": MINIMAL_TOOL_REPAIR_AGENT_CONFIG,
 }
