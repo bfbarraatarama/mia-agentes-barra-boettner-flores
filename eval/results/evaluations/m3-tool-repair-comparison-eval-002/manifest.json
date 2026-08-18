@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "eval_id": "m3-tool-repair-comparison-eval-002",
+  "run_id": "m3-tool-repair-comparison-run-002",
+  "created_at": "2026-08-18T09:42:12+00:00",
+  "git": {
+    "commit": "18bdc2bb26de23c91a51cfc83caa0c47225d1579",
+    "branch": "m3/evaluation-persistence",
+    "dirty": false
+  },
+  "evaluation": {
+    "metrics": [
+      "success_rate"
+    ],
+    "analyses": [
+      "error_analysis",
+      "tool_call_repair_analysis"
+    ]
+  }
+}
