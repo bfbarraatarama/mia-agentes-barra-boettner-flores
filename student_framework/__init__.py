@@ -44,6 +44,10 @@ def build_agent(config: dict[str, Any] | None = None) -> Agent:
     if "max_iterations" in config:
         kwargs["max_iterations"] = config["max_iterations"]
 
+    if "tool_call_repair_max_attempts" in config:
+        kwargs["tool_call_repair_max_attempts"] = config[
+            "tool_call_repair_max_attempts"
+        ]
     if "trace_callback" in config:
         kwargs["trace_callback"] = config["trace_callback"]
 

@@ -17,7 +17,7 @@ if str(REPO_ROOT) not in sys.path:
 from eval.evaluation import start_evaluation
 from eval.evaluation_configs import M3_EVALUATION_CONFIG
 from eval.persistence import EVALUATIONS_DIR, RUNS_DIR
-from eval.run_configs import M3_BASELINE_RUN_CONFIG
+from eval.run_configs import M3_BASELINE_RUN_CONFIG, M3_TOOL_REPAIR_COMPARISON_RUN_CONFIG
 from eval.run_execution import resume_run, start_run
 from eval.report import (
     plot_success_rate,
@@ -26,10 +26,10 @@ from eval.report import (
 )
 
 
-RUN_ID = "m3-baseline-run-001"
-EVAL_ID = "m3-baseline-eval-001"
+RUN_ID = "m3-tool-repair-comparison-run-001"
+EVAL_ID = "m3-tool-repair-comparison-eval-001"
 
-RUN_CONFIG = M3_BASELINE_RUN_CONFIG
+RUN_CONFIG = M3_TOOL_REPAIR_COMPARISON_RUN_CONFIG
 EVALUATION_CONFIG = M3_EVALUATION_CONFIG
 
 
@@ -57,11 +57,11 @@ def print_progress(
 def main() -> int:
     # Para crear una corrida nueva:
     #
-    # start_run(
-    #     run_id=RUN_ID,
-    #     run_config=RUN_CONFIG,
-    #     progress_callback=print_progress,
-    # )
+    start_run(
+        run_id=RUN_ID,
+        run_config=RUN_CONFIG,
+        progress_callback=print_progress,
+    )
     #
     # Para reanudar una corrida interrumpida:
     #

@@ -17,8 +17,9 @@ from typing import Any, Callable
 from mia_agents.protocols import LLMClient
 from mia_agents.types import AgentResult, ToolSchema, AgentStep
 import json
-from mia_agents.tool_schema import final_result_tool_schema, FINAL_RESULT_TOOL_NAME
+from mia_agents.tool_schema import final_result_tool_schema
 from pydantic import ValidationError
+import inspect
 
 class MyAgent:
     def __init__(
@@ -27,6 +28,7 @@ class MyAgent:
         system_prompt: str = "Eres un asistente útil.",
         max_iterations: int = 10,
         max_history_messages: int = 50,
+        tool_call_repair_max_attempts: int = 0,
         trace_callback: Callable[[dict[str, Any]], None] | None = None,
     ) -> None:
         """Inicializa el agente.
@@ -52,6 +54,12 @@ class MyAgent:
         self._system = system_prompt
         self._max_iterations = max_iterations
         self._max_history_messages = max_history_messages
+        if tool_call_repair_max_attempts < 0:
+            raise ValueError(
+                "tool_call_repair_max_attempts no puede ser negativo."
+            )
+
+        self._tool_call_repair_max_attempts = tool_call_repair_max_attempts
         self._schemas: dict[str, ToolSchema] = {}
         self._tools: dict[str, Callable[..., str]] = {}
         self._history: list[dict[str, Any]] = []
@@ -74,6 +82,81 @@ class MyAgent:
         """
         self._schemas[schema.name] = schema
         self._tools[schema.name] = tool
+
+
+    def _validate_tool_call(
+        self,
+        tool_call: Any,
+    ) -> dict[str, Any]:
+        if tool_call.name not in self._tools:
+            raise ValueError(f"Herramienta desconocida: {tool_call.name}")
+
+        try:
+            kwargs = (
+                json.loads(tool_call.arguments)
+                if tool_call.arguments
+                else {}
+            )
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Argumentos JSON inválidos: {e}") from e
+
+        if not isinstance(kwargs, dict):
+            raise ValueError(
+                "Los argumentos de la herramienta deben ser un objeto JSON."
+            )
+
+        tool_function = self._tools[tool_call.name]
+
+        try:
+            inspect.signature(tool_function).bind(**kwargs)
+        except TypeError as e:
+            raise ValueError(str(e)) from e
+
+        return kwargs
+
+
+    def _repair_tool_call(
+        self,
+        tool_call: Any,
+        error: str,
+        max_attempts: int,
+        response_callback: Callable[[Any], None] | None = None,
+    ) -> Any:
+        if max_attempts < 1:
+            raise ValueError("max_attempts debe ser al menos 1.")
+
+        tools = list(self._schemas.values())
+
+        if not tools:
+            raise ValueError(
+                "No hay herramientas registradas disponibles para reparar la llamada."
+            )
+
+        prompt = (
+            "Repará exclusivamente la siguiente llamada a herramienta para que "
+            "respete alguna de las herramientas disponibles.\n\n"
+            f"Herramienta original: {tool_call.name}\n"
+            f"Argumentos originales: {tool_call.arguments}\n"
+            f"Error detectado: {error}\n\n"
+            "Preservá la intención de la llamada original. Podés cambiar la "
+            "herramienta si la intención corresponde a otra de las disponibles. "
+            "No avances la tarea ni agregues una acción nueva. Invocá una única "
+            "herramienta disponible con argumentos válidos."
+        )
+
+        def validate_call(repaired_call: Any) -> Any:
+            self._validate_tool_call(repaired_call)
+            return repaired_call
+
+        return self._structured_call_with_repair(
+            prompt=prompt,
+            tools=tools,
+            validate_call=validate_call,
+            max_repair_attempts=max_attempts - 1,
+            response_callback=response_callback,
+            purpose="tool_call_repair",
+        )
+
 
     def _clip(self, history: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Recorta el historial a una ventana deslizante de los últimos mensajes"""
@@ -259,6 +342,7 @@ class MyAgent:
         tools: list[ToolSchema] | None = None,
         system: str | None = None,
         max_retries: int = 2,
+        purpose: str = "agent",
     ):
         """Llama al LLM y reintenta únicamente ante errores transitorios."""
 
@@ -280,6 +364,7 @@ class MyAgent:
                 if self._trace_callback is not None:
                     self._trace_callback({
                         "type": "llm_call",
+                        "purpose": purpose,
                         "retry_index": attempt,
                         "messages": messages_snapshot,
                         "error": error,
@@ -295,6 +380,7 @@ class MyAgent:
                 if self._trace_callback is not None:
                     self._trace_callback({
                         "type": "llm_call",
+                        "purpose": purpose,
                         "retry_index": attempt,
                         "messages": messages_snapshot,
                         "response": response,
@@ -445,15 +531,20 @@ class MyAgent:
         total_in: int | None = None
         total_out: int | None = None
 
-        steps : list[AgentStep] = []
-        for _ in range(self._max_iterations):
-            messages = self._clip(self._history)
-            response = self._chat_with_retry(messages=messages, tools=list(self._schemas.values()), system= self._system)
+        def accumulate_response_tokens(response: Any) -> None:
+            nonlocal total_in, total_out
 
             if response.input_tokens is not None or total_in is not None:
                 total_in = (total_in or 0) + (response.input_tokens or 0)
             if response.output_tokens is not None or total_out is not None:
                 total_out = (total_out or 0) + (response.output_tokens or 0)
+
+        steps : list[AgentStep] = []
+        for _ in range(self._max_iterations):
+            messages = self._clip(self._history)
+            response = self._chat_with_retry(messages=messages, tools=list(self._schemas.values()), system= self._system)
+
+            accumulate_response_tokens(response)
 
             if not response.tool_calls:
                 self._history.append({
@@ -470,9 +561,32 @@ class MyAgent:
                     output_tokens=total_out,
                 )
 
+            effective_tool_calls = response.tool_calls
+
+            if self._tool_call_repair_max_attempts > 0:
+                effective_tool_calls = []
+
+                for tool_call in response.tool_calls:
+                    effective_tool_call = tool_call
+
+                    try:
+                        self._validate_tool_call(tool_call)
+                    except ValueError as e:
+                        try:
+                            effective_tool_call = self._repair_tool_call(
+                                tool_call=tool_call,
+                                error=str(e),
+                                max_attempts=self._tool_call_repair_max_attempts,
+                                response_callback=accumulate_response_tokens,
+                            )
+                        except ValueError:
+                            pass
+
+                    effective_tool_calls.append(effective_tool_call)
+
             prepared_turn_start = self._prepare_run_tool_context(
                 active_turn_start=active_turn_start,
-                tool_call_count=len(response.tool_calls),
+                tool_call_count=len(effective_tool_calls),
             )
 
             if prepared_turn_start is None:
@@ -511,11 +625,11 @@ class MyAgent:
                             'arguments': tool.arguments,
                         },
                     }
-                    for tool in response.tool_calls
+                    for tool in effective_tool_calls
                 ],
             })
 
-            for tool_call in response.tool_calls:
+            for tool_call in effective_tool_calls:
                 error = None
                 tool_output = ""
 
@@ -654,11 +768,14 @@ class MyAgent:
         }
 
 
-    def structured_call(
+    def _structured_call_with_repair(
         self,
         prompt: str,
-        schema: Any,
+        tools: list[ToolSchema],
+        validate_call: Callable[[Any], Any],
         max_repair_attempts: int = 2,
+        response_callback: Callable[[Any], None] | None = None,
+        purpose: str = "structured_call",
     ) -> Any:
         
         if self._max_history_messages < 1:
@@ -666,7 +783,9 @@ class MyAgent:
                 "max_history_messages debe ser al menos 1 para structured_call()."
             )
 
-        final_tool = final_result_tool_schema(schema)
+        tool_names = {tool.name for tool in tools}
+        tool_names_text = ", ".join(tool.name for tool in tools)
+
         initial_message = {
             "role": "user",
             "content": prompt,
@@ -682,17 +801,36 @@ class MyAgent:
 
             response = self._chat_with_retry(
                 messages=messages,
-                tools=[final_tool],
+                tools=tools,
                 system=self._system,
+                purpose=purpose,
             )
 
+            if response_callback is not None:
+                response_callback(response)
+
             final_call = next(
-                (tc for tc in response.tool_calls if tc.name == FINAL_RESULT_TOOL_NAME),
+                (tc for tc in response.tool_calls if tc.name in tool_names),
                 None,
             )
 
             if final_call is None:
-                last_error = "El modelo respondió con texto libre en lugar de invocar final_result."
+                if len(tools) == 1:
+                    last_error = (
+                        f"El modelo respondió con texto libre en lugar de invocar {tools[0].name}."
+                    )
+                    instruction = (
+                        f"Tenés que invocar la herramienta {tools[0].name}."
+                    )
+                else:
+                    last_error = (
+                        "El modelo no invocó ninguna de las herramientas disponibles: "
+                        f"{tool_names_text}."
+                    )
+                    instruction = (
+                        "Tenés que invocar una de las herramientas disponibles: "
+                        f"{tool_names_text}."
+                    )
 
                 repair_blocks.append([
                     {
@@ -702,18 +840,25 @@ class MyAgent:
                     self._structured_call_repair_message(
                         prompt=prompt,
                         error=last_error,
-                        instruction=(
-                            "Tenés que invocar la herramienta final_result."
-                        ),
+                        instruction=instruction,
                     ),
                 ])
                 continue
 
             try:
-                args = json.loads(final_call.arguments)
-                return schema.model_validate(args)
-            except (json.JSONDecodeError, ValidationError) as e:
+                return validate_call(final_call)
+            except (json.JSONDecodeError, ValidationError, ValueError) as e:
                 last_error = str(e)
+
+                if len(tools) == 1:
+                    instruction = (
+                        f"Intentá de nuevo e invocá {tools[0].name} con el formato correcto."
+                    )
+                else:
+                    instruction = (
+                        "Intentá de nuevo e invocá una de las herramientas disponibles "
+                        f"con el formato correcto: {tool_names_text}."
+                    )
 
                 repair_blocks.append([
                     {
@@ -731,7 +876,7 @@ class MyAgent:
                     {
                         "role": "tool",
                         "tool_call_id": final_call.id,
-                        "name": FINAL_RESULT_TOOL_NAME,
+                        "name": final_call.name,
                         "content": (
                             f"Error de validación: {last_error}"
                         ),
@@ -739,10 +884,28 @@ class MyAgent:
                     self._structured_call_repair_message(
                         prompt=prompt,
                         error=last_error,
-                        instruction=(
-                            "Intentá de nuevo e invocá final_result con el formato correcto."
-                        ),
+                        instruction=instruction,
                     ),
                 ])
 
         raise ValueError(f"structured_call falló tras {max_repair_attempts + 1} intentos: {last_error}")
+
+
+    def structured_call(
+        self,
+        prompt: str,
+        schema: Any,
+        max_repair_attempts: int = 2,
+    ) -> Any:
+        final_tool = final_result_tool_schema(schema)
+
+        def validate_call(final_call: Any) -> Any:
+            args = json.loads(final_call.arguments)
+            return schema.model_validate(args)
+
+        return self._structured_call_with_repair(
+            prompt=prompt,
+            tools=[final_tool],
+            validate_call=validate_call,
+            max_repair_attempts=max_repair_attempts,
+        )
