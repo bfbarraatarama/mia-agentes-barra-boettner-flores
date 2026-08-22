@@ -50,6 +50,105 @@ EVIDENCE_RULES = (
     ),
 )
 
+Q1_1_GUIDANCE = (
+    (
+        "Un error producido por una herramienta no implica por sí mismo una "
+        "inconsistencia factual. Q1.1 evalúa cómo el agente interpreta y "
+        "utiliza posteriormente la evidencia observable."
+    ),
+)
+
+Q1_2_GUIDANCE = (
+    (
+        "No se exige que el agente explicite formalmente una descomposición "
+        "en subobjetivos. La ausencia de esa verbalización no constituye por "
+        "sí sola un FAIL."
+    ),
+)
+
+Q1_4_APPLICABILITY_DESCRIPTION = (
+    "Q1.4 sólo es evaluable cuando la trayectoria contiene una oportunidad "
+    "observable de monitorear el resultado de una conducta y, cuando "
+    "corresponde, revisar el curso de acción. Si esa oportunidad no aparece, "
+    "el criterio es N/A porque la trayectoria no permite observar capacidad "
+    "de replanificación."
+)
+
+Q1_4_CONTINUATION_TRIGGER = (
+    "El trial contiene más de un attempt."
+)
+
+Q1_4_ERROR_TRIGGER = (
+    "Existe una observación marcada como error antes de una iteración "
+    "posterior."
+)
+
+Q1_4_REPETITION_TRIGGER = (
+    "Una acción efectiva se repite en una iteración posterior con la misma "
+    "herramienta, los mismos argumentos y el mismo resultado observable."
+)
+
+Q1_4_APPLICABILITY_TRIGGERS = (
+    (
+        Q1_4_CONTINUATION_TRIGGER,
+        (
+            "Entre attempts, el agente recibe un mensaje de continuación que "
+            "indica que la trayectoria anterior no completó el desafío y abre "
+            "una nueva oportunidad para ajustar su comportamiento."
+        ),
+    ),
+    (
+        Q1_4_ERROR_TRIGGER,
+        (
+            "El error aporta evidencia de que una acción no produjo un "
+            "resultado válido y existe una decisión posterior en la que el "
+            "agente puede reaccionar."
+        ),
+    ),
+    (
+        Q1_4_REPETITION_TRIGGER,
+        (
+            "La repetición permite observar si el agente incorpora un "
+            "resultado ya obtenido o persiste sin obtener nueva información "
+            "ni progreso."
+        ),
+    ),
+)
+
+Q1_4_APPLICABILITY_NOTES = (
+    (
+        "A efectos del trigger de error, una observación se marca como error "
+        "cuando el paso persistido contiene un error o cuando su contenido "
+        "observable comienza con 'Error:'."
+    ),
+    (
+        "Para comparar repeticiones, los argumentos que pueden interpretarse "
+        "como un objeto JSON se comparan estructuralmente; en caso contrario "
+        "se compara su representación raw."
+    ),
+    (
+        "Una repetición de acciones dentro de una misma iteración no activa "
+        "por sí sola Q1.4, porque esas acciones fueron decididas antes de "
+        "observar cualquiera de sus resultados."
+    ),
+    (
+        "Un error ocurrido en la última iteración sin una decisión posterior "
+        "no activa por sí solo Q1.4, porque no existe una oportunidad "
+        "observable de reaccionar a ese error."
+    ),
+)
+
+Q1_4_GUIDANCE = (
+    (
+        "Las condiciones de aplicabilidad no constituyen por sí mismas un "
+        "FAIL. Una vez que Q1.4 aplica, PASS o FAIL depende de cómo el agente "
+        "incorpora la evidencia disponible en sus decisiones posteriores."
+    ),
+)
+
+Q1_4_NO_TRIGGER_REASON = (
+    "No se detectó ninguno de los triggers determinísticos de Q1.4."
+)
 
 @dataclass(frozen=True)
 class CriterionDefinition:
@@ -61,6 +160,13 @@ class CriterionDefinition:
     pass_description: str
     fail_description: str
     applicability: CriterionApplicability
+    guidance: tuple[str, ...] = ()
+    applicability_description: str | None = None
+    applicability_triggers: tuple[
+        tuple[str, str],
+        ...,
+    ] = ()
+    applicability_notes: tuple[str, ...] = ()
 
 
 CRITERIA = (
@@ -83,6 +189,7 @@ CRITERIA = (
             "representación de forma adecuada."
         ),
         applicability="always",
+        guidance=Q1_1_GUIDANCE,
     ),
     CriterionDefinition(
         id="Q1.2",
@@ -100,6 +207,7 @@ CRITERIA = (
             "material uno o más subobjetivos o prerrequisitos necesarios."
         ),
         applicability="always",
+        guidance=Q1_2_GUIDANCE,
     ),
     CriterionDefinition(
         id="Q1.3",
@@ -139,6 +247,10 @@ CRITERIA = (
             "inadecuada, sin nueva evidencia que justifique esa persistencia."
         ),
         applicability="conditional",
+        guidance=Q1_4_GUIDANCE,
+        applicability_description=Q1_4_APPLICABILITY_DESCRIPTION,
+        applicability_triggers=Q1_4_APPLICABILITY_TRIGGERS,
+        applicability_notes=Q1_4_APPLICABILITY_NOTES,
     ),
 )
 

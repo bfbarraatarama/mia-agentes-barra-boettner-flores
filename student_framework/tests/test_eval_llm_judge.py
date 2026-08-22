@@ -1,3 +1,4 @@
+import html
 import json
 import pytest
 from pydantic import ValidationError
@@ -14,6 +15,8 @@ from eval.llm_judge.models import (
     QualitativeIteration,
     ToolCallView,
     ActionExecution,
+    HumanAnnotation,
+    HumanCriterionAnnotation,
 )
 from eval.llm_judge.persistence import (
     create_qualitative_dataset,
@@ -22,10 +25,25 @@ from eval.llm_judge.persistence import (
     load_qualitative_cases,
 )
 from eval.llm_judge.rubric import (
+    BOUNDARY_RULES,
     CRITERIA,
     CRITERIA_BY_ID,
     CRITERION_IDS,
+    DIMENSION_DESCRIPTION,
     DIMENSION_ID,
+    DIMENSION_NAME,
+    EVIDENCE_RULES,
+    MATERIALITY_RULE,
+    Q1_1_GUIDANCE,
+    Q1_2_GUIDANCE,
+    Q1_4_APPLICABILITY_DESCRIPTION,
+    Q1_4_APPLICABILITY_NOTES,
+    Q1_4_APPLICABILITY_TRIGGERS,
+    Q1_4_CONTINUATION_TRIGGER,
+    Q1_4_ERROR_TRIGGER,
+    Q1_4_GUIDANCE,
+    Q1_4_NO_TRIGGER_REASON,
+    Q1_4_REPETITION_TRIGGER,
     RUBRIC_VERSION,
 )
 from eval.llm_judge.configs.dataset_configs import (
@@ -41,7 +59,31 @@ from eval.llm_judge.sampling import (
     collect_trial_candidates,
     sample_trials_by_scenario,
 )
-
+from eval.llm_judge.annotations import (
+    HUMAN_ANNOTATION_SCHEMA_VERSION,
+    validate_human_annotation,
+    load_human_annotations,
+    save_human_annotation,
+    create_annotator,
+    delete_annotator,
+    delete_human_annotation,
+    list_annotators,
+    update_human_annotation,
+)
+from eval.llm_judge.presentation import (
+    PRESENTATION_VERSION,
+    build_case_presentation,
+)
+from eval.llm_judge.reviewer import (
+    load_review_cases,
+)
+from eval.llm_judge.annotate import (
+    _annotation_from_form,
+    _load_selected_cases,
+    _page_html,
+    _selected_case,
+    _default_annotator_id,
+)
 
 def _qualitative_case() -> QualitativeCase:
     return QualitativeCase(
@@ -96,6 +138,31 @@ def _qualitative_case() -> QualitativeCase:
                 ),
             ),
         ],
+    )
+
+
+def _human_annotation() -> HumanAnnotation:
+    criterion_annotation = HumanCriterionAnnotation(
+        verdict="PASS",
+        reason="La trayectoria mantiene una estrategia coherente.",
+        evidence_refs=[
+            "a1.i1",
+        ],
+    )
+
+    return HumanAnnotation(
+        schema_version=HUMAN_ANNOTATION_SCHEMA_VERSION,
+        case_schema_version=1,
+        case_view_version="trajectory-planning-v1",
+        presentation_version=PRESENTATION_VERSION,
+        rubric_version="planning-quality-v1",
+        case_id="qc-001",
+        annotator_id="annotator-a",
+        criteria={
+            "Q1.1": criterion_annotation,
+            "Q1.2": criterion_annotation,
+            "Q1.3": criterion_annotation,
+        },
     )
 
 
@@ -294,6 +361,26 @@ def test_llm_judge_rubric_defines_planning_quality_criteria() -> None:
     assert len(CRITERIA) == 4
     assert set(CRITERIA_BY_ID) == set(CRITERION_IDS)
     assert CRITERIA_BY_ID["Q1.4"].applicability == "conditional"
+
+    assert CRITERIA_BY_ID["Q1.1"].guidance == Q1_1_GUIDANCE
+    assert CRITERIA_BY_ID["Q1.2"].guidance == Q1_2_GUIDANCE
+    assert CRITERIA_BY_ID["Q1.3"].guidance == ()
+    assert (
+        CRITERIA_BY_ID["Q1.4"].guidance
+        == Q1_4_GUIDANCE
+    )
+    assert (
+        CRITERIA_BY_ID["Q1.4"].applicability_description
+        == Q1_4_APPLICABILITY_DESCRIPTION
+    )
+    assert (
+        CRITERIA_BY_ID["Q1.4"].applicability_triggers
+        == Q1_4_APPLICABILITY_TRIGGERS
+    )
+    assert (
+        CRITERIA_BY_ID["Q1.4"].applicability_notes
+        == Q1_4_APPLICABILITY_NOTES
+    )
 
 
 def test_qualitative_case_preserves_blind_normalized_evidence() -> None:
@@ -554,6 +641,11 @@ def test_build_qualitative_case_marks_world_error_as_q1_4_trigger() -> None:
     assert observation.is_error is True
     assert case.criteria_applicability["Q1.4"].applicable is True
 
+    assert (
+        case.criteria_applicability["Q1.4"].reason
+        == Q1_4_ERROR_TRIGGER
+    )
+
 
 def test_build_qualitative_case_marks_continuation_as_q1_4_trigger() -> None:
     first_attempt = _attempt(
@@ -580,6 +672,11 @@ def test_build_qualitative_case_marks_continuation_as_q1_4_trigger() -> None:
     assert case.task == "Abrí la puerta."
     assert len(case.attempts) == 2
     assert case.criteria_applicability["Q1.4"].applicable is True
+
+    assert (
+        case.criteria_applicability["Q1.4"].reason
+        == Q1_4_CONTINUATION_TRIGGER
+    )
 
 
 def test_build_qualitative_case_rejects_unmatched_steps() -> None:
@@ -654,6 +751,11 @@ def test_build_qualitative_case_does_not_mark_same_iteration_repetition_as_adapt
 
     assert case.criteria_applicability["Q1.4"].applicable is False
 
+    assert (
+        case.criteria_applicability["Q1.4"].reason
+        == Q1_4_NO_TRIGGER_REASON
+    )
+
 
 def test_build_qualitative_case_requires_decision_after_error_for_q1_4() -> None:
     trace = [
@@ -692,6 +794,11 @@ def test_build_qualitative_case_requires_decision_after_error_for_q1_4() -> None
     case = build_qualitative_case(trial, case_id="qc-006")
 
     assert case.criteria_applicability["Q1.4"].applicable is False
+
+    assert (
+        case.criteria_applicability["Q1.4"].reason
+        == Q1_4_NO_TRIGGER_REASON
+    )
 
 
 def test_build_qualitative_case_compares_tool_arguments_structurally() -> None:
@@ -782,6 +889,11 @@ def test_build_qualitative_case_marks_repetition_across_iterations_as_q1_4_trigg
     case = build_qualitative_case(trial, case_id="qc-008")
 
     assert case.criteria_applicability["Q1.4"].applicable is True
+
+    assert (
+        case.criteria_applicability["Q1.4"].reason
+        == Q1_4_REPETITION_TRIGGER
+    )
 
 
 def test_build_qualitative_case_preserves_unexecuted_terminal_actions() -> None:
@@ -1306,3 +1418,928 @@ def test_prepare_qualitative_dataset_rejects_unknown_sampling_method(
             dataset_config,
             results_dir=tmp_path,
         )
+
+
+def test_human_annotation_accepts_only_applicable_criteria() -> None:
+    case = _qualitative_case()
+    annotation = _human_annotation()
+
+    validate_human_annotation(
+        case,
+        annotation,
+    )
+
+
+def test_human_annotation_rejects_non_applicable_criterion() -> None:
+    case = _qualitative_case()
+    annotation_data = _human_annotation().model_dump()
+    annotation_data["criteria"]["Q1.4"] = {
+        "verdict": "PASS",
+        "reason": "No fue necesario replanificar.",
+        "evidence_refs": [
+            "a1.i1.action1",
+        ],
+    }
+    annotation = HumanAnnotation.model_validate(
+        annotation_data
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="criterios no aplicables",
+    ):
+        validate_human_annotation(
+            case,
+            annotation,
+        )
+
+
+def test_human_annotation_requires_reason_and_evidence() -> None:
+    with pytest.raises(ValidationError):
+        HumanCriterionAnnotation(
+            verdict="FAIL",
+            reason="",
+            evidence_refs=[],
+        )
+
+
+def test_human_annotation_rejects_mismatched_case_version() -> None:
+    case = _qualitative_case()
+    annotation_data = _human_annotation().model_dump()
+    annotation_data["case_view_version"] = "other-view"
+    annotation = HumanAnnotation.model_validate(
+        annotation_data
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="vista del caso",
+    ):
+        validate_human_annotation(
+            case,
+            annotation,
+        )
+
+
+def test_human_annotation_rejects_unknown_evidence_ref() -> None:
+    case = _qualitative_case()
+    annotation_data = _human_annotation().model_dump()
+    annotation_data["criteria"]["Q1.1"]["evidence_refs"] = [
+        "a1.i99.action1",
+    ]
+    annotation = HumanAnnotation.model_validate(
+        annotation_data
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="referencias de evidencia inexistentes",
+    ):
+        validate_human_annotation(
+            case,
+            annotation,
+        )
+
+
+def test_save_and_load_human_annotation(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    annotation_data = _human_annotation().model_dump()
+    annotation_data["case_id"] = "qc-001"
+    annotation = HumanAnnotation.model_validate(
+        annotation_data
+    )
+
+    save_human_annotation(
+        "test-dataset",
+        annotation,
+        results_dir=tmp_path,
+    )
+
+    loaded = load_human_annotations(
+        "test-dataset",
+        "annotator-a",
+        results_dir=tmp_path,
+    )
+
+    assert loaded == [
+        annotation,
+    ]
+    assert (
+        tmp_path
+        / "test-dataset"
+        / "annotations"
+        / "annotator-a.jsonl"
+    ).exists()
+
+
+def test_save_human_annotation_rejects_duplicate_case(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    annotation = _human_annotation()
+
+    save_human_annotation(
+        "test-dataset",
+        annotation,
+        results_dir=tmp_path,
+    )
+
+    with pytest.raises(
+        FileExistsError,
+        match="ya tiene una anotación",
+    ):
+        save_human_annotation(
+            "test-dataset",
+            annotation,
+            results_dir=tmp_path,
+        )
+
+    loaded = load_human_annotations(
+        "test-dataset",
+        "annotator-a",
+        results_dir=tmp_path,
+    )
+
+    assert len(loaded) == 1
+
+
+def test_save_human_annotation_rejects_unknown_case(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    annotation_data = _human_annotation().model_dump()
+    annotation_data["case_id"] = "qc-999"
+    annotation = HumanAnnotation.model_validate(
+        annotation_data
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="no pertenece al dataset",
+    ):
+        save_human_annotation(
+            "test-dataset",
+            annotation,
+            results_dir=tmp_path,
+        )
+
+
+def test_case_presentation_preserves_canonical_blind_evidence() -> None:
+    presentation = build_case_presentation(
+        _qualitative_case()
+    )
+
+    assert presentation.version == PRESENTATION_VERSION
+    assert presentation.evidence_refs == (
+        "a1.user_message",
+        "a1.i1",
+        "a1.i1.action1",
+        "a1.termination",
+    )
+
+    data = json.loads(presentation.text)
+
+    assert data["case_id"] == "qc-001"
+    assert data["task"] == "Abrí la puerta principal."
+    assert tuple(data["evidence_rules"]) == EVIDENCE_RULES
+    assert data["attempts"][0]["iterations"][0][
+        "assistant_content"
+    ] == "<thinking>Primero voy a mirar.</thinking>"
+
+    action = data["attempts"][0]["iterations"][0][
+        "actions"
+    ][0]
+
+    assert action["ref"] == "a1.i1.action1"
+    assert action["proposed_action"]["tool"] == "look"
+    assert action["execution"]["action"]["tool"] == "look"
+    assert action["execution"]["differs_from_proposal"] is False
+    assert action["execution"]["observation"]["content"] == (
+        "Ves una llave."
+    )
+
+
+def test_case_presentation_excludes_evaluation_metadata() -> None:
+    presentation = build_case_presentation(
+        _qualitative_case()
+    )
+
+    assert "criteria_applicability" not in presentation.text
+    assert "goal_achieved" not in presentation.text
+    assert "goal_reason" not in presentation.text
+    assert "agent_config" not in presentation.text
+    assert "llm_config" not in presentation.text
+    assert "trial_config" not in presentation.text
+
+
+def test_human_annotation_rejects_mismatched_presentation_version() -> None:
+    case = _qualitative_case()
+    annotation_data = _human_annotation().model_dump()
+    annotation_data["presentation_version"] = "other-presentation"
+    annotation = HumanAnnotation.model_validate(
+        annotation_data
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="versión vigente de la presentación",
+    ):
+        validate_human_annotation(
+            case,
+            annotation,
+        )
+
+
+def test_annotator_management(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    assert list_annotators(
+        "test-dataset",
+        results_dir=tmp_path,
+    ) == []
+
+    create_annotator(
+        "test-dataset",
+        "annotator-a",
+        results_dir=tmp_path,
+    )
+
+    assert list_annotators(
+        "test-dataset",
+        results_dir=tmp_path,
+    ) == [
+        "annotator-a",
+    ]
+
+    with pytest.raises(
+        FileExistsError,
+        match="ya existe",
+    ):
+        create_annotator(
+            "test-dataset",
+            "annotator-a",
+            results_dir=tmp_path,
+        )
+
+    delete_annotator(
+        "test-dataset",
+        "annotator-a",
+        results_dir=tmp_path,
+    )
+
+    assert list_annotators(
+        "test-dataset",
+        results_dir=tmp_path,
+    ) == []
+
+
+def test_update_human_annotation_requires_explicit_update(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    annotation = _human_annotation()
+
+    save_human_annotation(
+        "test-dataset",
+        annotation,
+        results_dir=tmp_path,
+    )
+
+    annotation_data = annotation.model_dump()
+    annotation_data["criteria"]["Q1.1"]["verdict"] = "FAIL"
+    annotation_data["criteria"]["Q1.1"]["reason"] = (
+        "La evidencia muestra una inconsistencia material."
+    )
+    updated = HumanAnnotation.model_validate(
+        annotation_data
+    )
+
+    update_human_annotation(
+        "test-dataset",
+        updated,
+        results_dir=tmp_path,
+    )
+
+    loaded = load_human_annotations(
+        "test-dataset",
+        "annotator-a",
+        results_dir=tmp_path,
+    )
+
+    assert len(loaded) == 1
+    assert loaded[0].criteria["Q1.1"].verdict == "FAIL"
+    assert loaded[0].criteria["Q1.1"].reason == (
+        "La evidencia muestra una inconsistencia material."
+    )
+
+
+def test_delete_human_annotation_preserves_annotator(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    annotation = _human_annotation()
+
+    save_human_annotation(
+        "test-dataset",
+        annotation,
+        results_dir=tmp_path,
+    )
+
+    delete_human_annotation(
+        "test-dataset",
+        "annotator-a",
+        "qc-001",
+        results_dir=tmp_path,
+    )
+
+    assert load_human_annotations(
+        "test-dataset",
+        "annotator-a",
+        results_dir=tmp_path,
+    ) == []
+    assert list_annotators(
+        "test-dataset",
+        results_dir=tmp_path,
+    ) == [
+        "annotator-a",
+    ]
+
+
+def test_load_review_cases_supports_all_splits(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    all_cases = load_review_cases(
+        "test-dataset",
+        "annotator-a",
+        results_dir=tmp_path,
+    )
+    dev_cases = load_review_cases(
+        "test-dataset",
+        "annotator-a",
+        split="dev",
+        results_dir=tmp_path,
+    )
+    holdout_cases = load_review_cases(
+        "test-dataset",
+        "annotator-a",
+        split="holdout",
+        results_dir=tmp_path,
+    )
+
+    assert [
+        review_case.case_id
+        for review_case in all_cases
+    ] == [
+        "qc-001",
+        "qc-002",
+    ]
+    assert [
+        review_case.case_id
+        for review_case in dev_cases
+    ] == [
+        "qc-001",
+    ]
+    assert [
+        review_case.case_id
+        for review_case in holdout_cases
+    ] == [
+        "qc-002",
+    ]
+
+
+def test_load_review_cases_preserves_annotation_state(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    save_human_annotation(
+        "test-dataset",
+        _human_annotation(),
+        results_dir=tmp_path,
+    )
+
+    review_cases = load_review_cases(
+        "test-dataset",
+        "annotator-a",
+        results_dir=tmp_path,
+    )
+
+    first_case = review_cases[0]
+    second_case = review_cases[1]
+
+    assert first_case.case_id == "qc-001"
+    assert first_case.annotated is True
+    assert first_case.annotation == _human_annotation()
+
+    assert second_case.case_id == "qc-002"
+    assert second_case.annotated is False
+    assert second_case.annotation is None
+
+
+def test_load_review_cases_does_not_depend_on_case_sources(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    (
+        tmp_path
+        / "test-dataset"
+        / "case_sources.jsonl"
+    ).unlink()
+
+    review_cases = load_review_cases(
+        "test-dataset",
+        "annotator-a",
+        results_dir=tmp_path,
+    )
+
+    assert len(review_cases) == 2
+
+    for review_case in review_cases:
+        assert review_case.presentation == (
+            build_case_presentation(
+                review_case.case
+            )
+        )
+
+
+def test_annotate_selects_requested_case(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    review_cases = load_review_cases(
+        "test-dataset",
+        "annotator-a",
+        results_dir=tmp_path,
+    )
+
+    selected = _selected_case(
+        review_cases,
+        "qc-002",
+    )
+
+    assert selected is not None
+    assert selected.case_id == "qc-002"
+
+
+def test_annotate_builds_annotation_from_shared_review_case(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    review_case = load_review_cases(
+        "test-dataset",
+        "annotator-a",
+        split="dev",
+        results_dir=tmp_path,
+    )[0]
+
+    form = {
+        "Q1.1.verdict": ["PASS"],
+        "Q1.1.reason": ["Consistencia factual adecuada."],
+        "Q1.1.evidence_refs": ["a1.i1"],
+        "Q1.2.verdict": ["PASS"],
+        "Q1.2.reason": ["Subobjetivos razonables."],
+        "Q1.2.evidence_refs": ["a1.i1"],
+        "Q1.3.verdict": ["PASS"],
+        "Q1.3.reason": ["Ejecución coherente."],
+        "Q1.3.evidence_refs": ["a1.i1"],
+    }
+
+    annotation = _annotation_from_form(
+        review_case,
+        "annotator-a",
+        form,
+    )
+
+    assert annotation.case_id == "qc-001"
+    assert annotation.annotator_id == "annotator-a"
+    assert (
+        annotation.presentation_version
+        == review_case.presentation.version
+    )
+    assert set(annotation.criteria) == {
+        "Q1.1",
+        "Q1.2",
+        "Q1.3",
+    }
+
+
+def test_annotate_filters_cases_by_annotation_status(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    save_human_annotation(
+        "test-dataset",
+        _human_annotation(),
+        results_dir=tmp_path,
+    )
+
+    monkeypatch.setattr(
+        "eval.llm_judge.annotate.RESULTS_DIR",
+        tmp_path,
+    )
+
+    pending = _load_selected_cases(
+        "test-dataset",
+        "annotator-a",
+        "all",
+        "pending",
+    )
+    annotated = _load_selected_cases(
+        "test-dataset",
+        "annotator-a",
+        "all",
+        "annotated",
+    )
+
+    assert [
+        review_case.case_id
+        for review_case in pending
+    ] == [
+        "qc-002",
+    ]
+    assert [
+        review_case.case_id
+        for review_case in annotated
+    ] == [
+        "qc-001",
+    ]
+
+
+def test_annotate_page_exposes_delete_only_for_annotated_case(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    save_human_annotation(
+        "test-dataset",
+        _human_annotation(),
+        results_dir=tmp_path,
+    )
+
+    monkeypatch.setattr(
+        "eval.llm_judge.annotate.RESULTS_DIR",
+        tmp_path,
+    )
+
+    review_cases = load_review_cases(
+        "test-dataset",
+        "annotator-a",
+        results_dir=tmp_path,
+    )
+
+    annotated_page = _page_html(
+        dataset_id="test-dataset",
+        annotator_id="annotator-a",
+        split="all",
+        status="all",
+        review_cases=review_cases,
+        review_case=review_cases[0],
+    )
+    pending_page = _page_html(
+        dataset_id="test-dataset",
+        annotator_id="annotator-a",
+        split="all",
+        status="all",
+        review_cases=review_cases,
+        review_case=review_cases[1],
+    )
+
+    assert 'formaction="/annotation/delete"' in annotated_page
+    assert 'formaction="/annotation/delete"' not in pending_page
+
+
+def test_annotate_page_case_links_preserve_filters(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    monkeypatch.setattr(
+        "eval.llm_judge.annotate.RESULTS_DIR",
+        tmp_path,
+    )
+
+    review_cases = load_review_cases(
+        "test-dataset",
+        "annotator-a",
+        results_dir=tmp_path,
+    )
+
+    page = _page_html(
+        dataset_id="test-dataset",
+        annotator_id="annotator-a",
+        split="dev",
+        status="pending",
+        review_cases=review_cases,
+        review_case=review_cases[0],
+    )
+
+    assert (
+        "dataset_id=test-dataset"
+        "&amp;annotator_id=annotator-a"
+        "&amp;split=dev"
+        "&amp;status=pending"
+        "&amp;case_id=qc-001"
+    ) in page
+
+
+def test_annotate_defaults_to_existing_annotator(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    create_annotator(
+        "test-dataset",
+        "Bruno",
+        results_dir=tmp_path,
+    )
+
+    monkeypatch.setattr(
+        "eval.llm_judge.annotate.RESULTS_DIR",
+        tmp_path,
+    )
+
+    assert _default_annotator_id(
+        "test-dataset"
+    ) == "Bruno"
+
+
+def test_human_annotation_accepts_partial_applicable_criteria() -> None:
+    case = _qualitative_case()
+    annotation_data = _human_annotation().model_dump()
+
+    annotation_data["criteria"] = {
+        "Q1.1": annotation_data[
+            "criteria"
+        ]["Q1.1"],
+    }
+
+    annotation = HumanAnnotation.model_validate(
+        annotation_data
+    )
+
+    validate_human_annotation(
+        case,
+        annotation,
+    )
+
+
+def test_review_case_distinguishes_partial_and_completed_annotation(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    annotation_data = _human_annotation().model_dump()
+    annotation_data["criteria"] = {
+        "Q1.1": annotation_data[
+            "criteria"
+        ]["Q1.1"],
+    }
+    partial_annotation = HumanAnnotation.model_validate(
+        annotation_data
+    )
+
+    save_human_annotation(
+        "test-dataset",
+        partial_annotation,
+        results_dir=tmp_path,
+    )
+
+    review_cases = load_review_cases(
+        "test-dataset",
+        "annotator-a",
+        results_dir=tmp_path,
+    )
+
+    first_case = review_cases[0]
+
+    assert first_case.annotated is True
+    assert first_case.in_progress is True
+    assert first_case.completed is False
+
+
+def test_annotate_builds_partial_annotation(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    review_case = load_review_cases(
+        "test-dataset",
+        "annotator-a",
+        split="dev",
+        results_dir=tmp_path,
+    )[0]
+
+    annotation = _annotation_from_form(
+        review_case,
+        "annotator-a",
+        {
+            "Q1.1.verdict": [
+                "FAIL",
+            ],
+            "Q1.1.reason": [
+                "La decisión contradice "
+                "la evidencia disponible.",
+            ],
+            "Q1.1.evidence_refs": [
+                "a1.i1",
+            ],
+        },
+    )
+
+    assert set(annotation.criteria) == {
+        "Q1.1",
+    }
+
+
+def test_annotate_evidence_inputs_belong_to_annotation_form(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    monkeypatch.setattr(
+        "eval.llm_judge.annotate.RESULTS_DIR",
+        tmp_path,
+    )
+
+    review_cases = load_review_cases(
+        "test-dataset",
+        "annotator-a",
+        results_dir=tmp_path,
+    )
+
+    page = _page_html(
+        dataset_id="test-dataset",
+        annotator_id="annotator-a",
+        split="all",
+        status="all",
+        review_cases=review_cases,
+        review_case=review_cases[0],
+    )
+
+    assert (
+        'class="evidence-checkbox" '
+        'type="checkbox" '
+        'hidden '
+        'form="annotation-form"'
+    ) in page
+
+
+def test_annotate_page_exposes_complete_canonical_rubric(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    monkeypatch.setattr(
+        "eval.llm_judge.annotate.RESULTS_DIR",
+        tmp_path,
+    )
+
+    review_cases = load_review_cases(
+        "test-dataset",
+        "annotator-a",
+        results_dir=tmp_path,
+    )
+
+    page = _page_html(
+        dataset_id="test-dataset",
+        annotator_id="annotator-a",
+        split="all",
+        status="all",
+        review_cases=review_cases,
+        review_case=review_cases[0],
+    )
+
+    common_rubric_texts = (
+        DIMENSION_NAME,
+        DIMENSION_DESCRIPTION,
+        MATERIALITY_RULE,
+        *EVIDENCE_RULES,
+        *BOUNDARY_RULES,
+    )
+
+    for text in common_rubric_texts:
+        assert html.escape(text) in page
+
+    for criterion in CRITERIA:
+        assert html.escape(criterion.name) in page
+        assert html.escape(criterion.question) in page
+        assert html.escape(
+            criterion.pass_description
+        ) in page
+        assert html.escape(
+            criterion.fail_description
+        ) in page
+
+        for guidance in criterion.guidance:
+            assert html.escape(guidance) in page
+
+        if criterion.applicability_description:
+            assert html.escape(
+                criterion.applicability_description
+            ) in page
+
+        for trigger, explanation in (
+            criterion.applicability_triggers
+        ):
+            assert html.escape(trigger) in page
+            assert html.escape(explanation) in page
+
+        for note in criterion.applicability_notes:
+            assert html.escape(note) in page

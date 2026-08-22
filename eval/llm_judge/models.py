@@ -116,3 +116,30 @@ class CaseSource(_StrictModel):
     scenario: str = Field(min_length=1)
     trial_index: int = Field(ge=1)
     split: CaseSplit
+
+
+HumanVerdict = Literal["PASS", "FAIL"]
+
+
+class HumanCriterionAnnotation(_StrictModel):
+    """Anotación humana de un criterio cualitativo aplicable."""
+
+    verdict: HumanVerdict
+    reason: str = Field(min_length=1)
+    evidence_refs: list[str] = Field(min_length=1)
+
+
+class HumanAnnotation(_StrictModel):
+    """Anotación humana ciega de un caso cualitativo."""
+
+    schema_version: int = Field(ge=1)
+    case_schema_version: int = Field(ge=1)
+    case_view_version: str = Field(min_length=1)
+    presentation_version: str = Field(min_length=1)
+    rubric_version: str = Field(min_length=1)
+    case_id: str = Field(min_length=1)
+    annotator_id: str = Field(min_length=1)
+    criteria: dict[
+        CriterionId,
+        HumanCriterionAnnotation,
+    ]

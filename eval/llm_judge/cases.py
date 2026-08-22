@@ -16,6 +16,12 @@ from eval.llm_judge.models import (
     ToolCallView,
     ActionExecution,
 )
+from eval.llm_judge.rubric import (
+    Q1_4_CONTINUATION_TRIGGER,
+    Q1_4_ERROR_TRIGGER,
+    Q1_4_NO_TRIGGER_REASON,
+    Q1_4_REPETITION_TRIGGER,
+)
 
 
 QUALITATIVE_CASE_SCHEMA_VERSION = 1
@@ -236,12 +242,12 @@ def _action_key(
 def _q1_4_applicability(
     attempts: list[QualitativeAttempt],
 ) -> CriterionApplicability:
-    """Determina si el trial contiene una oportunidad objetiva de adaptación."""
+    """Determina si el trial contiene una oportunidad observable de adaptación."""
 
     if len(attempts) > 1:
         return CriterionApplicability(
             applicable=True,
-            reason="El trial contiene un mensaje de continuación entre attempts.",
+            reason=Q1_4_CONTINUATION_TRIGGER,
         )
 
     attempt = attempts[0]
@@ -262,10 +268,7 @@ def _q1_4_applicability(
             ):
                 return CriterionApplicability(
                     applicable=True,
-                    reason=(
-                        "La trayectoria contiene feedback adverso explícito "
-                        "antes de una decisión posterior."
-                    ),
+                    reason=Q1_4_ERROR_TRIGGER,
                 )
 
             action_key = _action_key(action)
@@ -273,10 +276,7 @@ def _q1_4_applicability(
             if action_key in seen_actions:
                 return CriterionApplicability(
                     applicable=True,
-                    reason=(
-                        "La trayectoria repite en una iteración posterior una "
-                        "misma acción efectiva con el mismo resultado observable."
-                    ),
+                    reason=Q1_4_REPETITION_TRIGGER,
                 )
 
             iteration_action_keys.append(action_key)
@@ -285,13 +285,8 @@ def _q1_4_applicability(
 
     return CriterionApplicability(
         applicable=False,
-        reason=(
-            "No se observó feedback adverso antes de una decisión posterior, "
-            "continuación entre attempts ni repetición entre iteraciones de "
-            "una misma acción con igual resultado."
-        ),
+        reason=Q1_4_NO_TRIGGER_REASON,
     )
-
 
 def build_qualitative_case(
     trial: dict[str, Any],
