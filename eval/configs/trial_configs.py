@@ -20,7 +20,14 @@ SINGLE_CONTINUATION_CONFIG: dict[str, Any] = {
 }
 
 
+MULTI_ATTEMPT_CONFIG: dict[str, Any] = {
+    "max_attempts": 10,
+    "continuation_message": CONTINUATION_MESSAGE,
+}
+
+
 TRIAL_CONFIGS: dict[str, dict[str, Any]] = {
     "single_attempt": SINGLE_ATTEMPT_CONFIG,
     "single_continuation": SINGLE_CONTINUATION_CONFIG,
+    "multi_attempt": MULTI_ATTEMPT_CONFIG,
 }
