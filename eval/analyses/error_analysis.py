@@ -482,7 +482,7 @@ def render_markdown(analysis: dict) -> str:
 
         if len(run_ids) > 1:
             lines.append(
-                f"| {f['source_run_id']} | {f['trial_index']} | "
+                f"| {f.get('source_run_id', '')} | {f['trial_index']} | "
                 f"{f['agent_config']} | {f['model']} | "
                 f"{f['scenario']} | {f['n_steps']} | "
                 f"`{f['mode']}` | {reason} |"

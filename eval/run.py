@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -72,7 +73,7 @@ def main() -> int:
 
     if (
         not run_manifest_path.exists()
-        and not run_results_path.exists()
+        or not run_results_path.exists()
     ):
         start_run(
             run_id=RUN_ID,
@@ -86,13 +87,23 @@ def main() -> int:
         )
 
 
-    evaluation_result = start_evaluation(
-        eval_id=EVAL_ID,
-        run_ids=EVALUATION_RUN_IDS,
-        evaluation_config=EVALUATION_CONFIG,
-    )
-
     evaluation_output_dir = evaluation_dir(EVAL_ID)
+    evaluation_results_path = evaluation_output_dir / "results.json"
+
+    if not evaluation_output_dir.exists():
+        evaluation_result = start_evaluation(
+            eval_id=EVAL_ID,
+            run_ids=EVALUATION_RUN_IDS,
+            evaluation_config=EVALUATION_CONFIG,
+        )
+    elif evaluation_results_path.exists():
+        evaluation_result = json.loads(
+            evaluation_results_path.read_text(encoding="utf-8")
+        )
+    else:
+        raise RuntimeError(
+            f"El directorio de evaluación '{EVAL_ID}' existe pero no tiene results.json."
+        )
 
     success_rate_plot_path = (
         evaluation_output_dir / "success_rate.png"
