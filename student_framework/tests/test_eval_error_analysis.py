@@ -72,10 +72,13 @@ def test_error_analysis_preserves_agent_config_and_separates_systems() -> None:
         ],
     }
 
-    analysis = analyze_errors(
-        run_manifest,
-        run_result,
-    )
+    analysis = analyze_errors([
+        {
+            "run_id": run_manifest["run_id"],
+            "manifest": run_manifest,
+            "result": run_result,
+        },
+    ])
 
     assert analysis["failures_by_model"] == {
         "llama3.1": {
@@ -201,3 +204,122 @@ def test_error_analysis_markdown_uses_trial_counts_and_precise_percentages() -> 
     assert "| Fallidos | 269 (84.1%) |" in markdown
     assert "| Modo | Trials | % |" in markdown
     assert "| Modo | Runs |" not in markdown
+
+
+def test_error_analysis_aggregates_trials_from_multiple_runs() -> None:
+    run_sources = [
+        {
+            "run_id": "run-a",
+            "manifest": {
+                "run_id": "run-a",
+                "scenario_metadata": {
+                    "study-with-key": {
+                        "difficulty": "easy",
+                    },
+                },
+            },
+            "result": {
+                "results": [
+                    {
+                        "agent_config": "minimal",
+                        "llm_config": "llama3.1",
+                        "scenario": "study-with-key",
+                        "trials": [
+                            _failed_trial(
+                                1,
+                                steps=[
+                                    {
+                                        "tool_name": "examine",
+                                        "error": "argumento inválido",
+                                    },
+                                ],
+                            ),
+                        ],
+                    },
+                ],
+            },
+        },
+        {
+            "run_id": "run-b",
+            "manifest": {
+                "run_id": "run-b",
+                "scenario_metadata": {
+                    "study-with-key": {
+                        "difficulty": "easy",
+                    },
+                },
+            },
+            "result": {
+                "results": [
+                    {
+                        "agent_config": "minimal",
+                        "llm_config": "llama3.1",
+                        "scenario": "study-with-key",
+                        "trials": [
+                            _failed_trial(
+                                1,
+                                steps=[
+                                    {
+                                        "tool_name": "look",
+                                        "error": None,
+                                    },
+                                    {
+                                        "tool_name": "look",
+                                        "error": None,
+                                    },
+                                    {
+                                        "tool_name": "look",
+                                        "error": None,
+                                    },
+                                    {
+                                        "tool_name": "look",
+                                        "error": None,
+                                    },
+                                    {
+                                        "tool_name": "look",
+                                        "error": None,
+                                    },
+                                ],
+                            ),
+                        ],
+                    },
+                ],
+            },
+        },
+    ]
+
+    analysis = analyze_errors(run_sources)
+
+    assert analysis["run_ids"] == [
+        "run-a",
+        "run-b",
+    ]
+    assert analysis["total_trials"] == 2
+    assert analysis["failures"] == 2
+    assert analysis["failures_by_mode"] == {
+        "wrong_tool_use": 1,
+        "planning_failure": 1,
+    }
+
+    assert [
+        failure["source_run_id"]
+        for failure in analysis["all_failures"]
+    ] == [
+        "run-a",
+        "run-b",
+    ]
+
+    assert [
+        failure["trial_index"]
+        for failure in analysis["all_failures"]
+    ] == [
+        1,
+        1,
+    ]
+
+    markdown = render_markdown(analysis)
+
+    assert "**Runs:** `run-a`, `run-b`" in markdown
+
+    assert "| run-a | 1 |" in markdown
+    assert "| run-b | 1 |" in markdown

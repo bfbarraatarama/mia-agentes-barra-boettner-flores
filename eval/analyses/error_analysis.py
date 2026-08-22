@@ -114,12 +114,18 @@ def classify_trial(trial: dict, scenario: str) -> tuple[str, str]:
 
 
 def analyze_errors(
-    run_manifest: dict,
-    run_result: dict,
+    run_sources: list[dict],
 ) -> dict:
-    """Analiza todos los trials fallidos de un run."""
+    """Analiza todos los trials fallidos de uno o más runs."""
 
-    run_id = run_manifest["run_id"]
+    if not run_sources:
+        raise ValueError(
+            "run_sources debe contener al menos una fuente de run."
+        )
+    run_ids = [
+        source["run_id"]
+        for source in run_sources
+    ]
 
     total = 0
     successes = 0
@@ -142,73 +148,88 @@ def analyze_errors(
     )
     examples_by_mode: dict[str, list[dict]] = defaultdict(list)
 
-    scenario_metadata = run_manifest["scenario_metadata"]
+    for source in run_sources:
+        run_id = source["run_id"]
+        run_manifest = source["manifest"]
+        current_run_result = source["result"]
+        scenario_metadata = run_manifest["scenario_metadata"]
 
-    for result in run_result["results"]:
-        agent_config = result["agent_config"]
-        model = result["llm_config"]
-        scenario = result["scenario"]
-        difficulty = scenario_metadata[scenario]["difficulty"]
+        for result in current_run_result["results"]:
+            agent_config = result["agent_config"]
+            model = result["llm_config"]
+            scenario = result["scenario"]
+            difficulty = scenario_metadata[scenario]["difficulty"]
 
-        for trial in result["trials"]:
-            total += 1
+            for trial in result["trials"]:
+                total += 1
 
-            if trial["goal_achieved"]:
-                successes += 1
-                continue
+                if trial["goal_achieved"]:
+                    successes += 1
+                    continue
 
-            final_attempt = trial["attempts"][-1]
+                final_attempt = trial["attempts"][-1]
 
-            trial_for_classify = {
-                "agent_result": final_attempt["agent_result"],
-                "goal_reason": (
-                    final_attempt.get("goal_reason", "")
-                    or trial.get("goal_reason", "")
-                ),
-            }
+                trial_for_classify = {
+                    "agent_result": final_attempt["agent_result"],
+                    "goal_reason": (
+                        final_attempt.get("goal_reason", "")
+                        or trial.get("goal_reason", "")
+                    ),
+                }
 
-            mode, reason = classify_trial(
-                trial_for_classify,
-                scenario,
-            )
+                mode, reason = classify_trial(
+                    trial_for_classify,
+                    scenario,
+                )
 
-            steps = final_attempt["agent_result"].get("steps") or []
+                steps = (
+                    final_attempt["agent_result"].get("steps")
+                    or []
+                )
 
-            failures_by_mode[mode] += 1
-            failures_by_model[model][mode] += 1
-            failures_by_system[agent_config][model][mode] += 1
-            failures_by_scenario[scenario][mode] += 1
+                failures_by_mode[mode] += 1
+                failures_by_model[model][mode] += 1
+                failures_by_system[agent_config][model][mode] += 1
+                failures_by_scenario[scenario][mode] += 1
 
-            failure_record = {
-                "agent_config": agent_config,
-                "model": model,
-                "scenario": scenario,
-                "difficulty": difficulty,
-                "trial_index": trial["trial_index"],
-                "n_attempts": len(trial["attempts"]),
-                "mode": mode,
-                "reason": reason,
-                "goal_reason": trial_for_classify["goal_reason"],
-                "n_steps": len(steps),
-                "answer_preview": (
-                    final_attempt["agent_result"].get("answer") or ""
-                )[:200].strip(),
-                "agent_error": final_attempt["agent_result"].get("error"),
-            }
+                failure_record = {
+                    "source_run_id": run_id,
+                    "agent_config": agent_config,
+                    "model": model,
+                    "scenario": scenario,
+                    "difficulty": difficulty,
+                    "trial_index": trial["trial_index"],
+                    "n_attempts": len(trial["attempts"]),
+                    "mode": mode,
+                    "reason": reason,
+                    "goal_reason": trial_for_classify["goal_reason"],
+                    "n_steps": len(steps),
+                    "answer_preview": (
+                        final_attempt["agent_result"].get("answer")
+                        or ""
+                    )[:200].strip(),
+                    "agent_error": (
+                        final_attempt["agent_result"].get("error")
+                    ),
+                }
 
-            classified_failures.append(failure_record)
+                classified_failures.append(failure_record)
 
-            if len(examples_by_mode[mode]) < 2:
-                examples_by_mode[mode].append(failure_record)
+                if len(examples_by_mode[mode]) < 2:
+                    examples_by_mode[mode].append(failure_record)
 
     failures = total - successes
 
-    return {
-        "run_id": run_id,
+    analysis = {
+        "run_ids": run_ids,
         "total_trials": total,
         "successes": successes,
         "failures": failures,
-        "success_rate": round(successes / total, 3) if total else 0,
+        "success_rate": (
+            round(successes / total, 3)
+            if total
+            else 0
+        ),
         "coverage": (
             f"{len(classified_failures)}/{failures} "
             "trials fallidos clasificados"
@@ -253,6 +274,11 @@ def analyze_errors(
         "all_failures": classified_failures,
     }
 
+    if len(run_ids) == 1:
+        analysis["run_id"] = run_ids[0]
+
+    return analysis
+
 
 def print_report(analysis: dict) -> None:
     total = analysis["total_trials"]
@@ -262,7 +288,14 @@ def print_report(analysis: dict) -> None:
     print("=" * 62)
     print("ANÁLISIS DE ERRORES — M3")
     print("=" * 62)
-    print(f"\nRun: {analysis['run_id']}")
+    run_ids = analysis.get("run_ids") or [
+        analysis["run_id"],
+    ]
+
+    if len(run_ids) == 1:
+        print(f"\nRun: {run_ids[0]}")
+    else:
+        print(f"\nRuns: {', '.join(run_ids)}")
     print(f"\nTotal trials: {total}")
     print(f"Exitosos:     {successes}  ({100 * successes // total}%)")
     print(f"Fallidos:     {failures}  ({100 * failures // total}%)")
@@ -304,11 +337,19 @@ def print_report(analysis: dict) -> None:
     for mode, examples in analysis["examples_by_mode"].items():
         print(f"\n  [{mode}]")
         for ex in examples:
-            print(
-                f"    {ex['agent_config']} / {ex['model']} / "
-                f"{ex['scenario']} / trial {ex['trial_index']}  "
-                f"({ex['n_steps']} pasos)"
-            )
+            if len(run_ids) > 1:
+                print(
+                    f"    {ex['source_run_id']} / "
+                    f"{ex['agent_config']} / {ex['model']} / "
+                    f"{ex['scenario']} / trial {ex['trial_index']}  "
+                    f"({ex['n_steps']} pasos)"
+                )
+            else:
+                print(
+                    f"    {ex['agent_config']} / {ex['model']} / "
+                    f"{ex['scenario']} / trial {ex['trial_index']}  "
+                    f"({ex['n_steps']} pasos)"
+                )
             print(f"    razón: {ex['reason']}")
             if ex["answer_preview"]:
                 print(f"    answer: {ex['answer_preview'][:130]}")
@@ -332,7 +373,22 @@ def render_markdown(analysis: dict) -> str:
     )
 
     lines.append("# Análisis de errores — M3\n")
-    lines.append(f"**Run:** `{analysis['run_id']}`\n")
+    run_ids = analysis.get("run_ids") or [
+        analysis["run_id"],
+    ]
+
+    if len(run_ids) == 1:
+        lines.append(
+            f"**Run:** `{run_ids[0]}`\n"
+        )
+    else:
+        runs = ", ".join(
+            f"`{run_id}`"
+            for run_id in run_ids
+        )
+        lines.append(
+            f"**Runs:** {runs}\n"
+        )
     lines.append(f"| | |")
     lines.append(f"|---|---|")
     lines.append(f"| Total trials | {total} |")
@@ -407,18 +463,37 @@ def render_markdown(analysis: dict) -> str:
             lines.append("")
 
     lines.append("## Todos los fallos clasificados\n")
-    lines.append(
-        "| Trial | Configuración de agente | Modelo | "
-        "Escenario | Pasos | Modo | Razón |"
-    )
-    lines.append("|---|---|---|---|---:|---|---|")
+
+    if len(run_ids) > 1:
+        lines.append(
+            "| Run | Trial | Configuración de agente | Modelo | "
+            "Escenario | Pasos | Modo | Razón |"
+        )
+        lines.append("|---|---:|---|---|---|---:|---|---|")
+    else:
+        lines.append(
+            "| Trial | Configuración de agente | Modelo | "
+            "Escenario | Pasos | Modo | Razón |"
+        )
+        lines.append("|---|---|---|---|---:|---|---|")
+
     for f in analysis["all_failures"]:
         reason = f["reason"][:60].replace("|", "\\|")
-        lines.append(
-            f"| {f['trial_index']} | {f['agent_config']} | "
-            f"{f['model']} | {f['scenario']} | {f['n_steps']} | "
-            f"`{f['mode']}` | {reason} |"
-        )
+
+        if len(run_ids) > 1:
+            lines.append(
+                f"| {f['source_run_id']} | {f['trial_index']} | "
+                f"{f['agent_config']} | {f['model']} | "
+                f"{f['scenario']} | {f['n_steps']} | "
+                f"`{f['mode']}` | {reason} |"
+            )
+        else:
+            lines.append(
+                f"| {f['trial_index']} | {f['agent_config']} | "
+                f"{f['model']} | {f['scenario']} | {f['n_steps']} | "
+                f"`{f['mode']}` | {reason} |"
+            )
+
     lines.append("")
 
     return "\n".join(lines)
@@ -462,10 +537,13 @@ def main() -> None:
     with open(results_path, encoding="utf-8") as f:
         run_result = json.load(f)
 
-    analysis = analyze_errors(
-        run_manifest,
-        run_result,
-    )
+    analysis = analyze_errors([
+        {
+            "run_id": args.run_id,
+            "manifest": run_manifest,
+            "result": run_result,
+        },
+    ])
     print_report(analysis)
 
     if args.output is not None:

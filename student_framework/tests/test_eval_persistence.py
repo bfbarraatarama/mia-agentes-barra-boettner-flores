@@ -28,9 +28,17 @@ def test_build_run_manifest_contains_reproducible_run_spec(
         },
     )
 
+    run_config = {
+        **M3_RUN_CONFIG,
+        "scenarios": [
+            "study-with-key",
+        ],
+    }
+
+
     manifest = persistence.build_run_manifest(
         run_id="test-run",
-        run_config=M3_RUN_CONFIG,
+        run_config=run_config,
     )
 
     assert manifest["schema_version"] == 1
@@ -44,10 +52,10 @@ def test_build_run_manifest_contains_reproducible_run_spec(
     }
 
     assert manifest["run"] == {
-        "systems": M3_RUN_CONFIG["systems"],
-        "trial_configs": M3_RUN_CONFIG["trial_configs"],
-        "scenarios": M3_RUN_CONFIG["scenarios"],
-        "trials_per_case": M3_RUN_CONFIG["trials_per_case"],
+        "systems": run_config["systems"],
+        "trial_configs": run_config["trial_configs"],
+        "scenarios": run_config["scenarios"],
+        "trials_per_case": run_config["trials_per_case"],
     }
     assert "metrics" not in manifest["run"]
 
@@ -232,6 +240,9 @@ def test_start_run_persists_completed_trials(
         **M3_RUN_CONFIG,
         "systems": [
             M3_RUN_CONFIG["systems"][0],
+        ],
+        "scenarios": [
+            "study-with-key",
         ],
         "trials_per_case": 2,
     }
@@ -447,6 +458,334 @@ def test_resume_run_uses_common_execution_engine(
     ]
 
 
+def _write_complete_evaluation_run(
+    runs_dir,
+    run_id: str,
+    goal_results: list[bool],
+    *,
+    agent_config: dict | None = None,
+) -> None:
+    """Persiste un run completo mínimo para tests de evaluación."""
+
+    if agent_config is None:
+        agent_config = {
+            "max_iterations": 40,
+        }
+
+    run_manifest = {
+        "run_id": run_id,
+        "run": {
+            "systems": [
+                {
+                    "agent_config": "agent-a",
+                    "llm_config": "llm-a",
+                },
+            ],
+            "trial_configs": [
+                "trial-a",
+            ],
+            "scenarios": [
+                "scenario-a",
+            ],
+            "trials_per_case": len(goal_results),
+        },
+        "agent_configs": {
+            "agent-a": agent_config,
+        },
+        "llm_configs": {
+            "llm-a": {
+                "provider": "test",
+                "model": "llm-a",
+            },
+        },
+        "trial_configs": {
+            "trial-a": {
+                "max_attempts": 1,
+            },
+        },
+        "scenario_metadata": {
+            "scenario-a": {
+                "difficulty": "test",
+                "goal": {
+                    "type": "test",
+                },
+            },
+        },
+    }
+
+    run_result = {
+        "results": [
+            {
+                "agent_config": "agent-a",
+                "llm_config": "llm-a",
+                "trial_config": "trial-a",
+                "scenario": "scenario-a",
+                "trials": [
+                    {
+                        "trial_index": trial_index,
+                        "goal_achieved": goal_achieved,
+                    }
+                    for trial_index, goal_achieved
+                    in enumerate(goal_results, start=1)
+                ],
+            },
+        ],
+    }
+
+    (
+        runs_dir / f"{run_id}.manifest.json"
+    ).write_text(
+        json.dumps(run_manifest),
+        encoding="utf-8",
+    )
+    (
+        runs_dir / f"{run_id}.json"
+    ).write_text(
+        json.dumps(run_result),
+        encoding="utf-8",
+    )
+
+
+def test_start_evaluation_aggregates_compatible_cases_across_runs(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Trials compatibles de distintos runs forman una sola muestra."""
+
+    runs_dir = tmp_path / "runs"
+    evaluations_dir = tmp_path / "evaluations"
+    runs_dir.mkdir()
+
+    _write_complete_evaluation_run(
+        runs_dir,
+        "run-a",
+        [
+            True,
+            False,
+        ],
+    )
+    _write_complete_evaluation_run(
+        runs_dir,
+        "run-b",
+        [
+            True,
+            True,
+        ],
+    )
+
+    monkeypatch.setattr(
+        persistence,
+        "_created_at",
+        lambda: "2026-08-18T15:00:00+00:00",
+    )
+    monkeypatch.setattr(
+        persistence,
+        "_git_metadata",
+        lambda: {
+            "commit": "abc123",
+            "branch": "test",
+            "dirty": False,
+        },
+    )
+
+    result = evaluation.start_evaluation(
+        eval_id="test-eval",
+        run_ids=[
+            "run-a",
+            "run-b",
+        ],
+        evaluation_config={
+            "metrics": [
+                "success_rate",
+            ],
+        },
+        runs_dir=runs_dir,
+        evaluations_dir=evaluations_dir,
+    )
+
+    assert result == {
+        "eval_id": "test-eval",
+        "run_ids": [
+            "run-a",
+            "run-b",
+        ],
+        "results": [
+            {
+                "agent_config": "agent-a",
+                "llm_config": "llm-a",
+                "trial_config": "trial-a",
+                "scenario": "scenario-a",
+                "source_run_ids": [
+                    "run-a",
+                    "run-b",
+                ],
+                "trial_count": 4,
+                "metrics": {
+                    "success_rate": 0.75,
+                },
+            },
+        ],
+        "analyses": {},
+    }
+
+    manifest = persistence.load_evaluation_manifest(
+        "test-eval",
+        results_dir=evaluations_dir,
+    )
+
+    assert manifest["schema_version"] == 2
+    assert manifest["run_ids"] == [
+        "run-a",
+        "run-b",
+    ]
+    assert "run_id" not in manifest
+
+
+def test_start_evaluation_passes_all_run_sources_to_analysis(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Los análisis reciben separadamente todas las fuentes del eval."""
+
+    runs_dir = tmp_path / "runs"
+    evaluations_dir = tmp_path / "evaluations"
+    runs_dir.mkdir()
+
+    _write_complete_evaluation_run(
+        runs_dir,
+        "run-a",
+        [
+            True,
+        ],
+    )
+    _write_complete_evaluation_run(
+        runs_dir,
+        "run-b",
+        [
+            False,
+        ],
+    )
+
+    received_run_ids = []
+
+    def capture_sources(run_sources):
+        received_run_ids.extend(
+            source["run_id"]
+            for source in run_sources
+        )
+
+        return {
+            "run_ids": [
+                source["run_id"]
+                for source in run_sources
+            ],
+        }
+
+    monkeypatch.setitem(
+        evaluation.ANALYSES,
+        "capture_sources",
+        capture_sources,
+    )
+    monkeypatch.setattr(
+        persistence,
+        "_created_at",
+        lambda: "2026-08-18T15:00:00+00:00",
+    )
+    monkeypatch.setattr(
+        persistence,
+        "_git_metadata",
+        lambda: {
+            "commit": "abc123",
+            "branch": "test",
+            "dirty": False,
+        },
+    )
+
+    result = evaluation.start_evaluation(
+        eval_id="test-eval",
+        run_ids=[
+            "run-a",
+            "run-b",
+        ],
+        evaluation_config={
+            "metrics": [],
+            "analyses": [
+                "capture_sources",
+            ],
+        },
+        runs_dir=runs_dir,
+        evaluations_dir=evaluations_dir,
+    )
+
+    assert received_run_ids == [
+        "run-a",
+        "run-b",
+    ]
+    assert result["analyses"] == {
+        "capture_sources": {
+            "run_ids": [
+                "run-a",
+                "run-b",
+            ],
+        },
+    }
+
+
+def test_start_evaluation_rejects_incompatible_reused_config(
+    tmp_path,
+) -> None:
+    """Un mismo nombre no puede representar configuraciones diferentes."""
+
+    runs_dir = tmp_path / "runs"
+    evaluations_dir = tmp_path / "evaluations"
+    runs_dir.mkdir()
+
+    _write_complete_evaluation_run(
+        runs_dir,
+        "run-a",
+        [
+            True,
+        ],
+        agent_config={
+            "max_iterations": 40,
+        },
+    )
+    _write_complete_evaluation_run(
+        runs_dir,
+        "run-b",
+        [
+            False,
+        ],
+        agent_config={
+            "max_iterations": 80,
+        },
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Definición incompatible de agent_config "
+            "'agent-a'"
+        ),
+    ):
+        evaluation.start_evaluation(
+            eval_id="test-eval",
+            run_ids=[
+                "run-a",
+                "run-b",
+            ],
+            evaluation_config={
+                "metrics": [
+                    "success_rate",
+                ],
+            },
+            runs_dir=runs_dir,
+            evaluations_dir=evaluations_dir,
+        )
+
+    assert not evaluations_dir.exists()
+
+
 def test_create_evaluation_persists_definition_for_complete_run(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
@@ -530,7 +869,9 @@ def test_create_evaluation_persists_definition_for_complete_run(
 
     evaluation.create_evaluation(
         eval_id="test-eval",
-        run_id="test-run",
+        run_ids=[
+            "test-run",
+        ],
         evaluation_config=evaluation_config,
         runs_dir=runs_dir,
         evaluations_dir=evaluations_dir,
@@ -552,9 +893,11 @@ def test_create_evaluation_persists_definition_for_complete_run(
     )
 
     assert manifest == {
-        "schema_version": 1,
+        "schema_version": 2,
         "eval_id": "test-eval",
-        "run_id": "test-run",
+        "run_ids": [
+            "test-run",
+        ],
         "created_at": "2026-08-17T14:00:00+00:00",
         "git": {
             "commit": "abc123",
@@ -566,7 +909,9 @@ def test_create_evaluation_persists_definition_for_complete_run(
 
     assert results == {
         "eval_id": "test-eval",
-        "run_id": "test-run",
+        "run_ids": [
+            "test-run",
+        ],
         "results": [],
         "analyses": {},
     }
@@ -621,7 +966,9 @@ def test_create_evaluation_rejects_incomplete_run(
     ):
         evaluation.create_evaluation(
             eval_id="test-eval",
-            run_id="test-run",
+            run_ids=[
+                "test-run",
+            ],
             evaluation_config={
                 "metrics": [
                     "success_rate",
@@ -663,7 +1010,9 @@ def test_initialize_evaluation_rejects_existing_eval_id(
     ):
         persistence.initialize_evaluation(
             eval_id="test-eval",
-            run_id="test-run",
+            run_ids=[
+                "test-run",
+            ],
             evaluation_config={
                 "metrics": [
                     "success_rate",
@@ -759,7 +1108,9 @@ def test_start_evaluation_computes_and_persists_metrics(
 
     result = evaluation.start_evaluation(
         eval_id="test-eval",
-        run_id="test-run",
+        run_ids=[
+            "test-run",
+        ],
         evaluation_config={
             "metrics": [
                 "success_rate",
@@ -771,13 +1122,19 @@ def test_start_evaluation_computes_and_persists_metrics(
 
     assert result == {
         "eval_id": "test-eval",
-        "run_id": "test-run",
+        "run_ids": [
+            "test-run",
+        ],
         "results": [
             {
                 "agent_config": "agent-a",
                 "llm_config": "llm-a",
                 "trial_config": "trial-a",
                 "scenario": "scenario-a",
+                "source_run_ids": [
+                    "test-run",
+                ],
+                "trial_count": 2,
                 "metrics": {
                     "success_rate": 0.5,
                 },
@@ -894,7 +1251,9 @@ def test_start_evaluation_computes_and_persists_error_analysis(
 
     result = evaluation.start_evaluation(
         eval_id="test-eval",
-        run_id="test-run",
+        run_ids=[
+            "test-run",
+        ],
         evaluation_config={
             "metrics": [],
             "analyses": [
@@ -935,7 +1294,9 @@ def test_start_evaluation_rejects_unknown_metric_before_creation(
     ):
         evaluation.start_evaluation(
             eval_id="test-eval",
-            run_id="test-run",
+            run_ids=[
+                "test-run",
+            ],
             evaluation_config={
                 "metrics": [
                     "missing_metric",
@@ -961,7 +1322,9 @@ def test_start_evaluation_rejects_unknown_analysis_before_creation(
     ):
         evaluation.start_evaluation(
             eval_id="test-eval",
-            run_id="test-run",
+            run_ids=[
+                "test-run",
+            ],
             evaluation_config={
                 "metrics": [],
                 "analyses": [

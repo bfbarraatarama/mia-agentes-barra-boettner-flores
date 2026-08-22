@@ -122,10 +122,13 @@ def test_tool_call_repair_analysis_counts_activity_and_tokens_by_system() -> Non
         ],
     }
 
-    analysis = analyze_tool_call_repair(
-        run_manifest,
-        run_result,
-    )
+    analysis = analyze_tool_call_repair([
+        {
+            "run_id": run_manifest["run_id"],
+            "manifest": run_manifest,
+            "result": run_result,
+        },
+    ])
 
     assert analysis["run_id"] == "test-run"
     assert analysis["total_trials"] == 4
@@ -203,10 +206,13 @@ def test_tool_call_repair_markdown_exposes_summary_and_system_activity() -> None
         ],
     }
 
-    analysis = analyze_tool_call_repair(
-        run_manifest,
-        run_result,
-    )
+    analysis = analyze_tool_call_repair([
+        {
+            "run_id": run_manifest["run_id"],
+            "manifest": run_manifest,
+            "result": run_result,
+        },
+    ])
     markdown = render_markdown(analysis)
 
     assert "# Análisis de reparación de tool calls — M3" in markdown
@@ -225,3 +231,88 @@ def test_tool_call_repair_markdown_exposes_summary_and_system_activity() -> None
 
     assert "## Por sistema" in markdown
     assert "### `minimal_tool_repair` / `llama3.1`" in markdown
+
+
+def test_tool_call_repair_analysis_aggregates_multiple_runs() -> None:
+    run_sources = [
+        {
+            "run_id": "run-a",
+            "manifest": {
+                "run_id": "run-a",
+            },
+            "result": {
+                "results": [
+                    {
+                        "agent_config": "minimal_tool_repair",
+                        "llm_config": "llama3.1",
+                        "trials": [
+                            {
+                                "attempts": [
+                                    {
+                                        "trace": [
+                                            _llm_event(
+                                                "tool_call_repair",
+                                                input_tokens=500,
+                                                output_tokens=20,
+                                            ),
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+        },
+        {
+            "run_id": "run-b",
+            "manifest": {
+                "run_id": "run-b",
+            },
+            "result": {
+                "results": [
+                    {
+                        "agent_config": "minimal_tool_repair",
+                        "llm_config": "llama3.1",
+                        "trials": [
+                            {
+                                "attempts": [
+                                    {
+                                        "trace": [
+                                            _llm_event(
+                                                "tool_call_repair",
+                                                input_tokens=600,
+                                                output_tokens=30,
+                                            ),
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+        },
+    ]
+
+    analysis = analyze_tool_call_repair(run_sources)
+
+    assert analysis["run_ids"] == [
+        "run-a",
+        "run-b",
+    ]
+    assert analysis["total_trials"] == 2
+    assert analysis["trials_with_repair"] == 2
+    assert analysis["repair_llm_calls"] == 2
+    assert analysis["repair_llm_responses"] == 2
+    assert analysis["repair_llm_errors"] == 0
+    assert analysis["repair_input_tokens"] == 1100
+    assert analysis["repair_output_tokens"] == 50
+
+    assert analysis["systems"][
+        "minimal_tool_repair"
+    ]["llama3.1"]["trials"] == 2
+
+    markdown = render_markdown(analysis)
+
+    assert "**Runs:** `run-a`, `run-b`" in markdown

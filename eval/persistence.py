@@ -24,7 +24,7 @@ RUNS_DIR = RESULTS_DIR / "runs"
 EVALUATIONS_DIR = RESULTS_DIR / "evaluations"
 
 MANIFEST_SCHEMA_VERSION = 1
-EVALUATION_MANIFEST_SCHEMA_VERSION = 1
+EVALUATION_MANIFEST_SCHEMA_VERSION = 2
 
 
 def _validate_run_id(run_id: str) -> None:
@@ -207,18 +207,30 @@ def build_run_manifest(
 
 def build_evaluation_manifest(
     eval_id: str,
-    run_id: str,
+    run_ids: list[str],
     evaluation_config: dict[str, Any],
 ) -> dict[str, Any]:
     """Construye el manifest inmutable de una evaluación."""
 
     _validate_eval_id(eval_id)
-    _validate_run_id(run_id)
+
+    if not run_ids:
+        raise ValueError(
+            "run_ids debe contener al menos un run_id."
+        )
+
+    if len(set(run_ids)) != len(run_ids):
+        raise ValueError(
+            "run_ids no puede contener duplicados."
+        )
+
+    for run_id in run_ids:
+        _validate_run_id(run_id)
 
     return {
         "schema_version": EVALUATION_MANIFEST_SCHEMA_VERSION,
         "eval_id": eval_id,
-        "run_id": run_id,
+        "run_ids": list(run_ids),
         "created_at": _created_at(),
         "git": _git_metadata(),
         "evaluation": deepcopy(evaluation_config),
@@ -518,7 +530,7 @@ def write_evaluation_results(
 
 def initialize_evaluation(
     eval_id: str,
-    run_id: str,
+    run_ids: list[str],
     evaluation_config: dict[str, Any],
     *,
     results_dir: Path = EVALUATIONS_DIR,
@@ -542,7 +554,7 @@ def initialize_evaluation(
 
     manifest = build_evaluation_manifest(
         eval_id=eval_id,
-        run_id=run_id,
+        run_ids=run_ids,
         evaluation_config=evaluation_config,
     )
 
@@ -555,7 +567,7 @@ def initialize_evaluation(
         results_path,
         {
             "eval_id": eval_id,
-            "run_id": run_id,
+            "run_ids": list(run_ids),
             "results": [],
             "analyses": {},
         },
