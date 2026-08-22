@@ -30,6 +30,8 @@ class MyAgent:
         max_history_messages: int = 50,
         tool_call_repair_max_attempts: int = 0,
         trace_callback: Callable[[dict[str, Any]], None] | None = None,
+        history_compactor: Callable[[list[dict[str, Any]]], str] | None = None,
+        compaction_keep_recent_rounds: int = 2,
     ) -> None:
         """Inicializa el agente.
 
@@ -49,6 +51,14 @@ class MyAgent:
             lista de mensajes pasada a `self._llm.chat(...)` no puede
             superar este número en ninguna llamada, sin importar la
             estrategia de memoria que elijan.
+        history_compactor : Callable | None
+            Compactor opcional de historial (M3). Recibe la lista de
+            mensajes que van a descartarse y devuelve un resumen en
+            texto que los reemplaza como un único mensaje. Con None se
+            conserva la política M2 de eliminación plana.
+        compaction_keep_recent_rounds : int
+            Cantidad de rondas de herramientas recientes del turno
+            activo que la compactación intra-turno conserva en crudo.
         """
         self._llm = llm_client
         self._system = system_prompt
@@ -60,10 +70,31 @@ class MyAgent:
             )
 
         self._tool_call_repair_max_attempts = tool_call_repair_max_attempts
+
+        if compaction_keep_recent_rounds < 0:
+            raise ValueError(
+                "compaction_keep_recent_rounds no puede ser negativo."
+            )
+
+        self._history_compactor = history_compactor
+        self._compaction_keep_recent_rounds = compaction_keep_recent_rounds
         self._schemas: dict[str, ToolSchema] = {}
         self._tools: dict[str, Callable[..., str]] = {}
         self._history: list[dict[str, Any]] = []
         self._trace_callback = trace_callback
+        self._run_response_callback: Callable[[Any], None] | None = None
+
+
+    def set_history_compactor(
+        self,
+        history_compactor: Callable[[list[dict[str, Any]]], str] | None,
+    ) -> None:
+        """Configura el compactor después de la construcción.
+
+        Necesario cuando el compactor usa el propio agente (p. ej. el
+        resumidor por LLM) y no puede existir antes que la instancia.
+        """
+        self._history_compactor = history_compactor
 
 
     def register_tool(
@@ -163,6 +194,44 @@ class MyAgent:
         if self._max_history_messages <= 0:
             return []
         return history[-self._max_history_messages:]
+
+
+    def _compact_messages(
+        self,
+        evicted: list[dict[str, Any]],
+    ) -> str | None:
+        """Ejecuta el compactor sobre mensajes a descartar.
+
+        Devuelve None si el compactor falla; el llamador decide el
+        fallback (eliminación plana en la eviction, abortar en la
+        compactación intra-turno). Un compactor roto degrada a la
+        política M2, nunca corta el run con una excepción propia.
+        """
+
+        if self._history_compactor is None:
+            return None
+
+        try:
+            summary = str(self._history_compactor(deepcopy(evicted)))
+
+        except Exception as error:
+            if self._trace_callback is not None:
+                self._trace_callback({
+                    "type": "history_compaction",
+                    "evicted_messages": len(evicted),
+                    "error": error,
+                })
+
+            return None
+
+        if self._trace_callback is not None:
+            self._trace_callback({
+                "type": "history_compaction",
+                "evicted_messages": len(evicted),
+                "summary_chars": len(summary),
+            })
+
+        return summary
 
 
     def _trim_run_history(
@@ -269,6 +338,32 @@ class MyAgent:
                 break
 
             start, end = trace_range
+
+            # end - start >= 2: con un solo mensaje, reemplazarlo por
+            # un resumen no reduce el historial y este while no
+            # terminaría nunca.
+            if (
+                self._history_compactor is not None
+                and end - start >= 2
+            ):
+                summary = self._compact_messages(
+                    self._history[start:end]
+                )
+
+                if summary is not None:
+                    # Rol user: con rol assistant sin tool_calls, el
+                    # resumen sería la "respuesta final" que la segunda
+                    # pasada elimina primero.
+                    self._history[start:end] = [{
+                        "role": "user",
+                        "content": (
+                            "[Resumen de contexto previo]\n"
+                            f"{summary}"
+                        ),
+                    }]
+                    protected_start -= end - start - 1
+                    continue
+
             removed_messages = end - start
 
             del self._history[start:end]
@@ -303,6 +398,106 @@ class MyAgent:
             remove_user_next = removed_role != "user"
 
         return True
+
+
+    def _closed_tool_rounds(
+        self,
+        active_turn_start: int,
+    ) -> list[tuple[int, int]]:
+        """Encuentra las rondas de herramientas cerradas del turno activo.
+
+        Una ronda es un mensaje assistant con tool_calls seguido de sus
+        mensajes tool. Devuelve rangos [start, end) en orden.
+        """
+
+        rounds: list[tuple[int, int]] = []
+        index = active_turn_start + 1
+
+        while index < len(self._history):
+            message = self._history[index]
+
+            if (
+                message.get("role") == "assistant"
+                and message.get("tool_calls")
+            ):
+                end = index + 1
+
+                while (
+                    end < len(self._history)
+                    and self._history[end].get("role") == "tool"
+                ):
+                    end += 1
+
+                rounds.append((index, end))
+                index = end
+                continue
+
+            index += 1
+
+        return rounds
+
+
+    def _compact_active_turn(
+        self,
+        *,
+        active_turn_start: int,
+        target_length: int,
+    ) -> bool:
+        """Compacta rondas ya consumidas del turno activo.
+
+        Este es el caso que la política M2 no cubre: cuando todo el
+        historial pertenece al turno activo, no hay trazas cerradas
+        eliminables y el run moriría por presupuesto. Se reemplazan las
+        rondas más viejas (junto con cualquier resumen previo
+        intercalado) por un único mensaje de resumen, conservando las
+        últimas compaction_keep_recent_rounds rondas en crudo. Si aun
+        así no alcanza, una segunda pasada compacta todas las rondas.
+
+        Las rondas se reemplazan siempre completas (assistant con
+        tool_calls junto a todos sus resultados), así no quedan
+        mensajes tool huérfanos ni respuestas multi-tool-call partidas.
+        """
+
+        if self._history_compactor is None:
+            return False
+
+        for keep_rounds in (self._compaction_keep_recent_rounds, 0):
+            if len(self._history) <= target_length:
+                return True
+
+            rounds = self._closed_tool_rounds(active_turn_start)
+            compactable = (
+                rounds[:-keep_rounds] if keep_rounds > 0 else rounds
+            )
+
+            if not compactable:
+                continue
+
+            # Desde el primer mensaje posterior al user del turno: así
+            # un resumen intra-turno anterior queda incluido y los
+            # resúmenes se fusionan en vez de acumularse.
+            start = active_turn_start + 1
+            end = compactable[-1][1]
+
+            if end - start < 2:
+                continue
+
+            summary = self._compact_messages(
+                self._history[start:end]
+            )
+
+            if summary is None:
+                return False
+
+            self._history[start:end] = [{
+                "role": "user",
+                "content": (
+                    "[Resumen de progreso del intento actual]\n"
+                    f"{summary}"
+                ),
+            }]
+
+        return len(self._history) <= target_length
 
 
     def _is_transient_error(self, error: Exception) -> bool:
@@ -467,15 +662,25 @@ class MyAgent:
             protected_start=active_turn_start,
         )
 
-        if not history_was_trimmed:
-            return None
-
+        # El trim solo remueve antes del turno activo; el ajuste va
+        # antes de la compactación intra-turno, que remueve después y
+        # no debe desplazar el índice.
         removed_messages = (
             history_length_before_trim
             - len(self._history)
         )
+        active_turn_start -= removed_messages
 
-        return active_turn_start - removed_messages
+        if not history_was_trimmed:
+            history_was_trimmed = self._compact_active_turn(
+                active_turn_start=active_turn_start,
+                target_length=target_length,
+            )
+
+        if not history_was_trimmed:
+            return None
+
+        return active_turn_start
 
 
     def _trim_closed_run_history(self) -> None:
@@ -538,6 +743,11 @@ class MyAgent:
                 total_in = (total_in or 0) + (response.input_tokens or 0)
             if response.output_tokens is not None or total_out is not None:
                 total_out = (total_out or 0) + (response.output_tokens or 0)
+
+        # Visible para el compactor por LLM, que corre dentro del
+        # trimming y no puede recibir la clausura por parámetro; sin
+        # esto sus tokens quedarían fuera de AgentResult.
+        self._run_response_callback = accumulate_response_tokens
 
         steps : list[AgentStep] = []
         for _ in range(self._max_iterations):

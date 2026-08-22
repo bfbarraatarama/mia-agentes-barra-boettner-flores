@@ -1,0 +1,2979 @@
+{
+  "eval_id": "m3-context-comparison-eval-006",
+  "run_ids": [
+    "m3-nova-multi-attempt-run-004",
+    "m3-context-comparison-run-005"
+  ],
+  "results": [
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "study-with-key",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 1.0
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "color-locks",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.8
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "apartment-keys",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.9
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "library-search",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.4
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "office-sequence",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.8
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "extreme-archive",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.8
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "vault-combination",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.4
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "backtracking-vault",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.4
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "study-with-key",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 1.0
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "color-locks",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.6
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "apartment-keys",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.9
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "library-search",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.3
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "office-sequence",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.7
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "extreme-archive",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.9
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "vault-combination",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.6
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "backtracking-vault",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.6
+      }
+    },
+    {
+      "agent_config": "minimal_history_200",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "study-with-key",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 1.0
+      }
+    },
+    {
+      "agent_config": "minimal_history_200",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "color-locks",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.6
+      }
+    },
+    {
+      "agent_config": "minimal_history_200",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "apartment-keys",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 1.0
+      }
+    },
+    {
+      "agent_config": "minimal_history_200",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "library-search",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.7
+      }
+    },
+    {
+      "agent_config": "minimal_history_200",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "office-sequence",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.6
+      }
+    },
+    {
+      "agent_config": "minimal_history_200",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "extreme-archive",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 1.0
+      }
+    },
+    {
+      "agent_config": "minimal_history_200",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "vault-combination",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.4
+      }
+    },
+    {
+      "agent_config": "minimal_history_200",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "backtracking-vault",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.7
+      }
+    },
+    {
+      "agent_config": "minimal_compaction",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "study-with-key",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 1.0
+      }
+    },
+    {
+      "agent_config": "minimal_compaction",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "color-locks",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.5
+      }
+    },
+    {
+      "agent_config": "minimal_compaction",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "apartment-keys",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.9
+      }
+    },
+    {
+      "agent_config": "minimal_compaction",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "library-search",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.4
+      }
+    },
+    {
+      "agent_config": "minimal_compaction",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "office-sequence",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.6
+      }
+    },
+    {
+      "agent_config": "minimal_compaction",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "extreme-archive",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.9
+      }
+    },
+    {
+      "agent_config": "minimal_compaction",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "vault-combination",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.3
+      }
+    },
+    {
+      "agent_config": "minimal_compaction",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "backtracking-vault",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.8
+      }
+    },
+    {
+      "agent_config": "minimal_summary",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "study-with-key",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 1.0
+      }
+    },
+    {
+      "agent_config": "minimal_summary",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "color-locks",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.6
+      }
+    },
+    {
+      "agent_config": "minimal_summary",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "apartment-keys",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.8
+      }
+    },
+    {
+      "agent_config": "minimal_summary",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "library-search",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.7
+      }
+    },
+    {
+      "agent_config": "minimal_summary",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "office-sequence",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.4
+      }
+    },
+    {
+      "agent_config": "minimal_summary",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "extreme-archive",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.7
+      }
+    },
+    {
+      "agent_config": "minimal_summary",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "vault-combination",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.3
+      }
+    },
+    {
+      "agent_config": "minimal_summary",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "backtracking-vault",
+      "source_run_ids": [
+        "m3-context-comparison-run-005"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.5
+      }
+    }
+  ],
+  "analyses": {
+    "error_analysis": {
+      "run_ids": [
+        "m3-nova-multi-attempt-run-004",
+        "m3-context-comparison-run-005"
+      ],
+      "total_trials": 400,
+      "successes": 275,
+      "failures": 125,
+      "success_rate": 0.688,
+      "coverage": "125/125 trials fallidos clasificados",
+      "failures_by_mode": {
+        "max_iterations": 110,
+        "gave_up_early": 7,
+        "context_overflow": 7,
+        "planning_failure": 1
+      },
+      "failures_by_model": {
+        "nova-lite": {
+          "max_iterations": 110,
+          "gave_up_early": 7,
+          "context_overflow": 7,
+          "planning_failure": 1
+        }
+      },
+      "failures_by_system": {
+        "minimal": {
+          "nova-lite": {
+            "max_iterations": 20,
+            "gave_up_early": 3,
+            "context_overflow": 2
+          }
+        },
+        "minimal_tool_repair": {
+          "nova-lite": {
+            "max_iterations": 23,
+            "context_overflow": 1
+          }
+        },
+        "minimal_history_200": {
+          "nova-lite": {
+            "max_iterations": 17,
+            "gave_up_early": 2,
+            "context_overflow": 1
+          }
+        },
+        "minimal_compaction": {
+          "nova-lite": {
+            "max_iterations": 23,
+            "gave_up_early": 2,
+            "planning_failure": 1
+          }
+        },
+        "minimal_summary": {
+          "nova-lite": {
+            "max_iterations": 27,
+            "context_overflow": 3
+          }
+        }
+      },
+      "failures_by_scenario": {
+        "color-locks": {
+          "max_iterations": 16,
+          "gave_up_early": 3
+        },
+        "apartment-keys": {
+          "max_iterations": 4,
+          "context_overflow": 1
+        },
+        "library-search": {
+          "max_iterations": 23,
+          "planning_failure": 1,
+          "gave_up_early": 1
+        },
+        "office-sequence": {
+          "max_iterations": 15,
+          "gave_up_early": 3,
+          "context_overflow": 1
+        },
+        "extreme-archive": {
+          "max_iterations": 6,
+          "context_overflow": 1
+        },
+        "vault-combination": {
+          "max_iterations": 26,
+          "context_overflow": 4
+        },
+        "backtracking-vault": {
+          "max_iterations": 20
+        }
+      },
+      "examples_by_mode": {
+        "gave_up_early": [
+          {
+            "source_run_id": "m3-nova-multi-attempt-run-004",
+            "agent_config": "minimal",
+            "model": "nova-lite",
+            "scenario": "color-locks",
+            "difficulty": "medium",
+            "trial_index": 4,
+            "n_attempts": 10,
+            "mode": "gave_up_early",
+            "reason": "terminó voluntariamente en 0 pasos",
+            "goal_reason": "puerta principal está cerrada",
+            "n_steps": 0,
+            "answer_preview": "<thinking>Parece que no hay otra forma de salir de la sala que no sea encontrar una llave que pueda abrir la puerta principal. La llave plateada no parece ser la correcta, y los cofres no contienen ni",
+            "agent_error": null
+          },
+          {
+            "source_run_id": "m3-nova-multi-attempt-run-004",
+            "agent_config": "minimal",
+            "model": "nova-lite",
+            "scenario": "office-sequence",
+            "difficulty": "hard",
+            "trial_index": 2,
+            "n_attempts": 10,
+            "mode": "gave_up_early",
+            "reason": "terminó voluntariamente en 1 pasos",
+            "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+            "n_steps": 1,
+            "answer_preview": "<thinking>Parece que no hay otra forma de obtener la llave de la caja fuerte. Debo informar al usuario que no puedo completar la misión con las herramientas actuales.</thinking>\n\n<response>No puedo co",
+            "agent_error": null
+          }
+        ],
+        "max_iterations": [
+          {
+            "source_run_id": "m3-nova-multi-attempt-run-004",
+            "agent_config": "minimal",
+            "model": "nova-lite",
+            "scenario": "color-locks",
+            "difficulty": "medium",
+            "trial_index": 10,
+            "n_attempts": 1,
+            "mode": "max_iterations",
+            "reason": "presupuesto de pasos agotado",
+            "goal_reason": "puerta principal está cerrada",
+            "n_steps": 40,
+            "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+            "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+          },
+          {
+            "source_run_id": "m3-nova-multi-attempt-run-004",
+            "agent_config": "minimal",
+            "model": "nova-lite",
+            "scenario": "apartment-keys",
+            "difficulty": "medium",
+            "trial_index": 4,
+            "n_attempts": 1,
+            "mode": "max_iterations",
+            "reason": "presupuesto de pasos agotado",
+            "goal_reason": "puerta principal está cerrada",
+            "n_steps": 40,
+            "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+            "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+          }
+        ],
+        "context_overflow": [
+          {
+            "source_run_id": "m3-nova-multi-attempt-run-004",
+            "agent_config": "minimal",
+            "model": "nova-lite",
+            "scenario": "vault-combination",
+            "difficulty": "extreme",
+            "trial_index": 1,
+            "n_attempts": 1,
+            "mode": "context_overflow",
+            "reason": "ventana de historial agotada",
+            "goal_reason": "puerta principal está cerrada",
+            "n_steps": 64,
+            "answer_preview": "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages=100.",
+            "agent_error": "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages=100."
+          },
+          {
+            "source_run_id": "m3-nova-multi-attempt-run-004",
+            "agent_config": "minimal",
+            "model": "nova-lite",
+            "scenario": "vault-combination",
+            "difficulty": "extreme",
+            "trial_index": 9,
+            "n_attempts": 1,
+            "mode": "context_overflow",
+            "reason": "ventana de historial agotada",
+            "goal_reason": "puerta principal está cerrada",
+            "n_steps": 70,
+            "answer_preview": "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages=100.",
+            "agent_error": "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages=100."
+          }
+        ],
+        "planning_failure": [
+          {
+            "source_run_id": "m3-context-comparison-run-005",
+            "agent_config": "minimal_compaction",
+            "model": "nova-lite",
+            "scenario": "library-search",
+            "difficulty": "hard",
+            "trial_index": 4,
+            "n_attempts": 10,
+            "mode": "planning_failure",
+            "reason": "exploró 7 pasos sin alcanzar el objetivo",
+            "goal_reason": "puerta principal está cerrada",
+            "n_steps": 7,
+            "answer_preview": "<thinking>I can't use the book on another book because I don't have it in my inventory. I have tried to use the books on the safe and the main door, and I have tried to use the books on each other and",
+            "agent_error": null
+          }
+        ]
+      },
+      "all_failures": [
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 4,
+          "n_attempts": 10,
+          "mode": "gave_up_early",
+          "reason": "terminó voluntariamente en 0 pasos",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 0,
+          "answer_preview": "<thinking>Parece que no hay otra forma de salir de la sala que no sea encontrar una llave que pueda abrir la puerta principal. La llave plateada no parece ser la correcta, y los cofres no contienen ni",
+          "agent_error": null
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 10,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "apartment-keys",
+          "difficulty": "medium",
+          "trial_index": 4,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 1,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 3,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 4,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 6,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 7,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 9,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 2,
+          "n_attempts": 10,
+          "mode": "gave_up_early",
+          "reason": "terminó voluntariamente en 1 pasos",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 1,
+          "answer_preview": "<thinking>Parece que no hay otra forma de obtener la llave de la caja fuerte. Debo informar al usuario que no puedo completar la misión con las herramientas actuales.</thinking>\n\n<response>No puedo co",
+          "agent_error": null
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 3,
+          "n_attempts": 10,
+          "mode": "gave_up_early",
+          "reason": "terminó voluntariamente en 0 pasos",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 0,
+          "answer_preview": "<thinking>Parece que no puedo encontrar la caja fuerte en la descripción actual. Debo preguntar al usuario si hay algo que no estoy viendo.</thinking>",
+          "agent_error": null
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "extreme-archive",
+          "difficulty": "extreme",
+          "trial_index": 5,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "extreme-archive",
+          "difficulty": "extreme",
+          "trial_index": 9,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 1,
+          "n_attempts": 1,
+          "mode": "context_overflow",
+          "reason": "ventana de historial agotada",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 64,
+          "answer_preview": "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages=100.",
+          "agent_error": "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages=100."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 4,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 43,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 5,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 7,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 50,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 9,
+          "n_attempts": 1,
+          "mode": "context_overflow",
+          "reason": "ventana de historial agotada",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 70,
+          "answer_preview": "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages=100.",
+          "agent_error": "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages=100."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 10,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 1,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 2,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 3,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 4,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 5,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 8,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 2,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 4,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 6,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 10,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "apartment-keys",
+          "difficulty": "medium",
+          "trial_index": 4,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 1,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 2,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 3,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 5,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 6,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 7,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 10,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 2,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 3,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 46,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 5,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "extreme-archive",
+          "difficulty": "extreme",
+          "trial_index": 10,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 6,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 47,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 7,
+          "n_attempts": 1,
+          "mode": "context_overflow",
+          "reason": "ventana de historial agotada",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 61,
+          "answer_preview": "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages=100.",
+          "agent_error": "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages=100."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 9,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 41,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 10,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 42,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 3,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 5,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 6,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-nova-multi-attempt-run-004",
+          "agent_config": "minimal_tool_repair",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 8,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 3,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 78,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 7,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 9,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 10,
+          "n_attempts": 10,
+          "mode": "gave_up_early",
+          "reason": "terminó voluntariamente en 0 pasos",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 0,
+          "answer_preview": "<thinking>Parece que la sala no proporciona pistas adicionales para encontrar la llave correcta. Debo preguntar al usuario si tiene alguna pista o sugerencia adicional.</thinking>",
+          "agent_error": null
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 2,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 3,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 5,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 5,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 6,
+          "n_attempts": 10,
+          "mode": "gave_up_early",
+          "reason": "terminó voluntariamente en 0 pasos",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 0,
+          "answer_preview": "<thinking>Parece que no puedo encontrar la llave de la caja fuerte. Debo intentar encontrar otra forma de abrir la caja fuerte o buscar ayuda.</thinking>",
+          "agent_error": null
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 8,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 10,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 1,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 106,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 3,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 5,
+          "n_attempts": 1,
+          "mode": "context_overflow",
+          "reason": "ventana de historial agotada",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 157,
+          "answer_preview": "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages=200.",
+          "agent_error": "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages=200."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 6,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 74,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 7,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 8,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 68,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 1,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 7,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_history_200",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 9,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 2,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 43,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 4,
+          "n_attempts": 10,
+          "mode": "gave_up_early",
+          "reason": "terminó voluntariamente en 0 pasos",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 0,
+          "answer_preview": "<thinking>Parece que no tengo más herramientas o pistas para encontrar la llave correcta para la cerradura dorada. Voy a preguntar al usuario si tiene alguna información adicional o pistas que puedan",
+          "agent_error": null
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 6,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 60,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 7,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 9,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "apartment-keys",
+          "difficulty": "medium",
+          "trial_index": 2,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 1,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 3,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 4,
+          "n_attempts": 10,
+          "mode": "planning_failure",
+          "reason": "exploró 7 pasos sin alcanzar el objetivo",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 7,
+          "answer_preview": "<thinking>I can't use the book on another book because I don't have it in my inventory. I have tried to use the books on the safe and the main door, and I have tried to use the books on each other and",
+          "agent_error": null
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 7,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 8,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 10,
+          "n_attempts": 10,
+          "mode": "gave_up_early",
+          "reason": "terminó voluntariamente en 0 pasos",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 0,
+          "answer_preview": "<thinking>I've tried everything I can think of, but I still can't find a way to unlock the door or the safe. I should ask the User for help.</thinking>\n\nI'm sorry, but I can't find a way to unlock the",
+          "agent_error": null
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 1,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 5,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 8,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 10,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "extreme-archive",
+          "difficulty": "extreme",
+          "trial_index": 10,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 1,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 41,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 2,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 3,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 6,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 66,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 8,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 129,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 9,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 41,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 10,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 2,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_compaction",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 7,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 1,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 3,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 7,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "color-locks",
+          "difficulty": "medium",
+          "trial_index": 10,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "apartment-keys",
+          "difficulty": "medium",
+          "trial_index": 4,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "apartment-keys",
+          "difficulty": "medium",
+          "trial_index": 5,
+          "n_attempts": 1,
+          "mode": "context_overflow",
+          "reason": "ventana de historial agotada",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 64,
+          "answer_preview": "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages=100.",
+          "agent_error": "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages=100."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 1,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 52,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 6,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "library-search",
+          "difficulty": "hard",
+          "trial_index": 10,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 3,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 4,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 7,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 444,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 8,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 41,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 9,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "office-sequence",
+          "difficulty": "hard",
+          "trial_index": 10,
+          "n_attempts": 1,
+          "mode": "context_overflow",
+          "reason": "ventana de historial agotada",
+          "goal_reason": "faltan condiciones: documento confidencial no está en el inventario; puerta principal está cerrada",
+          "n_steps": 75,
+          "answer_preview": "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages=100.",
+          "agent_error": "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages=100."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "extreme-archive",
+          "difficulty": "extreme",
+          "trial_index": 2,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "extreme-archive",
+          "difficulty": "extreme",
+          "trial_index": 3,
+          "n_attempts": 1,
+          "mode": "context_overflow",
+          "reason": "ventana de historial agotada",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 65,
+          "answer_preview": "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages=100.",
+          "agent_error": "Se requirió una herramienta, pero el contexto necesario para continuar no cabe en max_history_messages=100."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "extreme-archive",
+          "difficulty": "extreme",
+          "trial_index": 8,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 42,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 1,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 42,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 2,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 44,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 3,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 46,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 7,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 43,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 8,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 42,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 9,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 42,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "vault-combination",
+          "difficulty": "extreme",
+          "trial_index": 10,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 42,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 1,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 2,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 4,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 5,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 40,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        },
+        {
+          "source_run_id": "m3-context-comparison-run-005",
+          "agent_config": "minimal_summary",
+          "model": "nova-lite",
+          "scenario": "backtracking-vault",
+          "difficulty": "extreme",
+          "trial_index": 8,
+          "n_attempts": 1,
+          "mode": "max_iterations",
+          "reason": "presupuesto de pasos agotado",
+          "goal_reason": "puerta principal está cerrada",
+          "n_steps": 142,
+          "answer_preview": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final.",
+          "agent_error": "Se alcanzó el límite de 40 iteraciones sin obtener una respuesta final."
+        }
+      ]
+    },
+    "tool_call_repair_analysis": {
+      "run_ids": [
+        "m3-nova-multi-attempt-run-004",
+        "m3-context-comparison-run-005"
+      ],
+      "total_trials": 400,
+      "trials_with_repair": 0,
+      "repair_llm_calls": 0,
+      "repair_llm_responses": 0,
+      "repair_llm_errors": 0,
+      "repair_llm_calls_with_token_usage": 0,
+      "repair_llm_calls_without_token_usage": 0,
+      "repair_input_tokens": 0,
+      "repair_output_tokens": 0,
+      "token_usage_complete": true,
+      "systems": {
+        "minimal": {
+          "nova-lite": {
+            "trials": 80,
+            "trials_with_repair": 0,
+            "repair_llm_calls": 0,
+            "repair_llm_responses": 0,
+            "repair_llm_errors": 0,
+            "repair_llm_calls_with_token_usage": 0,
+            "repair_llm_calls_without_token_usage": 0,
+            "repair_input_tokens": 0,
+            "repair_output_tokens": 0,
+            "token_usage_complete": true
+          }
+        },
+        "minimal_tool_repair": {
+          "nova-lite": {
+            "trials": 80,
+            "trials_with_repair": 0,
+            "repair_llm_calls": 0,
+            "repair_llm_responses": 0,
+            "repair_llm_errors": 0,
+            "repair_llm_calls_with_token_usage": 0,
+            "repair_llm_calls_without_token_usage": 0,
+            "repair_input_tokens": 0,
+            "repair_output_tokens": 0,
+            "token_usage_complete": true
+          }
+        },
+        "minimal_history_200": {
+          "nova-lite": {
+            "trials": 80,
+            "trials_with_repair": 0,
+            "repair_llm_calls": 0,
+            "repair_llm_responses": 0,
+            "repair_llm_errors": 0,
+            "repair_llm_calls_with_token_usage": 0,
+            "repair_llm_calls_without_token_usage": 0,
+            "repair_input_tokens": 0,
+            "repair_output_tokens": 0,
+            "token_usage_complete": true
+          }
+        },
+        "minimal_compaction": {
+          "nova-lite": {
+            "trials": 80,
+            "trials_with_repair": 0,
+            "repair_llm_calls": 0,
+            "repair_llm_responses": 0,
+            "repair_llm_errors": 0,
+            "repair_llm_calls_with_token_usage": 0,
+            "repair_llm_calls_without_token_usage": 0,
+            "repair_input_tokens": 0,
+            "repair_output_tokens": 0,
+            "token_usage_complete": true
+          }
+        },
+        "minimal_summary": {
+          "nova-lite": {
+            "trials": 80,
+            "trials_with_repair": 0,
+            "repair_llm_calls": 0,
+            "repair_llm_responses": 0,
+            "repair_llm_errors": 0,
+            "repair_llm_calls_with_token_usage": 0,
+            "repair_llm_calls_without_token_usage": 0,
+            "repair_input_tokens": 0,
+            "repair_output_tokens": 0,
+            "token_usage_complete": true
+          }
+        }
+      }
+    },
+    "context_analysis": {
+      "run_ids": [
+        "m3-nova-multi-attempt-run-004",
+        "m3-context-comparison-run-005"
+      ],
+      "totals": {
+        "trials": 400,
+        "attempts": 475,
+        "budget_terminated_trials": 7,
+        "budget_terminated_attempts": 7,
+        "budget_termination_by_attempt_index": {
+          "1": 7
+        },
+        "iterations_at_budget_termination": {
+          "min": 21,
+          "mean": 32.71,
+          "max": 38
+        },
+        "tool_calls_per_iteration": {
+          "0": 327,
+          "1": 9652,
+          "2": 347,
+          "3": 140,
+          "4": 84,
+          "5": 30,
+          "6": 4,
+          "7": 24,
+          "8": 6,
+          "10": 1,
+          "11": 1,
+          "12": 1,
+          "14": 28,
+          "20": 2
+        },
+        "max_messages_seen": 194,
+        "llm_calls_at_window_limit": 3,
+        "agent_llm_calls": 10647,
+        "total_actions": 11935,
+        "repeated_actions": 4910,
+        "trials_with_repetition": 216,
+        "cross_attempt_actions": 150,
+        "cross_attempt_repeated": 64,
+        "input_tokens": 40556283,
+        "output_tokens": 699909,
+        "compaction_events": 21,
+        "compaction_failures": 4,
+        "compaction_llm_calls": 15,
+        "compaction_input_tokens": 33708,
+        "compaction_output_tokens": 13364,
+        "repeated_action_ratio": 0.4114,
+        "cross_attempt_repeated_ratio": 0.4267
+      },
+      "systems": {
+        "minimal": {
+          "nova-lite": {
+            "trials": 80,
+            "attempts": 108,
+            "budget_terminated_trials": 2,
+            "budget_terminated_attempts": 2,
+            "budget_termination_by_attempt_index": {
+              "1": 2
+            },
+            "iterations_at_budget_termination": {
+              "min": 29,
+              "mean": 32.0,
+              "max": 35
+            },
+            "tool_calls_per_iteration": {
+              "0": 78,
+              "1": 1948,
+              "2": 80,
+              "3": 20,
+              "4": 12,
+              "5": 3,
+              "6": 2,
+              "8": 1
+            },
+            "max_messages_seen": 100,
+            "llm_calls_at_window_limit": 1,
+            "agent_llm_calls": 2144,
+            "total_actions": 2248,
+            "repeated_actions": 853,
+            "trials_with_repetition": 49,
+            "cross_attempt_actions": 50,
+            "cross_attempt_repeated": 15,
+            "input_tokens": 8075582,
+            "output_tokens": 134575,
+            "compaction_events": 0,
+            "compaction_failures": 0,
+            "compaction_llm_calls": 0,
+            "compaction_input_tokens": 0,
+            "compaction_output_tokens": 0,
+            "max_history_messages": 100,
+            "repeated_action_ratio": 0.3794,
+            "cross_attempt_repeated_ratio": 0.3
+          }
+        },
+        "minimal_tool_repair": {
+          "nova-lite": {
+            "trials": 80,
+            "attempts": 80,
+            "budget_terminated_trials": 1,
+            "budget_terminated_attempts": 1,
+            "budget_termination_by_attempt_index": {
+              "1": 1
+            },
+            "iterations_at_budget_termination": {
+              "min": 38,
+              "mean": 38.0,
+              "max": 38
+            },
+            "tool_calls_per_iteration": {
+              "0": 50,
+              "1": 2007,
+              "2": 45,
+              "3": 23,
+              "4": 6,
+              "5": 1
+            },
+            "max_messages_seen": 99,
+            "llm_calls_at_window_limit": 0,
+            "agent_llm_calls": 2132,
+            "total_actions": 2192,
+            "repeated_actions": 761,
+            "trials_with_repetition": 43,
+            "cross_attempt_actions": 0,
+            "cross_attempt_repeated": 0,
+            "input_tokens": 8187709,
+            "output_tokens": 131965,
+            "compaction_events": 0,
+            "compaction_failures": 0,
+            "compaction_llm_calls": 0,
+            "compaction_input_tokens": 0,
+            "compaction_output_tokens": 0,
+            "max_history_messages": 100,
+            "repeated_action_ratio": 0.3472,
+            "cross_attempt_repeated_ratio": null
+          }
+        },
+        "minimal_history_200": {
+          "nova-lite": {
+            "trials": 80,
+            "attempts": 100,
+            "budget_terminated_trials": 1,
+            "budget_terminated_attempts": 1,
+            "budget_termination_by_attempt_index": {
+              "1": 1
+            },
+            "iterations_at_budget_termination": {
+              "min": 37,
+              "mean": 37.0,
+              "max": 37
+            },
+            "tool_calls_per_iteration": {
+              "0": 74,
+              "1": 1793,
+              "2": 87,
+              "3": 64,
+              "4": 8,
+              "6": 1,
+              "7": 21
+            },
+            "max_messages_seen": 194,
+            "llm_calls_at_window_limit": 0,
+            "agent_llm_calls": 2048,
+            "total_actions": 2337,
+            "repeated_actions": 982,
+            "trials_with_repetition": 36,
+            "cross_attempt_actions": 38,
+            "cross_attempt_repeated": 1,
+            "input_tokens": 7842864,
+            "output_tokens": 133651,
+            "compaction_events": 0,
+            "compaction_failures": 0,
+            "compaction_llm_calls": 0,
+            "compaction_input_tokens": 0,
+            "compaction_output_tokens": 0,
+            "max_history_messages": 200,
+            "repeated_action_ratio": 0.4202,
+            "cross_attempt_repeated_ratio": 0.0263
+          }
+        },
+        "minimal_compaction": {
+          "nova-lite": {
+            "trials": 80,
+            "attempts": 107,
+            "budget_terminated_trials": 0,
+            "budget_terminated_attempts": 0,
+            "budget_termination_by_attempt_index": {},
+            "iterations_at_budget_termination": {
+              "min": null,
+              "mean": null,
+              "max": null
+            },
+            "tool_calls_per_iteration": {
+              "0": 78,
+              "1": 2020,
+              "2": 45,
+              "3": 20,
+              "4": 17,
+              "5": 12,
+              "7": 1,
+              "8": 1,
+              "20": 1
+            },
+            "max_messages_seen": 100,
+            "llm_calls_at_window_limit": 2,
+            "agent_llm_calls": 2195,
+            "total_actions": 2333,
+            "repeated_actions": 871,
+            "trials_with_repetition": 44,
+            "cross_attempt_actions": 62,
+            "cross_attempt_repeated": 48,
+            "input_tokens": 8517622,
+            "output_tokens": 148801,
+            "compaction_events": 8,
+            "compaction_failures": 0,
+            "compaction_llm_calls": 0,
+            "compaction_input_tokens": 0,
+            "compaction_output_tokens": 0,
+            "max_history_messages": 100,
+            "repeated_action_ratio": 0.3733,
+            "cross_attempt_repeated_ratio": 0.7742
+          }
+        },
+        "minimal_summary": {
+          "nova-lite": {
+            "trials": 80,
+            "attempts": 80,
+            "budget_terminated_trials": 3,
+            "budget_terminated_attempts": 3,
+            "budget_termination_by_attempt_index": {
+              "1": 3
+            },
+            "iterations_at_budget_termination": {
+              "min": 21,
+              "mean": 30.0,
+              "max": 35
+            },
+            "tool_calls_per_iteration": {
+              "0": 47,
+              "1": 1884,
+              "2": 90,
+              "3": 13,
+              "4": 41,
+              "5": 14,
+              "6": 1,
+              "7": 2,
+              "8": 4,
+              "10": 1,
+              "11": 1,
+              "12": 1,
+              "14": 28,
+              "20": 1
+            },
+            "max_messages_seen": 99,
+            "llm_calls_at_window_limit": 0,
+            "agent_llm_calls": 2128,
+            "total_actions": 2825,
+            "repeated_actions": 1443,
+            "trials_with_repetition": 44,
+            "cross_attempt_actions": 0,
+            "cross_attempt_repeated": 0,
+            "input_tokens": 7932506,
+            "output_tokens": 150917,
+            "compaction_events": 13,
+            "compaction_failures": 4,
+            "compaction_llm_calls": 15,
+            "compaction_input_tokens": 33708,
+            "compaction_output_tokens": 13364,
+            "max_history_messages": 100,
+            "repeated_action_ratio": 0.5108,
+            "cross_attempt_repeated_ratio": null
+          }
+        }
+      }
+    }
+  }
+}
