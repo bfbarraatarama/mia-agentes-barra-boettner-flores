@@ -18,6 +18,10 @@ from .agent import MyAgent
 from student_framework.tools.calculator import  calculator, calculator_schema
 from student_framework.tools.distance_converter import distance_converter, distance_converter_schema
 from student_framework.tools.file_reader import file_reader, file_reader_schema
+from student_framework.context.summarizer import (
+    deterministic_history_compactor,
+    make_llm_history_compactor,
+)
 
 
 def build_agent(config: dict[str, Any] | None = None) -> Agent:
@@ -51,7 +55,29 @@ def build_agent(config: dict[str, Any] | None = None) -> Agent:
     if "trace_callback" in config:
         kwargs["trace_callback"] = config["trace_callback"]
 
+    if "compaction_keep_recent_rounds" in config:
+        kwargs["compaction_keep_recent_rounds"] = config[
+            "compaction_keep_recent_rounds"
+        ]
+
     agent = MyAgent(**kwargs)
+
+    # Estrategia de compactación declarativa, para que las configs de
+    # eval/ sigan siendo serializables en el manifest del run. También
+    # se acepta un callable directo (tests).
+    history_compaction = config.get("history_compaction")
+
+    if callable(history_compaction):
+        agent.set_history_compactor(history_compaction)
+    elif history_compaction == "deterministic":
+        agent.set_history_compactor(deterministic_history_compactor)
+    elif history_compaction == "llm":
+        agent.set_history_compactor(make_llm_history_compactor(agent))
+    elif history_compaction is not None:
+        raise ValueError(
+            f"history_compaction desconocida: {history_compaction!r}. "
+            "Valores válidos: 'deterministic', 'llm' o un callable."
+        )
 
     if config.get("register_default_tools", True):
         agent.register_tool(calculator, calculator_schema)

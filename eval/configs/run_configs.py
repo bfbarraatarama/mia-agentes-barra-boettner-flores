@@ -135,3 +135,39 @@ M3_NOVA_MULTI_ATTEMPT_RUN_CONFIG: dict[str, Any] = {
         "multi_attempt",
     ],
 }
+
+
+# Experimento de gestión de contexto (issue #26). El baseline "minimal"
+# no se repite: ya está persistido en m3-nova-multi-attempt-run-004 con
+# la misma configuración de trial, y la evaluación puede combinar ambos
+# runs vía run_ids.
+M3_CONTEXT_COMPARISON_RUN_CONFIG: dict[str, Any] = {
+    "systems": [
+        {
+            "agent_config": "minimal_history_200",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "minimal_compaction",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "minimal_summary",
+            "llm_config": "nova-lite",
+        },
+    ],
+    "trial_configs": [
+        "multi_attempt",
+    ],
+    "scenarios": [
+        "study-with-key",
+        "color-locks",
+        "apartment-keys",
+        "library-search",
+        "office-sequence",
+        "extreme-archive",
+        "vault-combination",
+        "backtracking-vault",
+    ],
+    "trials_per_case": 10,
+}

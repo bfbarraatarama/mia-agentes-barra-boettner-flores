@@ -1,0 +1,568 @@
+{
+  "eval_id": "m3-context-baseline-eval-005",
+  "run_ids": [
+    "m3-nova-tool-repair-comparison-run-003",
+    "m3-nova-multi-attempt-run-004"
+  ],
+  "results": [
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "single_attempt",
+      "scenario": "study-with-key",
+      "source_run_ids": [
+        "m3-nova-tool-repair-comparison-run-003"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 1.0
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "single_attempt",
+      "scenario": "color-locks",
+      "source_run_ids": [
+        "m3-nova-tool-repair-comparison-run-003"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.6
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "single_attempt",
+      "scenario": "apartment-keys",
+      "source_run_ids": [
+        "m3-nova-tool-repair-comparison-run-003"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 1.0
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "single_attempt",
+      "scenario": "library-search",
+      "source_run_ids": [
+        "m3-nova-tool-repair-comparison-run-003"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.9
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "single_attempt",
+      "scenario": "office-sequence",
+      "source_run_ids": [
+        "m3-nova-tool-repair-comparison-run-003"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.7
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "single_attempt",
+      "scenario": "extreme-archive",
+      "source_run_ids": [
+        "m3-nova-tool-repair-comparison-run-003"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 1.0
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "single_attempt",
+      "scenario": "vault-combination",
+      "source_run_ids": [
+        "m3-nova-tool-repair-comparison-run-003"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.4
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "single_attempt",
+      "scenario": "backtracking-vault",
+      "source_run_ids": [
+        "m3-nova-tool-repair-comparison-run-003"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.9
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "single_attempt",
+      "scenario": "study-with-key",
+      "source_run_ids": [
+        "m3-nova-tool-repair-comparison-run-003"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 1.0
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "single_attempt",
+      "scenario": "color-locks",
+      "source_run_ids": [
+        "m3-nova-tool-repair-comparison-run-003"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.4
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "single_attempt",
+      "scenario": "apartment-keys",
+      "source_run_ids": [
+        "m3-nova-tool-repair-comparison-run-003"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.9
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "single_attempt",
+      "scenario": "library-search",
+      "source_run_ids": [
+        "m3-nova-tool-repair-comparison-run-003"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.6
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "single_attempt",
+      "scenario": "office-sequence",
+      "source_run_ids": [
+        "m3-nova-tool-repair-comparison-run-003"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.7
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "single_attempt",
+      "scenario": "extreme-archive",
+      "source_run_ids": [
+        "m3-nova-tool-repair-comparison-run-003"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.8
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "single_attempt",
+      "scenario": "vault-combination",
+      "source_run_ids": [
+        "m3-nova-tool-repair-comparison-run-003"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.2
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "single_attempt",
+      "scenario": "backtracking-vault",
+      "source_run_ids": [
+        "m3-nova-tool-repair-comparison-run-003"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.7
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "study-with-key",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 1.0
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "color-locks",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.8
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "apartment-keys",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.9
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "library-search",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.4
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "office-sequence",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.8
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "extreme-archive",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.8
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "vault-combination",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.4
+      }
+    },
+    {
+      "agent_config": "minimal",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "backtracking-vault",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.4
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "study-with-key",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 1.0
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "color-locks",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.6
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "apartment-keys",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.9
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "library-search",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.3
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "office-sequence",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.7
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "extreme-archive",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.9
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "vault-combination",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.6
+      }
+    },
+    {
+      "agent_config": "minimal_tool_repair",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "backtracking-vault",
+      "source_run_ids": [
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "trial_count": 10,
+      "metrics": {
+        "success_rate": 0.6
+      }
+    }
+  ],
+  "analyses": {
+    "context_analysis": {
+      "run_ids": [
+        "m3-nova-tool-repair-comparison-run-003",
+        "m3-nova-multi-attempt-run-004"
+      ],
+      "totals": {
+        "trials": 320,
+        "attempts": 348,
+        "budget_terminated_trials": 5,
+        "budget_terminated_attempts": 5,
+        "budget_termination_by_attempt_index": {
+          "1": 5
+        },
+        "iterations_at_budget_termination": {
+          "min": 26,
+          "mean": 31.8,
+          "max": 38
+        },
+        "tool_calls_per_iteration": {
+          "0": 231,
+          "1": 7824,
+          "2": 212,
+          "3": 87,
+          "4": 27,
+          "5": 8,
+          "6": 3,
+          "7": 6,
+          "8": 5,
+          "20": 1
+        },
+        "max_messages_seen": 100,
+        "llm_calls_at_window_limit": 1,
+        "agent_llm_calls": 8404,
+        "total_actions": 8763,
+        "repeated_actions": 3020,
+        "trials_with_repetition": 178,
+        "cross_attempt_actions": 50,
+        "cross_attempt_repeated": 15,
+        "input_tokens": 31273551,
+        "output_tokens": 523251,
+        "compaction_events": 0,
+        "compaction_failures": 0,
+        "compaction_llm_calls": 0,
+        "compaction_input_tokens": 0,
+        "compaction_output_tokens": 0,
+        "repeated_action_ratio": 0.3446,
+        "cross_attempt_repeated_ratio": 0.3
+      },
+      "systems": {
+        "minimal": {
+          "nova-lite": {
+            "trials": 160,
+            "attempts": 188,
+            "budget_terminated_trials": 4,
+            "budget_terminated_attempts": 4,
+            "budget_termination_by_attempt_index": {
+              "1": 4
+            },
+            "iterations_at_budget_termination": {
+              "min": 26,
+              "mean": 30.25,
+              "max": 35
+            },
+            "tool_calls_per_iteration": {
+              "0": 134,
+              "1": 3767,
+              "2": 120,
+              "3": 52,
+              "4": 20,
+              "5": 7,
+              "6": 3,
+              "7": 4,
+              "8": 2,
+              "20": 1
+            },
+            "max_messages_seen": 100,
+            "llm_calls_at_window_limit": 1,
+            "agent_llm_calls": 4110,
+            "total_actions": 4349,
+            "repeated_actions": 1452,
+            "trials_with_repetition": 88,
+            "cross_attempt_actions": 50,
+            "cross_attempt_repeated": 15,
+            "input_tokens": 15094629,
+            "output_tokens": 255607,
+            "compaction_events": 0,
+            "compaction_failures": 0,
+            "compaction_llm_calls": 0,
+            "compaction_input_tokens": 0,
+            "compaction_output_tokens": 0,
+            "max_history_messages": 100,
+            "repeated_action_ratio": 0.3339,
+            "cross_attempt_repeated_ratio": 0.3
+          }
+        },
+        "minimal_tool_repair": {
+          "nova-lite": {
+            "trials": 160,
+            "attempts": 160,
+            "budget_terminated_trials": 1,
+            "budget_terminated_attempts": 1,
+            "budget_termination_by_attempt_index": {
+              "1": 1
+            },
+            "iterations_at_budget_termination": {
+              "min": 38,
+              "mean": 38.0,
+              "max": 38
+            },
+            "tool_calls_per_iteration": {
+              "0": 97,
+              "1": 4057,
+              "2": 92,
+              "3": 35,
+              "4": 7,
+              "5": 1,
+              "7": 2,
+              "8": 3
+            },
+            "max_messages_seen": 99,
+            "llm_calls_at_window_limit": 0,
+            "agent_llm_calls": 4294,
+            "total_actions": 4414,
+            "repeated_actions": 1568,
+            "trials_with_repetition": 90,
+            "cross_attempt_actions": 0,
+            "cross_attempt_repeated": 0,
+            "input_tokens": 16178922,
+            "output_tokens": 267644,
+            "compaction_events": 0,
+            "compaction_failures": 0,
+            "compaction_llm_calls": 0,
+            "compaction_input_tokens": 0,
+            "compaction_output_tokens": 0,
+            "max_history_messages": 100,
+            "repeated_action_ratio": 0.3552,
+            "cross_attempt_repeated_ratio": null
+          }
+        }
+      }
+    }
+  }
+}

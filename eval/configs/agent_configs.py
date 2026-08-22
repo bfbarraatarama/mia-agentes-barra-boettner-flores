@@ -22,7 +22,32 @@ MINIMAL_TOOL_REPAIR_AGENT_CONFIG: dict[str, Any] = {
 }
 
 
+# Control barato de la issue #26: cuánto del problema de contexto se
+# resuelve solo subiendo el presupuesto.
+MINIMAL_HISTORY_200_AGENT_CONFIG: dict[str, Any] = {
+    **MINIMAL_AGENT_CONFIG,
+    "max_history_messages": 200,
+}
+
+
+# Compactación sin LLM: comprime lo descartado sin abstracción.
+MINIMAL_COMPACTION_AGENT_CONFIG: dict[str, Any] = {
+    **MINIMAL_AGENT_CONFIG,
+    "history_compaction": "deterministic",
+}
+
+
+# Resumen por LLM: abstrae lo descartado a estado estructurado.
+MINIMAL_SUMMARY_AGENT_CONFIG: dict[str, Any] = {
+    **MINIMAL_AGENT_CONFIG,
+    "history_compaction": "llm",
+}
+
+
 AGENT_CONFIGS: dict[str, dict[str, Any]] = {
     "minimal": MINIMAL_AGENT_CONFIG,
     "minimal_tool_repair": MINIMAL_TOOL_REPAIR_AGENT_CONFIG,
+    "minimal_history_200": MINIMAL_HISTORY_200_AGENT_CONFIG,
+    "minimal_compaction": MINIMAL_COMPACTION_AGENT_CONFIG,
+    "minimal_summary": MINIMAL_SUMMARY_AGENT_CONFIG,
 }

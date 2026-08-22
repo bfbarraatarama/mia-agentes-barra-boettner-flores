@@ -1,0 +1,24 @@
+{
+  "schema_version": 2,
+  "eval_id": "m3-context-comparison-eval-006",
+  "run_ids": [
+    "m3-nova-multi-attempt-run-004",
+    "m3-context-comparison-run-005"
+  ],
+  "created_at": "2026-08-22T16:04:13+00:00",
+  "git": {
+    "commit": "c2d20da58ae9479d3c593cd4abab271987f312f6",
+    "branch": "issue-26",
+    "dirty": true
+  },
+  "evaluation": {
+    "metrics": [
+      "success_rate"
+    ],
+    "analyses": [
+      "error_analysis",
+      "tool_call_repair_analysis",
+      "context_analysis"
+    ]
+  }
+}
