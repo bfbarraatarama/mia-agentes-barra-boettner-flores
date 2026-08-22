@@ -34,6 +34,7 @@ MINIMAL_HISTORY_200_AGENT_CONFIG: dict[str, Any] = {
 MINIMAL_COMPACTION_AGENT_CONFIG: dict[str, Any] = {
     **MINIMAL_AGENT_CONFIG,
     "history_compaction": "deterministic",
+    "compaction_keep_recent_rounds": 2,
 }
 
 
@@ -41,6 +42,8 @@ MINIMAL_COMPACTION_AGENT_CONFIG: dict[str, Any] = {
 MINIMAL_SUMMARY_AGENT_CONFIG: dict[str, Any] = {
     **MINIMAL_AGENT_CONFIG,
     "history_compaction": "llm",
+    "compaction_keep_recent_rounds": 2,
+    "history_compaction_repair_max_attempts": 1,
 }
 
 

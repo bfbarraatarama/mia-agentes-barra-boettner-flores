@@ -98,6 +98,58 @@ def test_build_run_manifest_contains_reproducible_run_spec(
     )
 
 
+def test_build_run_manifest_materializes_history_compaction_policy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """El manifest conserva la política efectiva de compactación."""
+
+    monkeypatch.setattr(
+        persistence,
+        "_created_at",
+        lambda: "2026-08-22T00:00:00+00:00",
+    )
+    monkeypatch.setattr(
+        persistence,
+        "_git_metadata",
+        lambda: {
+            "commit": "abc123",
+            "branch": "issue-26",
+            "dirty": False,
+        },
+    )
+
+    run_config = {
+        "systems": [
+            {
+                "agent_config": "minimal_compaction",
+                "llm_config": "nova-lite",
+            },
+            {
+                "agent_config": "minimal_summary",
+                "llm_config": "nova-lite",
+            },
+        ],
+        "trial_configs": ["multi_attempt"],
+        "scenarios": ["study-with-key"],
+        "trials_per_case": 1,
+    }
+
+    manifest = persistence.build_run_manifest(
+        run_id="test-context-run",
+        run_config=run_config,
+    )
+
+    assert manifest["agent_configs"]["minimal_compaction"][
+        "compaction_keep_recent_rounds"
+    ] == 2
+    assert manifest["agent_configs"]["minimal_summary"][
+        "compaction_keep_recent_rounds"
+    ] == 2
+    assert manifest["agent_configs"]["minimal_summary"][
+        "history_compaction_repair_max_attempts"
+    ] == 1
+
+
 def test_build_run_manifest_rejects_empty_run_id() -> None:
     """Una corrida debe tener un run_id explícito."""
 

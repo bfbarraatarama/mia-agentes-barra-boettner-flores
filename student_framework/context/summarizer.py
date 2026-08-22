@@ -3,8 +3,11 @@
 Dos variantes de compactor para `MyAgent(history_compactor=...)`:
 
 - `deterministic_history_compactor`: pliega cada acción consumida en una
-  línea `acción → resultado`, deduplicando repeticiones. Sin LLM: costo
-  cero y sin nuevos modos de falla. Aísla cuánto aporta *comprimir*
+  línea `acción → resultado`, deduplicando repeticiones. Las observaciones
+  largas conservan un prefijo acotado, por lo que la estrategia es
+  deliberadamente lossy; si dos observaciones distintas colisionan tras
+  truncarse, ambas se conservan completas para no fusionarlas. Sin LLM:
+  costo cero y sin nuevos modos de falla. Aísla cuánto aporta *comprimir*
   frente a *resumir con abstracción*.
 - `make_llm_history_compactor(agent)`: resume con el propio LLM del
   agente a un estado estructurado (`TrajectorySummary`). Los hechos
@@ -49,8 +52,8 @@ _DETERMINISTIC_OBSERVATION_CHARS = 200
 _TRANSCRIPT_OBSERVATION_CHARS = 1000
 
 
-def _truncate(text: str, max_chars: int) -> str:
-    if len(text) <= max_chars:
+def _truncate(text: str, max_chars: int | None) -> str:
+    if max_chars is None or len(text) <= max_chars:
         return text
 
     return text[: max_chars - 1] + "…"
@@ -59,7 +62,7 @@ def _truncate(text: str, max_chars: int) -> str:
 def _render_action_lines(
     messages: list[dict[str, Any]],
     *,
-    max_observation_chars: int,
+    max_observation_chars: int | None,
 ) -> list[str]:
     """Convierte mensajes descartados en líneas acción → resultado."""
 
@@ -70,6 +73,13 @@ def _render_action_lines(
         role = message.get("role")
 
         if role == "assistant" and message.get("tool_calls"):
+            content = message.get("content")
+            if content:
+                lines.append(
+                    f"- [{role}] "
+                    f"{_truncate(content, max_observation_chars)}"
+                )
+
             for call in message["tool_calls"]:
                 function = call.get("function", {})
                 calls_by_id[call.get("id")] = (
@@ -105,22 +115,47 @@ def _render_action_lines(
 def deterministic_history_compactor(
     messages: list[dict[str, Any]],
 ) -> str:
-    """Compacta mensajes descartados sin LLM, deduplicando repeticiones."""
+    """Compacta mensajes descartados sin LLM.
 
-    lines = _render_action_lines(
+    Deduplica sólo representaciones completas iguales. Para mantener
+    acotado el resumen, las observaciones ordinarias se representan por
+    su prefijo de `_DETERMINISTIC_OBSERVATION_CHARS` caracteres. Si dos
+    observaciones distintas producirían la misma representación truncada,
+    se conservan completas para evitar una deduplicación falsa.
+    """
+
+    full_lines = _render_action_lines(
+        messages,
+        max_observation_chars=None,
+    )
+    compact_lines = _render_action_lines(
         messages,
         max_observation_chars=_DETERMINISTIC_OBSERVATION_CHARS,
     )
 
-    counted: dict[str, int] = {}
+    counted: dict[str, tuple[str, int]] = {}
+    compact_groups: dict[str, set[str]] = {}
 
-    for line in lines:
-        counted[line] = counted.get(line, 0) + 1
+    for full_line, compact_line in zip(full_lines, compact_lines):
+        compact_groups.setdefault(compact_line, set()).add(full_line)
 
-    rendered = [
-        line if count == 1 else f"{line} (x{count})"
-        for line, count in counted.items()
-    ]
+        if full_line in counted:
+            rendered_line, count = counted[full_line]
+            counted[full_line] = (rendered_line, count + 1)
+        else:
+            counted[full_line] = (compact_line, 1)
+
+    rendered = []
+
+    for full_line, (compact_line, count) in counted.items():
+        if len(compact_groups[compact_line]) > 1:
+            line = full_line
+        else:
+            line = compact_line
+
+        rendered.append(
+            line if count == 1 else f"{line} (x{count})"
+        )
 
     return "\n".join(rendered) or "(sin acciones registradas)"
 
