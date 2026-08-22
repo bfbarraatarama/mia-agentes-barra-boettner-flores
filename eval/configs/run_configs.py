@@ -127,3 +127,11 @@ M3_NOVA_TOOL_REPAIR_COMPARISON_RUN_CONFIG: dict[str, Any] = {
     ],
     "trials_per_case": 10,
 }
+
+
+M3_NOVA_MULTI_ATTEMPT_RUN_CONFIG: dict[str, Any] = {
+    **M3_NOVA_TOOL_REPAIR_COMPARISON_RUN_CONFIG,
+    "trial_configs": [
+        "multi_attempt",
+    ],
+}

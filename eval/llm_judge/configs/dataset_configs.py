@@ -12,7 +12,7 @@ from eval.llm_judge.sampling import (
 M3_QUALITATIVE_PILOT_DATASET_CONFIG: dict[str, Any] = {
     "dataset_id": "qualitative-pilot-v1",
     "run_ids": [
-        "m3-nova-tool-repair-comparison-run-003",
+        "m3-nova-multi-attempt-run-004",
     ],
     "population": {
         "agent_configs": None,
@@ -20,7 +20,7 @@ M3_QUALITATIVE_PILOT_DATASET_CONFIG: dict[str, Any] = {
             "nova-lite",
         ],
         "trial_configs": [
-            "single_attempt",
+            "multi_attempt",
         ],
         "scenarios": [
             "study-with-key",

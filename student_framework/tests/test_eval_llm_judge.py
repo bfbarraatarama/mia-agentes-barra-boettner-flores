@@ -1206,11 +1206,11 @@ def test_pilot_dataset_config_defines_shared_population_and_sampling() -> None:
 
     assert config["dataset_id"] == "qualitative-pilot-v1"
     assert config["run_ids"] == [
-        "m3-nova-tool-repair-comparison-run-003",
+        "m3-nova-multi-attempt-run-004",
     ]
     assert config["population"]["agent_configs"] is None
-    assert config["population"]["llm_configs"] == [
-        "nova-lite",
+    assert config["population"]["trial_configs"] == [
+        "multi_attempt",
     ]
     assert config["sampling"] == {
         "method": RANDOM_STRATIFIED_BY_SCENARIO_METHOD,
