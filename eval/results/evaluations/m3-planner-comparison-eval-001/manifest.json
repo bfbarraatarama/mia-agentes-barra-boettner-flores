@@ -1,0 +1,23 @@
+{
+  "schema_version": 2,
+  "eval_id": "m3-planner-comparison-eval-001",
+  "run_ids": [
+    "m3-nova-tool-repair-comparison-run-003",
+    "m3-planner-run-001"
+  ],
+  "created_at": "2026-08-22T17:57:17+00:00",
+  "git": {
+    "commit": "c7af2a306f8213e08030a961e0bbe14d9958500b",
+    "branch": "m3/planner-agent",
+    "dirty": true
+  },
+  "evaluation": {
+    "metrics": [
+      "success_rate"
+    ],
+    "analyses": [
+      "error_analysis",
+      "tool_call_repair_analysis"
+    ]
+  }
+}

@@ -18,7 +18,7 @@ from eval.evaluation import start_evaluation
 from eval.persistence import RUNS_DIR, evaluation_dir
 from eval.configs.evaluation_configs import M3_EVALUATION_CONFIG
 from eval.configs.run_configs import (
-    M3_NOVA_MULTI_ATTEMPT_RUN_CONFIG,
+    M3_PLANNER_RUN_CONFIG,
 )
 from eval.run_execution import resume_run, start_run
 from eval.report import (
@@ -30,13 +30,14 @@ from eval.analyses.tool_call_repair_analysis import (
     render_markdown as render_tool_call_repair_markdown,
 )
 
-RUN_ID = "m3-nova-multi-attempt-run-004"
+RUN_ID = "m3-planner-run-001"
 EVALUATION_RUN_IDS = [
+    "m3-nova-tool-repair-comparison-run-003",
     RUN_ID,
 ]
-EVAL_ID = "m3-nova-multi-attempt-eval-004"
+EVAL_ID = "m3-planner-comparison-eval-001"
 
-RUN_CONFIG = M3_NOVA_MULTI_ATTEMPT_RUN_CONFIG
+RUN_CONFIG = M3_PLANNER_RUN_CONFIG
 EVALUATION_CONFIG = M3_EVALUATION_CONFIG
 
 

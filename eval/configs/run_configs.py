@@ -135,3 +135,27 @@ M3_NOVA_MULTI_ATTEMPT_RUN_CONFIG: dict[str, Any] = {
         "multi_attempt",
     ],
 }
+
+
+M3_PLANNER_RUN_CONFIG: dict[str, Any] = {
+    "systems": [
+        {
+            "agent_config": "planner",
+            "llm_config": "nova-lite",
+        },
+    ],
+    "trial_configs": [
+        "single_attempt",
+    ],
+    "scenarios": [
+        "study-with-key",
+        "color-locks",
+        "apartment-keys",
+        "library-search",
+        "office-sequence",
+        "extreme-archive",
+        "vault-combination",
+        "backtracking-vault",
+    ],
+    "trials_per_case": 10,
+}

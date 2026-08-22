@@ -21,8 +21,13 @@ MINIMAL_TOOL_REPAIR_AGENT_CONFIG: dict[str, Any] = {
     "tool_call_repair_max_attempts": 3,
 }
 
+PLANNER_AGENT_CONFIG: dict[str, Any] = {
+    **MINIMAL_AGENT_CONFIG,
+    "use_planner": True,
+}
 
 AGENT_CONFIGS: dict[str, dict[str, Any]] = {
     "minimal": MINIMAL_AGENT_CONFIG,
     "minimal_tool_repair": MINIMAL_TOOL_REPAIR_AGENT_CONFIG,
+    "planner": PLANNER_AGENT_CONFIG,
 }
