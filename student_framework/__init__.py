@@ -14,6 +14,7 @@ from mia_agents.llm_client import LLMClient
 from mia_agents.protocols import Agent
 
 from .agent import MyAgent
+from .planner_agent import PlannerAgent
 
 from student_framework.tools.calculator import  calculator, calculator_schema
 from student_framework.tools.distance_converter import distance_converter, distance_converter_schema
@@ -51,7 +52,8 @@ def build_agent(config: dict[str, Any] | None = None) -> Agent:
     if "trace_callback" in config:
         kwargs["trace_callback"] = config["trace_callback"]
 
-    agent = MyAgent(**kwargs)
+    agent_class = PlannerAgent if config.get("use_planner") else MyAgent
+    agent = agent_class(**kwargs)
 
     if config.get("register_default_tools", True):
         agent.register_tool(calculator, calculator_schema)

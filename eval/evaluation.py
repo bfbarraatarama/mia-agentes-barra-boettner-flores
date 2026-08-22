@@ -192,7 +192,7 @@ def create_evaluation(
     *,
     runs_dir: Path = persistence.RUNS_DIR,
     evaluations_dir: Path = persistence.EVALUATIONS_DIR,
-) -> None:
+) -> list[dict[str, Any]]:
     """Crea una evaluación nueva sobre una o más corridas completas."""
 
     _validate_run_ids(run_ids)
@@ -211,6 +211,8 @@ def create_evaluation(
         evaluation_config=evaluation_config,
         results_dir=evaluations_dir,
     )
+
+    return run_sources
 
 
 def start_evaluation(
@@ -232,18 +234,12 @@ def start_evaluation(
 
     _validate_run_ids(run_ids)
 
-    create_evaluation(
+    run_sources = create_evaluation(
         eval_id=eval_id,
         run_ids=run_ids,
         evaluation_config=evaluation_config,
         runs_dir=runs_dir,
         evaluations_dir=evaluations_dir,
-    )
-
-    run_sources = _load_complete_runs(
-        eval_id,
-        run_ids,
-        runs_dir,
     )
 
     grouped_cases = _group_cases(run_sources)
