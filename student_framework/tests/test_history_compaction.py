@@ -6,9 +6,9 @@ Cubren los dos ganchos del compactor:
 - compactación intra-turno en `_prepare_run_tool_context`, el caso que
   la política M2 no cubre y que produce la terminación por presupuesto.
 
-Y los invariantes que deben sobrevivir: ventana acotada, rondas de
-herramientas siempre completas, degradación a M2 ante un compactor roto
-y tokens del compactor por LLM contabilizados en AgentResult.
+y los invariantes que deben sobrevivir: ventana acotada, rondas de
+herramientas siempre completas, fallback controlado ante un compactor
+roto y tokens del compactor por LLM contabilizados en AgentResult.
 """
 
 from __future__ import annotations
@@ -279,7 +279,41 @@ def test_intra_turn_compaction_avoids_budget_termination():
     )
 
 
-def test_failing_compactor_degrades_to_m2_intra_turn():
+def test_compaction_merges_adjacent_user_messages_before_llm_call():
+    """El resumen no genera turnos user consecutivos al enviar contexto."""
+
+    mock = MockLLMClient([
+        _tool_call_response("c1", "uno"),
+        _tool_call_response("c2", "dos"),
+        _tool_call_response("c3", "tres"),
+        _tool_call_response("c4", "cuatro"),
+        LLMResponse(content="objetivo cumplido"),
+    ])
+    agent = _build_compaction_agent(
+        mock,
+        max_history_messages=7,
+        history_compaction=RecordingCompactor(),
+    )
+
+    result = agent.run("tarea larga")
+
+    assert result.error is None
+
+    messages = mock.calls[-1]["messages"]
+
+    assert [message["role"] for message in messages] == [
+        "user",
+        "assistant",
+        "tool",
+    ]
+    assert messages[0]["content"].startswith("tarea larga\n\n")
+    assert (
+        "[Resumen de progreso del intento actual]"
+        in messages[0]["content"]
+    )
+
+
+def test_failing_compactor_intra_turn_falls_back_to_budget_termination():
     """Compactor roto en el turno activo: error de presupuesto, no crash."""
 
     events: list[dict[str, Any]] = []
@@ -312,6 +346,89 @@ def test_failing_compactor_degrades_to_m2_intra_turn():
         and event.get("error") is not None
     ]
     assert compaction_errors
+
+
+def test_failed_second_intra_turn_compaction_keeps_first_summary():
+    """Una compactación exitosa no se revierte por un fallo posterior."""
+
+    calls = 0
+
+    def partially_failing_compactor(
+        messages: list[dict[str, Any]],
+    ) -> str:
+        nonlocal calls
+        calls += 1
+
+        if calls == 1:
+            return "PRIMER RESUMEN"
+
+        raise RuntimeError("falló la segunda compactación")
+
+    agent = _build_compaction_agent(
+        MockLLMClient([]),
+        max_history_messages=7,
+        history_compaction=partially_failing_compactor,
+    )
+
+    agent._history = [
+        {
+            "role": "user",
+            "content": "tarea larga",
+        },
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [{"id": "c1"}],
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "c1",
+            "content": "uno",
+        },
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [{"id": "c2"}],
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "c2",
+            "content": "dos",
+        },
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [{"id": "c3"}],
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "c3",
+            "content": "tres",
+        },
+    ]
+
+    compacted = agent._compact_active_turn(
+        active_turn_start=0,
+        target_length=5,
+    )
+
+    assert compacted is False
+    assert calls == 2
+    assert [
+        message["role"]
+        for message in agent._history
+    ] == [
+        "user",
+        "user",
+        "assistant",
+        "tool",
+        "assistant",
+        "tool",
+    ]
+    assert agent._history[1]["content"] == (
+        "[Resumen de progreso del intento actual]\n"
+        "PRIMER RESUMEN"
+    )
 
 
 def test_failing_compactor_degrades_to_m2_eviction():
@@ -425,6 +542,47 @@ def test_build_agent_rejects_unknown_compaction_strategy():
         })
 
 
+def test_build_agent_forwards_llm_compactor_repair_attempts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, int] = {}
+
+    def fake_make_llm_history_compactor(
+        agent: Any,
+        *,
+        max_repair_attempts: int = 1,
+    ) -> Any:
+        captured["max_repair_attempts"] = max_repair_attempts
+        return lambda messages: "RESUMEN"
+
+    monkeypatch.setattr(
+        "student_framework.make_llm_history_compactor",
+        fake_make_llm_history_compactor,
+    )
+
+    build_agent({
+        "llm_client": MockLLMClient([]),
+        "register_default_tools": False,
+        "history_compaction": "llm",
+        "history_compaction_repair_max_attempts": 0,
+    })
+
+    assert captured["max_repair_attempts"] == 0
+
+
+def test_negative_history_compaction_repair_attempts_rejected() -> None:
+    with pytest.raises(
+        ValueError,
+        match="history_compaction_repair_max_attempts no puede ser negativo",
+    ):
+        build_agent({
+            "llm_client": MockLLMClient([]),
+            "register_default_tools": False,
+            "history_compaction": "llm",
+            "history_compaction_repair_max_attempts": -1,
+        })
+
+
 def test_negative_keep_recent_rounds_rejected():
     with pytest.raises(ValueError):
         build_agent({
@@ -483,3 +641,86 @@ def test_deterministic_compactor_folds_and_dedupes_actions():
     assert summary.count("record(") == 1
     assert "(x2)" in summary
     assert "recorded:uno" in summary
+
+
+def test_deterministic_compactor_preserves_assistant_content_with_tool_calls():
+    messages = [
+        {
+            "role": "assistant",
+            "content": "Primero voy a registrar esta pista.",
+            "tool_calls": [
+                {
+                    "id": "c1",
+                    "type": "function",
+                    "function": {
+                        "name": "record",
+                        "arguments": '{"text": "pista"}',
+                    },
+                },
+            ],
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "c1",
+            "name": "record",
+            "content": "recorded:pista",
+        },
+    ]
+
+    summary = deterministic_history_compactor(messages)
+
+    assert "Primero voy a registrar esta pista." in summary
+    assert "record(" in summary
+    assert "recorded:pista" in summary
+
+
+def test_deterministic_compactor_preserves_distinct_observations_on_truncation_collision():
+    common_prefix = "A" * 220
+    messages = [
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "c1",
+                    "type": "function",
+                    "function": {
+                        "name": "examine",
+                        "arguments": '{"target": "documento"}',
+                    },
+                },
+            ],
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "c1",
+            "name": "examine",
+            "content": common_prefix + " Código: 7391",
+        },
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "c2",
+                    "type": "function",
+                    "function": {
+                        "name": "examine",
+                        "arguments": '{"target": "documento"}',
+                    },
+                },
+            ],
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "c2",
+            "name": "examine",
+            "content": common_prefix + " Código: 4826",
+        },
+    ]
+
+    summary = deterministic_history_compactor(messages)
+
+    assert "(x2)" not in summary
+    assert "7391" in summary
+    assert "4826" in summary

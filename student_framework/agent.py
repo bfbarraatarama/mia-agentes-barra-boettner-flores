@@ -196,6 +196,38 @@ class MyAgent:
         return history[-self._max_history_messages:]
 
 
+    @staticmethod
+    def _merge_adjacent_user_messages(
+        messages: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Fusiona mensajes user consecutivos para la llamada al LLM."""
+
+        merged: list[dict[str, Any]] = []
+
+        for message in messages:
+            current = deepcopy(message)
+
+            if (
+                current.get("role") == "user"
+                and merged
+                and merged[-1].get("role") == "user"
+            ):
+                contents = [
+                    content
+                    for content in (
+                        merged[-1].get("content"),
+                        current.get("content"),
+                    )
+                    if content
+                ]
+                merged[-1]["content"] = "\n\n".join(contents)
+                continue
+
+            merged.append(current)
+
+        return merged
+
+
     def _compact_messages(
         self,
         evicted: list[dict[str, Any]],
@@ -204,8 +236,9 @@ class MyAgent:
 
         Devuelve None si el compactor falla; el llamador decide el
         fallback (eliminación plana en la eviction, abortar en la
-        compactación intra-turno). Un compactor roto degrada a la
-        política M2, nunca corta el run con una excepción propia.
+        compactación intra-turno). El fallo del compactor no se propaga
+        como una excepción propia. Las compactaciones completadas antes
+        de un fallo posterior no se revierten.
         """
 
         if self._history_compactor is None:
@@ -751,7 +784,9 @@ class MyAgent:
 
         steps : list[AgentStep] = []
         for _ in range(self._max_iterations):
-            messages = self._clip(self._history)
+            messages = self._merge_adjacent_user_messages(
+                self._clip(self._history)
+            )
             response = self._chat_with_retry(messages=messages, tools=list(self._schemas.values()), system= self._system)
 
             accumulate_response_tokens(response)

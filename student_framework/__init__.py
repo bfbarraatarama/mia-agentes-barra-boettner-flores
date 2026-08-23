@@ -66,13 +66,29 @@ def build_agent(config: dict[str, Any] | None = None) -> Agent:
     # eval/ sigan siendo serializables en el manifest del run. También
     # se acepta un callable directo (tests).
     history_compaction = config.get("history_compaction")
+    history_compaction_repair_max_attempts = config.get(
+        "history_compaction_repair_max_attempts",
+        1,
+    )
+
+    if history_compaction_repair_max_attempts < 0:
+        raise ValueError(
+            "history_compaction_repair_max_attempts no puede ser negativo"
+        )
 
     if callable(history_compaction):
         agent.set_history_compactor(history_compaction)
     elif history_compaction == "deterministic":
         agent.set_history_compactor(deterministic_history_compactor)
     elif history_compaction == "llm":
-        agent.set_history_compactor(make_llm_history_compactor(agent))
+        agent.set_history_compactor(
+            make_llm_history_compactor(
+                agent,
+                max_repair_attempts=(
+                    history_compaction_repair_max_attempts
+                ),
+            )
+        )
     elif history_compaction is not None:
         raise ValueError(
             f"history_compaction desconocida: {history_compaction!r}. "

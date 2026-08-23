@@ -129,3 +129,48 @@
 | Tokens entrada / salida | 7932506 / 150917 |
 | Compactaciones (eventos / fallas) | 13 / 4 |
 | Tokens del compactor (in / out) | 33708 / 13364 |
+
+## Por caso
+
+| Agente | Modelo | Trial config | Escenario | Ventana | Trials | Presupuesto | Compactaciones | Repetición |
+|---|---|---|---|---:|---:|---:|---:|---:|
+| `minimal` | `nova-lite` | `multi_attempt` | `study-with-key` | 100 | 10 | 0 | 0 / 0 | 0.00% |
+| `minimal` | `nova-lite` | `multi_attempt` | `color-locks` | 100 | 10 | 0 | 0 / 0 | 23.02% |
+| `minimal` | `nova-lite` | `multi_attempt` | `apartment-keys` | 100 | 10 | 0 | 0 / 0 | 22.36% |
+| `minimal` | `nova-lite` | `multi_attempt` | `library-search` | 100 | 10 | 0 | 0 / 0 | 57.32% |
+| `minimal` | `nova-lite` | `multi_attempt` | `office-sequence` | 100 | 10 | 0 | 0 / 0 | 45.91% |
+| `minimal` | `nova-lite` | `multi_attempt` | `extreme-archive` | 100 | 10 | 0 | 0 / 0 | 28.03% |
+| `minimal` | `nova-lite` | `multi_attempt` | `vault-combination` | 100 | 10 | 2 | 0 / 0 | 39.74% |
+| `minimal` | `nova-lite` | `multi_attempt` | `backtracking-vault` | 100 | 10 | 0 | 0 / 0 | 41.19% |
+| `minimal_tool_repair` | `nova-lite` | `multi_attempt` | `study-with-key` | 100 | 10 | 0 | 0 / 0 | 5.26% |
+| `minimal_tool_repair` | `nova-lite` | `multi_attempt` | `color-locks` | 100 | 10 | 0 | 0 / 0 | 40.49% |
+| `minimal_tool_repair` | `nova-lite` | `multi_attempt` | `apartment-keys` | 100 | 10 | 0 | 0 / 0 | 26.51% |
+| `minimal_tool_repair` | `nova-lite` | `multi_attempt` | `library-search` | 100 | 10 | 0 | 0 / 0 | 53.98% |
+| `minimal_tool_repair` | `nova-lite` | `multi_attempt` | `office-sequence` | 100 | 10 | 0 | 0 / 0 | 53.69% |
+| `minimal_tool_repair` | `nova-lite` | `multi_attempt` | `extreme-archive` | 100 | 10 | 0 | 0 / 0 | 12.75% |
+| `minimal_tool_repair` | `nova-lite` | `multi_attempt` | `vault-combination` | 100 | 10 | 1 | 0 / 0 | 20.75% |
+| `minimal_tool_repair` | `nova-lite` | `multi_attempt` | `backtracking-vault` | 100 | 10 | 0 | 0 / 0 | 29.00% |
+| `minimal_history_200` | `nova-lite` | `multi_attempt` | `study-with-key` | 200 | 10 | 0 | 0 / 0 | 0.00% |
+| `minimal_history_200` | `nova-lite` | `multi_attempt` | `color-locks` | 200 | 10 | 0 | 0 / 0 | 45.83% |
+| `minimal_history_200` | `nova-lite` | `multi_attempt` | `apartment-keys` | 200 | 10 | 0 | 0 / 0 | 29.73% |
+| `minimal_history_200` | `nova-lite` | `multi_attempt` | `library-search` | 200 | 10 | 0 | 0 / 0 | 44.31% |
+| `minimal_history_200` | `nova-lite` | `multi_attempt` | `office-sequence` | 200 | 10 | 0 | 0 / 0 | 50.00% |
+| `minimal_history_200` | `nova-lite` | `multi_attempt` | `extreme-archive` | 200 | 10 | 0 | 0 / 0 | 0.43% |
+| `minimal_history_200` | `nova-lite` | `multi_attempt` | `vault-combination` | 200 | 10 | 1 | 0 / 0 | 63.83% |
+| `minimal_history_200` | `nova-lite` | `multi_attempt` | `backtracking-vault` | 200 | 10 | 0 | 0 / 0 | 30.00% |
+| `minimal_compaction` | `nova-lite` | `multi_attempt` | `study-with-key` | 100 | 10 | 0 | 0 / 0 | 0.00% |
+| `minimal_compaction` | `nova-lite` | `multi_attempt` | `color-locks` | 100 | 10 | 0 | 1 / 0 | 45.70% |
+| `minimal_compaction` | `nova-lite` | `multi_attempt` | `apartment-keys` | 100 | 10 | 0 | 0 / 0 | 22.78% |
+| `minimal_compaction` | `nova-lite` | `multi_attempt` | `library-search` | 100 | 10 | 0 | 5 / 0 | 42.69% |
+| `minimal_compaction` | `nova-lite` | `multi_attempt` | `office-sequence` | 100 | 10 | 0 | 0 / 0 | 51.70% |
+| `minimal_compaction` | `nova-lite` | `multi_attempt` | `extreme-archive` | 100 | 10 | 0 | 0 / 0 | 15.26% |
+| `minimal_compaction` | `nova-lite` | `multi_attempt` | `vault-combination` | 100 | 10 | 0 | 2 / 0 | 49.70% |
+| `minimal_compaction` | `nova-lite` | `multi_attempt` | `backtracking-vault` | 100 | 10 | 0 | 0 / 0 | 17.13% |
+| `minimal_summary` | `nova-lite` | `multi_attempt` | `study-with-key` | 100 | 10 | 0 | 0 / 0 | 5.45% |
+| `minimal_summary` | `nova-lite` | `multi_attempt` | `color-locks` | 100 | 10 | 0 | 0 / 0 | 40.96% |
+| `minimal_summary` | `nova-lite` | `multi_attempt` | `apartment-keys` | 100 | 10 | 1 | 2 / 2 | 41.82% |
+| `minimal_summary` | `nova-lite` | `multi_attempt` | `library-search` | 100 | 10 | 0 | 0 / 0 | 37.26% |
+| `minimal_summary` | `nova-lite` | `multi_attempt` | `office-sequence` | 100 | 10 | 1 | 8 / 1 | 77.11% |
+| `minimal_summary` | `nova-lite` | `multi_attempt` | `extreme-archive` | 100 | 10 | 1 | 2 / 1 | 23.96% |
+| `minimal_summary` | `nova-lite` | `multi_attempt` | `vault-combination` | 100 | 10 | 0 | 0 / 0 | 39.79% |
+| `minimal_summary` | `nova-lite` | `multi_attempt` | `backtracking-vault` | 100 | 10 | 0 | 1 / 0 | 55.65% |

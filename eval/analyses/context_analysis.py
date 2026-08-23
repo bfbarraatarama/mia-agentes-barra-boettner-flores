@@ -289,6 +289,10 @@ def analyze_context(
     ]
 
     systems: dict[str, dict[str, dict[str, Any]]] = defaultdict(dict)
+    cases: dict[
+        tuple[str, str, str, str],
+        dict[str, Any],
+    ] = {}
     totals = _new_system_stats()
 
     for source in run_sources:
@@ -297,6 +301,8 @@ def analyze_context(
         for result in source["result"]["results"]:
             agent_config = result["agent_config"]
             model = result["llm_config"]
+            trial_config = result["trial_config"]
+            scenario = result["scenario"]
 
             window_limit = _window_limit_for(
                 manifest,
@@ -309,14 +315,26 @@ def analyze_context(
             )
             system["max_history_messages"] = window_limit
 
+            case_key = (
+                agent_config,
+                model,
+                trial_config,
+                scenario,
+            )
+            case = cases.setdefault(
+                case_key,
+                _new_system_stats(),
+            )
+            case["max_history_messages"] = window_limit
+
             for trial in result["trials"]:
-                for stats in (system, totals):
+                for stats in (case, system, totals):
                     stats["trials"] += 1
 
                 trial_budget_terminated = False
 
                 for attempt in trial["attempts"]:
-                    for stats in (system, totals):
+                    for stats in (case, system, totals):
                         stats["attempts"] += 1
                         _accumulate_attempt(
                             stats,
@@ -330,11 +348,11 @@ def analyze_context(
                         trial_budget_terminated = True
 
                 if trial_budget_terminated:
-                    system["budget_terminated_trials"] += 1
-                    totals["budget_terminated_trials"] += 1
+                    for stats in (case, system, totals):
+                        stats["budget_terminated_trials"] += 1
 
-                _accumulate_trial_actions(system, trial)
-                _accumulate_trial_actions(totals, trial)
+                for stats in (case, system, totals):
+                    _accumulate_trial_actions(stats, trial)
 
     analysis = {
         "run_ids": run_ids,
@@ -346,6 +364,21 @@ def analyze_context(
             }
             for agent_config, models in systems.items()
         },
+        "cases": [
+            {
+                "agent_config": agent_config,
+                "llm_config": model,
+                "trial_config": trial_config,
+                "scenario": scenario,
+                "stats": _finalize_stats(values),
+            }
+            for (
+                agent_config,
+                model,
+                trial_config,
+                scenario,
+            ), values in cases.items()
+        ],
     }
 
     if len(run_ids) == 1:
@@ -461,5 +494,31 @@ def render_markdown(analysis: dict[str, Any]) -> str:
             )
             lines.extend(_stats_table_lines(values))
             lines.append("")
+
+    lines.append("## Por caso\n")
+    lines.extend([
+        (
+            "| Agente | Modelo | Trial config | Escenario | Ventana | "
+            "Trials | Presupuesto | Compactaciones | Repetición |"
+        ),
+        "|---|---|---|---|---:|---:|---:|---:|---:|",
+    ])
+
+    for case in analysis["cases"]:
+        values = case["stats"]
+        lines.append(
+            f"| `{case['agent_config']}` "
+            f"| `{case['llm_config']}` "
+            f"| `{case['trial_config']}` "
+            f"| `{case['scenario']}` "
+            f"| {values.get('max_history_messages')} "
+            f"| {values['trials']} "
+            f"| {values['budget_terminated_trials']} "
+            f"| {values['compaction_events']} / "
+            f"{values['compaction_failures']} "
+            f"| {_format_ratio(values['repeated_action_ratio'])} |"
+        )
+
+    lines.append("")
 
     return "\n".join(lines)
