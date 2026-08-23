@@ -141,6 +141,26 @@ M3_PLANNER_RUN_CONFIG: dict[str, Any] = {
     "systems": [
         {
             "agent_config": "planner",
+            "llm_config": "nova-lite",
+        },
+    ],
+    "trial_configs": [
+        "multi_attempt",
+    ],
+    "scenarios": [
+        "study-with-key",
+        "color-locks",
+        "apartment-keys",
+        "library-search",
+        "office-sequence",
+        "extreme-archive",
+        "vault-combination",
+        "backtracking-vault",
+    ],
+    "trials_per_case": 10,
+}
+
+
 # Experimento de gestión de contexto (issue #26). El baseline "minimal"
 # no se repite: ya está persistido en m3-nova-multi-attempt-run-004 con
 # la misma configuración de trial, y la evaluación puede combinar ambos

@@ -56,6 +56,11 @@ def build_agent(config: dict[str, Any] | None = None) -> Agent:
     if "trace_callback" in config:
         kwargs["trace_callback"] = config["trace_callback"]
 
+    if "compaction_keep_recent_rounds" in config:
+        kwargs["compaction_keep_recent_rounds"] = config[
+            "compaction_keep_recent_rounds"
+        ]
+
     use_planner = bool(config.get("use_planner"))
 
     if use_planner:
@@ -69,12 +74,6 @@ def build_agent(config: dict[str, Any] | None = None) -> Agent:
 
     agent_class = PlannerAgent if use_planner else MyAgent
     agent = agent_class(**kwargs)
-    if "compaction_keep_recent_rounds" in config:
-        kwargs["compaction_keep_recent_rounds"] = config[
-            "compaction_keep_recent_rounds"
-        ]
-
-    agent = MyAgent(**kwargs)
 
     # Estrategia de compactación declarativa, para que las configs de
     # eval/ sigan siendo serializables en el manifest del run. También
