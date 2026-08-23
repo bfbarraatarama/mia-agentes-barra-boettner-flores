@@ -19,6 +19,7 @@ from eval.persistence import RUNS_DIR, evaluation_dir
 from eval.configs.evaluation_configs import M3_EVALUATION_CONFIG
 from eval.configs.run_configs import (
     M3_PLANNER_RUN_CONFIG,
+    M3_CONTEXT_COMPARISON_RUN_CONFIG,
 )
 from eval.run_execution import resume_run, start_run
 from eval.report import (
@@ -28,6 +29,9 @@ from eval.report import (
 )
 from eval.analyses.tool_call_repair_analysis import (
     render_markdown as render_tool_call_repair_markdown,
+)
+from eval.analyses.context_analysis import (
+    render_markdown as render_context_markdown,
 )
 
 RUN_ID = "m3-planner-run-002"
@@ -107,6 +111,10 @@ def main() -> int:
         / "tool_call_repair_analysis.md"
     )
 
+    context_analysis_path = (
+        evaluation_output_dir / "context_analysis.md"
+    )
+
     print_success_rate_summary(
         evaluation_result
     )
@@ -130,6 +138,15 @@ def main() -> int:
         render_tool_call_repair_markdown(
             tool_call_repair_analysis
         ),
+        encoding="utf-8",
+    )
+
+    context_analysis = (
+        evaluation_result["analyses"]["context_analysis"]
+    )
+
+    context_analysis_path.write_text(
+        render_context_markdown(context_analysis),
         encoding="utf-8",
     )
 
@@ -161,6 +178,10 @@ def main() -> int:
     print(
         "Análisis de reparación de tool calls: "
         f"{tool_call_repair_analysis_path}"
+    )
+    print(
+        "Análisis de presión de contexto: "
+        f"{context_analysis_path}"
     )
 
     return 0

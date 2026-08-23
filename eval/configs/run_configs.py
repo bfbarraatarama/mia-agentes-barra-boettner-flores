@@ -141,6 +141,22 @@ M3_PLANNER_RUN_CONFIG: dict[str, Any] = {
     "systems": [
         {
             "agent_config": "planner",
+# Experimento de gestión de contexto (issue #26). El baseline "minimal"
+# no se repite: ya está persistido en m3-nova-multi-attempt-run-004 con
+# la misma configuración de trial, y la evaluación puede combinar ambos
+# runs vía run_ids.
+M3_CONTEXT_COMPARISON_RUN_CONFIG: dict[str, Any] = {
+    "systems": [
+        {
+            "agent_config": "minimal_history_200",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "minimal_compaction",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "minimal_summary",
             "llm_config": "nova-lite",
         },
     ],

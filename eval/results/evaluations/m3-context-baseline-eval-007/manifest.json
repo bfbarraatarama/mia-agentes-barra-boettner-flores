@@ -1,0 +1,22 @@
+{
+  "schema_version": 2,
+  "eval_id": "m3-context-baseline-eval-007",
+  "run_ids": [
+    "m3-nova-tool-repair-comparison-run-003",
+    "m3-nova-multi-attempt-run-004"
+  ],
+  "created_at": "2026-08-22T22:55:57+00:00",
+  "git": {
+    "commit": "28fc1b663cde376c90d88b0ab2cb09004bf9b8cf",
+    "branch": "fix/issue-26-review",
+    "dirty": false
+  },
+  "evaluation": {
+    "metrics": [
+      "success_rate"
+    ],
+    "analyses": [
+      "context_analysis"
+    ]
+  }
+}

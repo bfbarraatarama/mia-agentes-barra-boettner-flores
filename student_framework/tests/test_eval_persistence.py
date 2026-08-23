@@ -109,6 +109,16 @@ def test_build_planner_run_manifest_contains_effective_planner_config(
         "_created_at",
         lambda: "2026-08-23T00:00:00+00:00",
     )
+    
+def test_build_run_manifest_materializes_history_compaction_policy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """El manifest conserva la política efectiva de compactación."""
+    monkeypatch.setattr(
+        persistence,
+        "_created_at",
+        lambda: "2026-08-22T00:00:00+00:00",
+    )
     monkeypatch.setattr(
         persistence,
         "_git_metadata",

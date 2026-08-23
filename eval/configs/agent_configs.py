@@ -34,8 +34,36 @@ PLANNER_AGENT_CONFIG: dict[str, Any] = {
     "planning_repair_max_attempts": DEFAULT_PLANNING_REPAIR_MAX_ATTEMPTS,
 }
 
+# Control barato de la issue #26: cuánto del problema de contexto se
+# resuelve solo subiendo el presupuesto.
+MINIMAL_HISTORY_200_AGENT_CONFIG: dict[str, Any] = {
+    **MINIMAL_AGENT_CONFIG,
+    "max_history_messages": 200,
+}
+
+
+# Compactación sin LLM: comprime lo descartado sin abstracción.
+MINIMAL_COMPACTION_AGENT_CONFIG: dict[str, Any] = {
+    **MINIMAL_AGENT_CONFIG,
+    "history_compaction": "deterministic",
+    "compaction_keep_recent_rounds": 2,
+}
+
+
+# Resumen por LLM: abstrae lo descartado a estado estructurado.
+MINIMAL_SUMMARY_AGENT_CONFIG: dict[str, Any] = {
+    **MINIMAL_AGENT_CONFIG,
+    "history_compaction": "llm",
+    "compaction_keep_recent_rounds": 2,
+    "history_compaction_repair_max_attempts": 1,
+}
+
+
 AGENT_CONFIGS: dict[str, dict[str, Any]] = {
     "minimal": MINIMAL_AGENT_CONFIG,
     "minimal_tool_repair": MINIMAL_TOOL_REPAIR_AGENT_CONFIG,
     "planner": PLANNER_AGENT_CONFIG,
+    "minimal_history_200": MINIMAL_HISTORY_200_AGENT_CONFIG,
+    "minimal_compaction": MINIMAL_COMPACTION_AGENT_CONFIG,
+    "minimal_summary": MINIMAL_SUMMARY_AGENT_CONFIG,
 }
