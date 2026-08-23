@@ -18,7 +18,9 @@ from eval.evaluation import start_evaluation
 from eval.persistence import RUNS_DIR, evaluation_dir
 from eval.configs.evaluation_configs import M3_EVALUATION_CONFIG
 from eval.configs.run_configs import (
+    M3_QUALITATIVE_PILOT_V2_COMPACTION_RUN_CONFIG,
     M3_QUALITATIVE_PILOT_V2_PLANNER_RUN_CONFIG,
+    M3_QUALITATIVE_PILOT_V2_SUMMARY_RUN_CONFIG,
 )
 from eval.run_execution import resume_run, start_run
 from eval.report import (
@@ -36,13 +38,27 @@ from eval.analyses.context_analysis import (
     render_markdown as render_context_markdown,
 )
 
-RUN_ID = "m3-qualitative-pilot-v2-planner-run-001"
-EVALUATION_RUN_IDS = [
-    RUN_ID,
+RUNS = [
+    (
+        "m3-qualitative-pilot-v2-planner-run-001",
+        M3_QUALITATIVE_PILOT_V2_PLANNER_RUN_CONFIG,
+    ),
+    (
+        "m3-qualitative-pilot-v2-compaction-run-001",
+        M3_QUALITATIVE_PILOT_V2_COMPACTION_RUN_CONFIG,
+    ),
+    (
+        "m3-qualitative-pilot-v2-summary-run-001",
+        M3_QUALITATIVE_PILOT_V2_SUMMARY_RUN_CONFIG,
+    ),
 ]
-EVAL_ID = "m3-qualitative-pilot-v2-planner-eval-001"
 
-RUN_CONFIG = M3_QUALITATIVE_PILOT_V2_PLANNER_RUN_CONFIG
+EVALUATION_RUN_IDS = [
+    run_id
+    for run_id, _ in RUNS
+]
+EVAL_ID = "m3-qualitative-pilot-v2-eval-001"
+
 EVALUATION_CONFIG = M3_EVALUATION_CONFIG
 
 
@@ -68,27 +84,28 @@ def print_progress(
 
 
 def main() -> int:
-    run_manifest_path = (
-        RUNS_DIR / f"{RUN_ID}.manifest.json"
-    )
-    run_results_path = (
-        RUNS_DIR / f"{RUN_ID}.json"
-    )
+    for run_id, run_config in RUNS:
+        run_manifest_path = (
+            RUNS_DIR / f"{run_id}.manifest.json"
+        )
+        run_results_path = (
+            RUNS_DIR / f"{run_id}.json"
+        )
 
-    if (
-        not run_manifest_path.exists()
-        and not run_results_path.exists()
-    ):
-        start_run(
-            run_id=RUN_ID,
-            run_config=RUN_CONFIG,
-            progress_callback=print_progress,
-        )
-    else:
-        resume_run(
-            run_id=RUN_ID,
-            progress_callback=print_progress,
-        )
+        if (
+            not run_manifest_path.exists()
+            and not run_results_path.exists()
+        ):
+            start_run(
+                run_id=run_id,
+                run_config=run_config,
+                progress_callback=print_progress,
+            )
+        else:
+            resume_run(
+                run_id=run_id,
+                progress_callback=print_progress,
+            )
 
 
     evaluation_result = start_evaluation(
