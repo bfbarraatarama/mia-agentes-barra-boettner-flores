@@ -30,6 +30,9 @@ from eval.report import (
 from eval.analyses.tool_call_repair_analysis import (
     render_markdown as render_tool_call_repair_markdown,
 )
+from eval.analyses.efficiency_analysis import (
+    render_markdown as render_efficiency_markdown,
+)
 from eval.analyses.context_analysis import (
     render_markdown as render_context_markdown,
 )
@@ -111,6 +114,11 @@ def main() -> int:
         / "tool_call_repair_analysis.md"
     )
 
+    efficiency_analysis_path = (
+        evaluation_output_dir
+        / "efficiency_analysis.md"
+    )
+
     context_analysis_path = (
         evaluation_output_dir / "context_analysis.md"
     )
@@ -137,6 +145,13 @@ def main() -> int:
     tool_call_repair_analysis_path.write_text(
         render_tool_call_repair_markdown(
             tool_call_repair_analysis
+        ),
+        encoding="utf-8",
+    )
+
+    efficiency_analysis_path.write_text(
+        render_efficiency_markdown(
+            evaluation_result["analyses"]["efficiency_analysis"]
         ),
         encoding="utf-8",
     )
@@ -178,6 +193,9 @@ def main() -> int:
     print(
         "Análisis de reparación de tool calls: "
         f"{tool_call_repair_analysis_path}"
+    )
+    print(
+        f"Análisis de eficiencia: {efficiency_analysis_path}"
     )
     print(
         "Análisis de presión de contexto: "
