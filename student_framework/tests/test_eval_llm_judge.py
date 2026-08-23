@@ -20,12 +20,22 @@ from eval.llm_judge.models import (
     ActionExecution,
     HumanAnnotation,
     HumanCriterionAnnotation,
+    JudgeCasePrediction,
+    JudgeCriterionDecision,
 )
 from eval.llm_judge.persistence import (
+    JUDGE_EVALUATION_MANIFEST_SCHEMA_VERSION,
+    append_judge_trace_event,
+    create_judge_evaluation,
     create_qualitative_dataset,
     load_case_sources,
     load_dataset_manifest,
+    load_judge_case_predictions,
+    load_judge_evaluation_manifest,
+    load_judge_evaluation_progress,
+    load_judge_trace,
     load_qualitative_cases,
+    save_judge_case_prediction,
 )
 from eval.llm_judge.rubric import (
     BOUNDARY_RULES,
@@ -74,6 +84,30 @@ from eval.llm_judge.presentation import (
     PRESENTATION_VERSION,
     build_case_presentation,
 )
+from eval.llm_judge.judge import (
+    JUDGE_PREDICTION_SCHEMA_VERSION,
+    JUDGE_PROMPT_VERSION,
+    JUDGE_SYSTEM_PROMPT,
+    judge_prompt_fingerprint,
+    build_judge_case_prediction,
+    build_judge_prompt,
+    judge_case,
+    judge_case_criterion,
+)
+from eval.llm_judge.runner import (
+    resume_judge_evaluation,
+    start_judge_evaluation,
+)
+from eval.llm_judge.comparison import (
+    ConfusionMatrix,
+    compare_human_and_judge,
+    compare_human_annotators,
+    compute_agreement_stats,
+)
+from mia_agents.testing.mock_llm import MockLLMClient
+from mia_agents.tool_schema import FINAL_RESULT_TOOL_NAME
+from mia_agents.types import LLMResponse, ToolCall
+from student_framework.agent import MyAgent
 from eval.llm_judge.reviewer import (
     ReviewCase,
     load_review_cases,
@@ -349,6 +383,29 @@ def _dataset_config_for_persistence() -> dict:
             "dev_per_scenario": 2,
         },
     }
+
+
+def _judge_response(
+    criterion_id: str,
+) -> LLMResponse:
+    return LLMResponse(
+        content=None,
+        tool_calls=[
+            ToolCall(
+                id=f"judge-{criterion_id}",
+                name=FINAL_RESULT_TOOL_NAME,
+                arguments=json.dumps({
+                    "verdict": "PASS",
+                    "reason": (
+                        f"Justificación para {criterion_id}."
+                    ),
+                    "evidence_refs": [
+                        "a1.i1",
+                    ],
+                }),
+            ),
+        ],
+    )
 
 
 def test_llm_judge_rubric_defines_planning_quality_criteria() -> None:
@@ -1997,6 +2054,1467 @@ def test_prepare_qualitative_dataset_rejects_unknown_sampling_method(
         )
 
 
+def test_create_judge_evaluation_persists_reproducible_manifest(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    monkeypatch.setattr(
+        "eval.llm_judge.persistence._created_at",
+        lambda: "2026-08-23T21:00:00+00:00",
+    )
+    monkeypatch.setattr(
+        "eval.llm_judge.persistence._git_metadata",
+        lambda: {
+            "commit": "abc123",
+            "branch": "main",
+            "dirty": False,
+        },
+    )
+    monkeypatch.setattr(
+        "eval.llm_judge.persistence._effective_llm_config",
+        lambda config_name: {
+            "provider": "bedrock",
+            "model": "judge-model",
+            "temperature": 0.0,
+        },
+    )
+
+    manifest = create_judge_evaluation(
+        "test-dataset",
+        "judge-eval-001",
+        split="dev",
+        judge_llm_config="nova-lite",
+        max_repair_attempts=2,
+        results_dir=tmp_path,
+    )
+
+    assert manifest == {
+        "schema_version": (
+            JUDGE_EVALUATION_MANIFEST_SCHEMA_VERSION
+        ),
+        "judge_eval_id": "judge-eval-001",
+        "dataset_id": "test-dataset",
+        "created_at": "2026-08-23T21:00:00+00:00",
+        "git": {
+            "commit": "abc123",
+            "branch": "main",
+            "dirty": False,
+        },
+        "split": "dev",
+        "case_ids": [
+            "qc-001",
+        ],
+        "judge": {
+            "llm_config": "nova-lite",
+            "effective_llm_config": {
+                "provider": "bedrock",
+                "model": "judge-model",
+                "temperature": 0.0,
+            },
+            "system_prompt": JUDGE_SYSTEM_PROMPT,
+            "prompt_fingerprint_sha256": (
+                judge_prompt_fingerprint()
+            ),
+            "max_repair_attempts": 2,
+        },
+        "versions": {
+            "prediction_schema_version": (
+                JUDGE_PREDICTION_SCHEMA_VERSION
+            ),
+            "case_schema_version": 5,
+            "case_view_version": "trajectory-planning-v5",
+            "presentation_version": PRESENTATION_VERSION,
+            "rubric_version": RUBRIC_VERSION,
+            "judge_prompt_version": JUDGE_PROMPT_VERSION,
+        },
+    }
+
+    assert (
+        load_judge_evaluation_manifest(
+            "test-dataset",
+            "judge-eval-001",
+            results_dir=tmp_path,
+        )
+        == manifest
+    )
+
+    predictions_path = (
+        tmp_path
+        / "test-dataset"
+        / "judge_evaluations"
+        / "judge-eval-001"
+        / "predictions.jsonl"
+    )
+    assert predictions_path.read_text(
+        encoding="utf-8"
+    ) == ""
+
+
+def test_judge_prediction_persistence_round_trip_and_rejects_duplicate(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+    create_judge_evaluation(
+        "test-dataset",
+        "judge-eval-001",
+        split="dev",
+        judge_llm_config="nova-lite",
+        max_repair_attempts=0,
+        results_dir=tmp_path,
+    )
+
+    case = load_qualitative_cases(
+        "test-dataset",
+        results_dir=tmp_path,
+    )[0]
+    decisions = {
+        criterion_id: JudgeCriterionDecision(
+            verdict="PASS",
+            reason=f"Justificación para {criterion_id}.",
+            evidence_refs=[
+                "a1.i1",
+            ],
+        )
+        for criterion_id in (
+            "Q1.1",
+            "Q1.2",
+            "Q1.3",
+        )
+    }
+    prediction = build_judge_case_prediction(
+        case,
+        decisions,
+    )
+
+    save_judge_case_prediction(
+        "test-dataset",
+        "judge-eval-001",
+        prediction,
+        results_dir=tmp_path,
+    )
+
+    assert load_judge_case_predictions(
+        "test-dataset",
+        "judge-eval-001",
+        results_dir=tmp_path,
+    ) == [
+        prediction,
+    ]
+
+    with pytest.raises(
+        FileExistsError,
+        match="Ya existe una predicción",
+    ):
+        save_judge_case_prediction(
+            "test-dataset",
+            "judge-eval-001",
+            prediction,
+            results_dir=tmp_path,
+        )
+
+
+def test_judge_prediction_atomic_write_preserves_previous_predictions(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sampled_trials = (
+        _sampled_trials_for_persistence()
+    )
+    second_sample = sampled_trials[1]
+
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        [
+            sampled_trials[0],
+            SampledTrial(
+                case_id=second_sample.case_id,
+                split="dev",
+                candidate=second_sample.candidate,
+            ),
+        ],
+        results_dir=tmp_path,
+    )
+    create_judge_evaluation(
+        "test-dataset",
+        "judge-eval-001",
+        split="dev",
+        judge_llm_config="nova-lite",
+        max_repair_attempts=0,
+        results_dir=tmp_path,
+    )
+
+    cases = load_qualitative_cases(
+        "test-dataset",
+        results_dir=tmp_path,
+    )
+    predictions = []
+
+    for case in cases:
+        decisions = {
+            criterion_id: JudgeCriterionDecision(
+                verdict="PASS",
+                reason=(
+                    f"Justificación para {criterion_id}."
+                ),
+                evidence_refs=[
+                    "a1.i1",
+                ],
+            )
+            for criterion_id, applicability
+            in case.criteria_applicability.items()
+            if applicability.applicable
+        }
+        predictions.append(
+            build_judge_case_prediction(
+                case,
+                decisions,
+            )
+        )
+
+    save_judge_case_prediction(
+        "test-dataset",
+        "judge-eval-001",
+        predictions[0],
+        results_dir=tmp_path,
+    )
+
+    predictions_path = (
+        tmp_path
+        / "test-dataset"
+        / "judge_evaluations"
+        / "judge-eval-001"
+        / "predictions.jsonl"
+    )
+    previous_content = (
+        predictions_path.read_text(
+            encoding="utf-8",
+        )
+    )
+
+    def interrupted_replace(
+        source,
+        destination,
+    ) -> None:
+        raise RuntimeError(
+            "corte simulado durante replace"
+        )
+
+    monkeypatch.setattr(
+        "eval.llm_judge.persistence.os.replace",
+        interrupted_replace,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="corte simulado durante replace",
+    ):
+        save_judge_case_prediction(
+            "test-dataset",
+            "judge-eval-001",
+            predictions[1],
+            results_dir=tmp_path,
+        )
+
+    assert predictions_path.read_text(
+        encoding="utf-8",
+    ) == previous_content
+
+    assert load_judge_case_predictions(
+        "test-dataset",
+        "judge-eval-001",
+        results_dir=tmp_path,
+    ) == [
+        predictions[0],
+    ]
+
+    assert list(
+        predictions_path.parent.glob(
+            ".predictions.jsonl.*.tmp"
+        )
+    ) == []
+
+
+def test_judge_prediction_rejects_case_outside_evaluation_split(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+    create_judge_evaluation(
+        "test-dataset",
+        "judge-eval-001",
+        split="dev",
+        judge_llm_config="nova-lite",
+        max_repair_attempts=0,
+        results_dir=tmp_path,
+    )
+
+    cases = load_qualitative_cases(
+        "test-dataset",
+        results_dir=tmp_path,
+    )
+    holdout_case = next(
+        case
+        for case in cases
+        if case.case_id == "qc-002"
+    )
+    decisions = {
+        criterion_id: JudgeCriterionDecision(
+            verdict="PASS",
+            reason=f"Justificación para {criterion_id}.",
+            evidence_refs=[
+                "a1.i1",
+            ],
+        )
+        for criterion_id in (
+            "Q1.1",
+            "Q1.2",
+            "Q1.3",
+        )
+    }
+    prediction = build_judge_case_prediction(
+        holdout_case,
+        decisions,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="no pertenece al split 'dev'",
+    ):
+        save_judge_case_prediction(
+            "test-dataset",
+            "judge-eval-001",
+            prediction,
+            results_dir=tmp_path,
+        )
+
+
+def test_judge_evaluation_rejects_outdated_dataset_versions(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    manifest_path = (
+        tmp_path
+        / "test-dataset"
+        / "manifest.json"
+    )
+    manifest = json.loads(
+        manifest_path.read_text(
+            encoding="utf-8",
+        )
+    )
+    manifest["rubric_version"] = (
+        "planning-quality-v1"
+    )
+    manifest_path.write_text(
+        json.dumps(
+            manifest,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="no corresponde a las versiones vigentes",
+    ):
+        create_judge_evaluation(
+            "test-dataset",
+            "judge-eval-001",
+            split="dev",
+            judge_llm_config="nova-lite",
+            max_repair_attempts=0,
+            results_dir=tmp_path,
+        )
+
+
+def test_judge_trace_atomic_write_preserves_previous_events(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+    create_judge_evaluation(
+        "test-dataset",
+        "judge-eval-001",
+        split="dev",
+        judge_llm_config="nova-lite",
+        max_repair_attempts=0,
+        results_dir=tmp_path,
+    )
+
+    first_event = {
+        "type": "llm_call",
+        "messages": [],
+        "response": LLMResponse(
+            content="primera llamada",
+            tool_calls=[],
+            input_tokens=10,
+            output_tokens=2,
+        ),
+    }
+
+    append_judge_trace_event(
+        "test-dataset",
+        "judge-eval-001",
+        "qc-001",
+        "Q1.1",
+        first_event,
+        results_dir=tmp_path,
+    )
+
+    previous_trace = load_judge_trace(
+        "test-dataset",
+        "judge-eval-001",
+        results_dir=tmp_path,
+    )
+
+    def interrupted_replace(
+        source,
+        destination,
+    ) -> None:
+        raise RuntimeError(
+            "corte simulado durante replace"
+        )
+
+    monkeypatch.setattr(
+        "eval.llm_judge.persistence.os.replace",
+        interrupted_replace,
+    )
+
+    second_event = {
+        "type": "llm_call",
+        "messages": [],
+        "response": LLMResponse(
+            content="segunda llamada",
+            tool_calls=[],
+            input_tokens=20,
+            output_tokens=4,
+        ),
+    }
+
+    with pytest.raises(
+        RuntimeError,
+        match="corte simulado durante replace",
+    ):
+        append_judge_trace_event(
+            "test-dataset",
+            "judge-eval-001",
+            "qc-001",
+            "Q1.1",
+            second_event,
+            results_dir=tmp_path,
+        )
+
+    assert load_judge_trace(
+        "test-dataset",
+        "judge-eval-001",
+        results_dir=tmp_path,
+    ) == previous_trace
+
+    trace_path = (
+        tmp_path
+        / "test-dataset"
+        / "judge_evaluations"
+        / "judge-eval-001"
+        / "trace.jsonl"
+    )
+    assert list(
+        trace_path.parent.glob(
+            ".trace.jsonl.*.tmp"
+        )
+    ) == []
+
+
+def test_judge_evaluation_traces_repairs_and_token_usage(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sampled_trial = (
+        _sampled_trials_for_persistence()[0]
+    )
+
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        [
+            sampled_trial,
+        ],
+        results_dir=tmp_path,
+    )
+
+    llm = MockLLMClient([
+        LLMResponse(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id="judge-q11-invalid",
+                    name=FINAL_RESULT_TOOL_NAME,
+                    arguments=json.dumps({
+                        "verdict": "INVALID",
+                        "reason": "Salida inválida.",
+                        "evidence_refs": [
+                            "a1.i1",
+                        ],
+                    }),
+                ),
+            ],
+            input_tokens=100,
+            output_tokens=10,
+        ),
+        LLMResponse(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id="judge-q11-valid",
+                    name=FINAL_RESULT_TOOL_NAME,
+                    arguments=json.dumps({
+                        "verdict": "PASS",
+                        "reason": "Q1.1 corregido.",
+                        "evidence_refs": [
+                            "a1.i1",
+                        ],
+                    }),
+                ),
+            ],
+            input_tokens=120,
+            output_tokens=12,
+        ),
+        LLMResponse(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id="judge-q12",
+                    name=FINAL_RESULT_TOOL_NAME,
+                    arguments=json.dumps({
+                        "verdict": "PASS",
+                        "reason": "Q1.2 correcto.",
+                        "evidence_refs": [
+                            "a1.i1",
+                        ],
+                    }),
+                ),
+            ],
+            input_tokens=200,
+            output_tokens=20,
+        ),
+        LLMResponse(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id="judge-q13",
+                    name=FINAL_RESULT_TOOL_NAME,
+                    arguments=json.dumps({
+                        "verdict": "PASS",
+                        "reason": "Q1.3 correcto.",
+                        "evidence_refs": [
+                            "a1.i1",
+                        ],
+                    }),
+                ),
+            ],
+            input_tokens=300,
+            output_tokens=30,
+        ),
+    ])
+
+    monkeypatch.setattr(
+        "eval.llm_judge.runner.build_llm_client",
+        lambda config: llm,
+    )
+
+    predictions = start_judge_evaluation(
+        "test-dataset",
+        "judge-eval-001",
+        split="dev",
+        judge_llm_config="nova-lite",
+        max_repair_attempts=1,
+        results_dir=tmp_path,
+    )
+
+    assert len(predictions) == 1
+
+    trace = load_judge_trace(
+        "test-dataset",
+        "judge-eval-001",
+        results_dir=tmp_path,
+    )
+
+    assert [
+        event["criterion_id"]
+        for event in trace
+    ] == [
+        "Q1.1",
+        "Q1.1",
+        "Q1.2",
+        "Q1.3",
+    ]
+    assert all(
+        event["type"] == "llm_call"
+        for event in trace
+    )
+    assert [
+        event["response"]["input_tokens"]
+        for event in trace
+    ] == [
+        100,
+        120,
+        200,
+        300,
+    ]
+    assert [
+        event["response"]["output_tokens"]
+        for event in trace
+    ] == [
+        10,
+        12,
+        20,
+        30,
+    ]
+
+    q11_messages = trace[1][
+        "messages"
+    ]
+    assert any(
+        message.get("role") == "tool"
+        and "Error de validación" in message.get(
+            "content",
+            "",
+        )
+        for message in q11_messages
+    )
+
+
+def test_judge_evaluation_resumes_from_last_completed_criterion(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sampled_trials = (
+        _sampled_trials_for_persistence()
+    )
+    second_sample = sampled_trials[1]
+
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        [
+            sampled_trials[0],
+            SampledTrial(
+                case_id=second_sample.case_id,
+                split="dev",
+                candidate=second_sample.candidate,
+            ),
+        ],
+        results_dir=tmp_path,
+    )
+
+    first_llm = MockLLMClient([
+        _judge_response("Q1.1"),
+        _judge_response("Q1.2"),
+        _judge_response("Q1.3"),
+        _judge_response("Q1.1"),
+        _judge_response("Q1.2"),
+        RuntimeError("corte simulado"),
+    ])
+    first_configs = []
+
+    def first_build_llm_client(config):
+        first_configs.append(
+            dict(config)
+        )
+        return first_llm
+
+    monkeypatch.setattr(
+        "eval.llm_judge.runner.build_llm_client",
+        first_build_llm_client,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="corte simulado",
+    ):
+        start_judge_evaluation(
+            "test-dataset",
+            "judge-eval-001",
+            split="dev",
+            judge_llm_config="nova-lite",
+            max_repair_attempts=0,
+            results_dir=tmp_path,
+        )
+
+    predictions = (
+        load_judge_case_predictions(
+            "test-dataset",
+            "judge-eval-001",
+            results_dir=tmp_path,
+        )
+    )
+    assert [
+        prediction.case_id
+        for prediction in predictions
+    ] == [
+        "qc-001",
+    ]
+
+    progress = (
+        load_judge_evaluation_progress(
+            "test-dataset",
+            "judge-eval-001",
+            results_dir=tmp_path,
+        )
+    )
+    assert list(
+        progress[
+            "qc-002"
+        ]
+    ) == [
+        "Q1.1",
+        "Q1.2",
+    ]
+
+    manifest = (
+        load_judge_evaluation_manifest(
+            "test-dataset",
+            "judge-eval-001",
+            results_dir=tmp_path,
+        )
+    )
+    assert first_configs == [
+        manifest[
+            "judge"
+        ][
+            "effective_llm_config"
+        ]
+    ]
+    assert first_llm.call_count == 6
+    assert all(
+        call["system"]
+        == JUDGE_SYSTEM_PROMPT
+        for call in first_llm.calls
+    )
+
+    interrupted_trace = load_judge_trace(
+        "test-dataset",
+        "judge-eval-001",
+        results_dir=tmp_path,
+    )
+    assert len(interrupted_trace) == 6
+    assert interrupted_trace[-1][
+        "case_id"
+    ] == "qc-002"
+    assert interrupted_trace[-1][
+        "criterion_id"
+    ] == "Q1.3"
+    assert interrupted_trace[-1][
+        "error"
+    ] == {
+        "type": "RuntimeError",
+        "message": "corte simulado",
+    }
+
+    second_llm = MockLLMClient([
+        _judge_response("Q1.3"),
+    ])
+    second_configs = []
+
+    def second_build_llm_client(config):
+        second_configs.append(
+            dict(config)
+        )
+        return second_llm
+
+    monkeypatch.setattr(
+        "eval.llm_judge.runner.build_llm_client",
+        second_build_llm_client,
+    )
+
+    resumed = resume_judge_evaluation(
+        "test-dataset",
+        "judge-eval-001",
+        results_dir=tmp_path,
+    )
+
+    assert [
+        prediction.case_id
+        for prediction in resumed
+    ] == [
+        "qc-001",
+        "qc-002",
+    ]
+    assert second_llm.call_count == 1
+    assert second_configs == [
+        manifest[
+            "judge"
+        ][
+            "effective_llm_config"
+        ]
+    ]
+    resumed_trace = load_judge_trace(
+        "test-dataset",
+        "judge-eval-001",
+        results_dir=tmp_path,
+    )
+    assert len(resumed_trace) == 7
+    assert resumed_trace[-1][
+        "case_id"
+    ] == "qc-002"
+    assert resumed_trace[-1][
+        "criterion_id"
+    ] == "Q1.3"
+    assert "response" in resumed_trace[-1]
+
+
+def test_resume_judge_evaluation_rejects_unversioned_prompt_change(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+    create_judge_evaluation(
+        "test-dataset",
+        "judge-eval-001",
+        split="dev",
+        judge_llm_config="nova-lite",
+        max_repair_attempts=0,
+        results_dir=tmp_path,
+    )
+
+    original_build_judge_prompt = (
+        build_judge_prompt
+    )
+
+    def changed_build_judge_prompt(
+        presentation,
+        criterion_id,
+    ):
+        return (
+            original_build_judge_prompt(
+                presentation,
+                criterion_id,
+            )
+            + "\nCAMBIO LOCAL DE CALIBRACIÓN"
+        )
+
+    monkeypatch.setattr(
+        "eval.llm_judge.judge.build_judge_prompt",
+        changed_build_judge_prompt,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="huella efectiva del prompt",
+    ):
+        resume_judge_evaluation(
+            "test-dataset",
+            "judge-eval-001",
+            results_dir=tmp_path,
+        )
+
+
+def test_resume_judge_evaluation_rejects_stale_policy(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+    create_judge_evaluation(
+        "test-dataset",
+        "judge-eval-001",
+        split="dev",
+        judge_llm_config="nova-lite",
+        max_repair_attempts=0,
+        results_dir=tmp_path,
+    )
+
+    manifest_path = (
+        tmp_path
+        / "test-dataset"
+        / "judge_evaluations"
+        / "judge-eval-001"
+        / "manifest.json"
+    )
+    manifest = json.loads(
+        manifest_path.read_text(
+            encoding="utf-8",
+        )
+    )
+    manifest["versions"][
+        "judge_prompt_version"
+    ] = "planning-criterion-judge-old"
+    manifest_path.write_text(
+        json.dumps(
+            manifest,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    def unexpected_build_llm_client(config):
+        pytest.fail(
+            "No debe construirse el LLM para un manifest obsoleto."
+        )
+
+    monkeypatch.setattr(
+        "eval.llm_judge.runner.build_llm_client",
+        unexpected_build_llm_client,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="no corresponde a las versiones vigentes",
+    ):
+        resume_judge_evaluation(
+            "test-dataset",
+            "judge-eval-001",
+            results_dir=tmp_path,
+        )
+
+
+def test_llm_judge_agreement_computes_confusion_and_cohen_kappa() -> None:
+    stats = compute_agreement_stats([
+        ("PASS", "PASS"),
+        ("PASS", "PASS"),
+        ("PASS", "FAIL"),
+        ("FAIL", "FAIL"),
+    ])
+
+    assert stats.n == 4
+    assert stats.agreement == pytest.approx(
+        0.75
+    )
+    assert stats.cohen_kappa == pytest.approx(
+        0.5
+    )
+    assert stats.confusion == ConfusionMatrix(
+        first_pass_second_pass=2,
+        first_pass_second_fail=1,
+        first_fail_second_pass=0,
+        first_fail_second_fail=1,
+    )
+
+    degenerate = compute_agreement_stats([
+        ("PASS", "PASS"),
+        ("PASS", "PASS"),
+    ])
+
+    assert degenerate.agreement == 1.0
+    assert degenerate.cohen_kappa is None
+
+
+def test_compare_human_and_judge_reports_per_criterion_and_overall(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+    create_judge_evaluation(
+        "test-dataset",
+        "judge-eval-001",
+        split="dev",
+        judge_llm_config="nova-lite",
+        max_repair_attempts=0,
+        results_dir=tmp_path,
+    )
+
+    save_human_annotation(
+        "test-dataset",
+        _human_annotation(),
+        results_dir=tmp_path,
+    )
+
+    case = load_qualitative_cases(
+        "test-dataset",
+        results_dir=tmp_path,
+    )[0]
+    decisions = {
+        "Q1.1": JudgeCriterionDecision(
+            verdict="PASS",
+            reason="Acuerdo en Q1.1.",
+            evidence_refs=[
+                "a1.i1",
+            ],
+        ),
+        "Q1.2": JudgeCriterionDecision(
+            verdict="FAIL",
+            reason="Desacuerdo en Q1.2.",
+            evidence_refs=[
+                "a1.i1",
+            ],
+        ),
+        "Q1.3": JudgeCriterionDecision(
+            verdict="PASS",
+            reason="Acuerdo en Q1.3.",
+            evidence_refs=[
+                "a1.i1",
+            ],
+        ),
+    }
+    prediction = build_judge_case_prediction(
+        case,
+        decisions,
+    )
+    save_judge_case_prediction(
+        "test-dataset",
+        "judge-eval-001",
+        prediction,
+        results_dir=tmp_path,
+    )
+
+    report = compare_human_and_judge(
+        "test-dataset",
+        "judge-eval-001",
+        "annotator-a",
+        results_dir=tmp_path,
+    )
+
+    assert report.dataset_id == "test-dataset"
+    assert report.judge_eval_id == "judge-eval-001"
+    assert report.annotator_id == "annotator-a"
+    assert report.split == "dev"
+    assert report.case_ids == (
+        "qc-001",
+    )
+
+    assert report.overall.n == 3
+    assert report.overall.agreement == pytest.approx(
+        2 / 3
+    )
+    assert report.overall.cohen_kappa == pytest.approx(
+        0.0
+    )
+    assert report.overall.confusion == ConfusionMatrix(
+        first_pass_second_pass=2,
+        first_pass_second_fail=1,
+        first_fail_second_pass=0,
+        first_fail_second_fail=0,
+    )
+
+    assert report.by_criterion["Q1.1"].n == 1
+    assert (
+        report.by_criterion[
+            "Q1.1"
+        ].agreement
+        == 1.0
+    )
+    assert (
+        report.by_criterion[
+            "Q1.1"
+        ].cohen_kappa
+        is None
+    )
+
+    assert report.by_criterion["Q1.2"].n == 1
+    assert (
+        report.by_criterion[
+            "Q1.2"
+        ].agreement
+        == 0.0
+    )
+    assert (
+        report.by_criterion[
+            "Q1.2"
+        ].cohen_kappa
+        == 0.0
+    )
+
+    assert report.by_criterion["Q1.4"].n == 0
+    assert (
+        report.by_criterion[
+            "Q1.4"
+        ].agreement
+        is None
+    )
+    assert (
+        report.by_criterion[
+            "Q1.4"
+        ].cohen_kappa
+        is None
+    )
+
+
+def test_compare_human_and_judge_allows_historical_judge_policy(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+    create_judge_evaluation(
+        "test-dataset",
+        "judge-eval-001",
+        split="dev",
+        judge_llm_config="nova-lite",
+        max_repair_attempts=0,
+        results_dir=tmp_path,
+    )
+
+    save_human_annotation(
+        "test-dataset",
+        _human_annotation(),
+        results_dir=tmp_path,
+    )
+
+    case = load_qualitative_cases(
+        "test-dataset",
+        results_dir=tmp_path,
+    )[0]
+    decisions = {
+        criterion_id: JudgeCriterionDecision(
+            verdict="PASS",
+            reason=f"Justificación para {criterion_id}.",
+            evidence_refs=[
+                "a1.i1",
+            ],
+        )
+        for criterion_id in (
+            "Q1.1",
+            "Q1.2",
+            "Q1.3",
+        )
+    }
+    prediction = build_judge_case_prediction(
+        case,
+        decisions,
+    )
+    save_judge_case_prediction(
+        "test-dataset",
+        "judge-eval-001",
+        prediction,
+        results_dir=tmp_path,
+    )
+
+    monkeypatch.setattr(
+        "eval.llm_judge.persistence.judge_prompt_fingerprint",
+        lambda: "politica-actual-distinta",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="huella efectiva del prompt",
+    ):
+        resume_judge_evaluation(
+            "test-dataset",
+            "judge-eval-001",
+            results_dir=tmp_path,
+        )
+
+    report = compare_human_and_judge(
+        "test-dataset",
+        "judge-eval-001",
+        "annotator-a",
+        results_dir=tmp_path,
+    )
+
+    assert report.case_ids == (
+        "qc-001",
+    )
+    assert report.overall.n == 3
+    assert report.overall.agreement == 1.0
+
+
+def test_compare_human_and_judge_rejects_partial_human_annotation(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+    create_judge_evaluation(
+        "test-dataset",
+        "judge-eval-001",
+        split="dev",
+        judge_llm_config="nova-lite",
+        max_repair_attempts=0,
+        results_dir=tmp_path,
+    )
+
+    annotation_data = (
+        _human_annotation().model_dump()
+    )
+    annotation_data["criteria"] = {
+        "Q1.1": annotation_data[
+            "criteria"
+        ][
+            "Q1.1"
+        ],
+    }
+    partial_annotation = (
+        HumanAnnotation.model_validate(
+            annotation_data
+        )
+    )
+    save_human_annotation(
+        "test-dataset",
+        partial_annotation,
+        results_dir=tmp_path,
+    )
+
+    case = load_qualitative_cases(
+        "test-dataset",
+        results_dir=tmp_path,
+    )[0]
+    decisions = {
+        criterion_id: JudgeCriterionDecision(
+            verdict="PASS",
+            reason=f"Justificación para {criterion_id}.",
+            evidence_refs=[
+                "a1.i1",
+            ],
+        )
+        for criterion_id in (
+            "Q1.1",
+            "Q1.2",
+            "Q1.3",
+        )
+    }
+    prediction = build_judge_case_prediction(
+        case,
+        decisions,
+    )
+    save_judge_case_prediction(
+        "test-dataset",
+        "judge-eval-001",
+        prediction,
+        results_dir=tmp_path,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="debe estar completa para comparar",
+    ):
+        compare_human_and_judge(
+            "test-dataset",
+            "judge-eval-001",
+            "annotator-a",
+            results_dir=tmp_path,
+        )
+
+
+def test_compare_human_and_judge_rejects_incomplete_judge_evaluation(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+    create_judge_evaluation(
+        "test-dataset",
+        "judge-eval-001",
+        split="dev",
+        judge_llm_config="nova-lite",
+        max_repair_attempts=0,
+        results_dir=tmp_path,
+    )
+
+    save_human_annotation(
+        "test-dataset",
+        _human_annotation(),
+        results_dir=tmp_path,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="debe estar completa antes de calcular acuerdo",
+    ):
+        compare_human_and_judge(
+            "test-dataset",
+            "judge-eval-001",
+            "annotator-a",
+            results_dir=tmp_path,
+        )
+
+
+def test_compare_human_annotators_reports_dev_agreement(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    annotation_a = _human_annotation()
+    save_human_annotation(
+        "test-dataset",
+        annotation_a,
+        results_dir=tmp_path,
+    )
+
+    annotation_b_data = (
+        annotation_a.model_dump()
+    )
+    annotation_b_data[
+        "annotator_id"
+    ] = "annotator-b"
+    annotation_b_data[
+        "criteria"
+    ][
+        "Q1.2"
+    ][
+        "verdict"
+    ] = "FAIL"
+    annotation_b_data[
+        "criteria"
+    ][
+        "Q1.2"
+    ][
+        "reason"
+    ] = "El segundo anotador discrepa en Q1.2."
+
+    annotation_b = (
+        HumanAnnotation.model_validate(
+            annotation_b_data
+        )
+    )
+    save_human_annotation(
+        "test-dataset",
+        annotation_b,
+        results_dir=tmp_path,
+    )
+
+    report = compare_human_annotators(
+        "test-dataset",
+        "annotator-a",
+        "annotator-b",
+        split="dev",
+        results_dir=tmp_path,
+    )
+
+    assert report.dataset_id == "test-dataset"
+    assert report.annotator_a_id == "annotator-a"
+    assert report.annotator_b_id == "annotator-b"
+    assert report.split == "dev"
+    assert report.case_ids == (
+        "qc-001",
+    )
+
+    assert report.overall.n == 3
+    assert report.overall.agreement == pytest.approx(
+        2 / 3
+    )
+    assert report.overall.cohen_kappa == pytest.approx(
+        0.0
+    )
+    assert report.overall.confusion == ConfusionMatrix(
+        first_pass_second_pass=2,
+        first_pass_second_fail=1,
+        first_fail_second_pass=0,
+        first_fail_second_fail=0,
+    )
+
+    assert report.by_criterion["Q1.1"].agreement == 1.0
+    assert report.by_criterion["Q1.2"].agreement == 0.0
+    assert report.by_criterion["Q1.3"].agreement == 1.0
+    assert report.by_criterion["Q1.4"].n == 0
+
+
+def test_compare_human_annotators_requires_complete_dev_annotations(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    annotation_a = _human_annotation()
+    save_human_annotation(
+        "test-dataset",
+        annotation_a,
+        results_dir=tmp_path,
+    )
+
+    annotation_b_data = (
+        annotation_a.model_dump()
+    )
+    annotation_b_data[
+        "annotator_id"
+    ] = "annotator-b"
+    annotation_b_data[
+        "criteria"
+    ] = {
+        "Q1.1": annotation_b_data[
+            "criteria"
+        ][
+            "Q1.1"
+        ],
+    }
+
+    save_human_annotation(
+        "test-dataset",
+        HumanAnnotation.model_validate(
+            annotation_b_data
+        ),
+        results_dir=tmp_path,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="annotator-b.*debe estar completa",
+    ):
+        compare_human_annotators(
+            "test-dataset",
+            "annotator-a",
+            "annotator-b",
+            split="dev",
+            results_dir=tmp_path,
+        )
+
+
+def test_compare_human_annotators_requires_distinct_annotators(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="deben ser distintos",
+    ):
+        compare_human_annotators(
+            "test-dataset",
+            "annotator-a",
+            "annotator-a",
+            split="dev",
+            results_dir=tmp_path,
+        )
+
+
 def test_human_annotation_accepts_only_applicable_criteria() -> None:
     case = _qualitative_case()
     annotation = _human_annotation()
@@ -2409,6 +3927,490 @@ def test_case_presentation_rejects_unknown_trigger_evidence_ref() -> None:
     ):
         build_case_presentation(
             case
+        )
+
+
+def test_llm_judge_prompt_uses_canonical_presentation_and_rubric() -> None:
+    presentation = build_case_presentation(
+        _qualitative_case()
+    )
+
+    prompt = build_judge_prompt(
+        presentation,
+        "Q1.1",
+    )
+
+    assert JUDGE_PROMPT_VERSION == (
+        "planning-criterion-judge-v1"
+    )
+    assert presentation.text in prompt
+    assert DIMENSION_DESCRIPTION in prompt
+    assert MATERIALITY_RULE in prompt
+    assert BOUNDARY_RULES[0] in prompt
+    assert CRITERIA_BY_ID["Q1.1"].question in prompt
+    assert CRITERIA_BY_ID["Q1.1"].pass_description in prompt
+    assert CRITERIA_BY_ID["Q1.1"].fail_description in prompt
+
+
+def test_llm_judge_criterion_uses_structured_call() -> None:
+    response = LLMResponse(
+        content=None,
+        tool_calls=[
+            ToolCall(
+                id="judge-1",
+                name=FINAL_RESULT_TOOL_NAME,
+                arguments=json.dumps({
+                    "verdict": "PASS",
+                    "reason": (
+                        "La decisión se mantiene compatible "
+                        "con la evidencia observada."
+                    ),
+                    "evidence_refs": [
+                        "a1.i1.action1",
+                    ],
+                }),
+            ),
+        ],
+    )
+    llm = MockLLMClient([
+        response,
+    ])
+    agent = MyAgent(
+        llm_client=llm,
+    )
+
+    decision = judge_case_criterion(
+        agent,
+        _qualitative_case(),
+        "Q1.1",
+        max_repair_attempts=0,
+    )
+
+    assert decision == JudgeCriterionDecision(
+        verdict="PASS",
+        reason=(
+            "La decisión se mantiene compatible "
+            "con la evidencia observada."
+        ),
+        evidence_refs=[
+            "a1.i1.action1",
+        ],
+    )
+    assert llm.call_count == 1
+    assert len(
+        llm.calls[0]["tools"]
+    ) == 1
+    assert (
+        llm.calls[0]["tools"][0].name
+        == FINAL_RESULT_TOOL_NAME
+    )
+
+
+def test_llm_judge_case_evaluates_only_applicable_criteria() -> None:
+    responses = [
+        LLMResponse(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id=f"judge-{criterion_id}",
+                    name=FINAL_RESULT_TOOL_NAME,
+                    arguments=json.dumps({
+                        "verdict": "PASS",
+                        "reason": (
+                            f"Justificación para {criterion_id}."
+                        ),
+                        "evidence_refs": [
+                            "a1.i1.action1",
+                        ],
+                    }),
+                ),
+            ],
+        )
+        for criterion_id in (
+            "Q1.1",
+            "Q1.2",
+            "Q1.3",
+        )
+    ]
+    llm = MockLLMClient(
+        responses
+    )
+    agent = MyAgent(
+        llm_client=llm,
+    )
+
+    decisions = judge_case(
+        agent,
+        _qualitative_case(),
+        max_repair_attempts=0,
+    )
+
+    assert list(decisions) == [
+        "Q1.1",
+        "Q1.2",
+        "Q1.3",
+    ]
+    assert all(
+        decision.verdict == "PASS"
+        for decision in decisions.values()
+    )
+    assert llm.call_count == 3
+
+    prompts = [
+        call["messages"][0]["content"]
+        for call in llm.calls
+    ]
+
+    assert (
+        CRITERIA_BY_ID["Q1.1"].question
+        in prompts[0]
+    )
+    assert (
+        CRITERIA_BY_ID["Q1.2"].question
+        in prompts[1]
+    )
+    assert (
+        CRITERIA_BY_ID["Q1.3"].question
+        in prompts[2]
+    )
+    assert all(
+        CRITERIA_BY_ID["Q1.4"].question
+        not in prompt
+        for prompt in prompts
+    )
+
+
+def test_llm_judge_case_includes_q1_4_when_applicable() -> None:
+    case = _qualitative_case()
+    case.attempts[0].iterations.append(
+        QualitativeIteration(
+            iteration_index=2,
+            assistant_content=(
+                "Voy a adaptar la estrategia."
+            ),
+        )
+    )
+    case.criteria_applicability["Q1.4"] = (
+        CriterionApplicability(
+            applicable=True,
+            triggers=[
+                ApplicabilityTrigger(
+                    target_ref="a1.i2",
+                    components=[
+                        ApplicabilityTriggerComponent(
+                            kind="error_before_later_decision",
+                            evidence_refs=[
+                                "a1.i1.action1",
+                            ],
+                        ),
+                    ],
+                ),
+            ],
+        )
+    )
+
+    responses = [
+        LLMResponse(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id=f"judge-{criterion_id}",
+                    name=FINAL_RESULT_TOOL_NAME,
+                    arguments=json.dumps({
+                        "verdict": "PASS",
+                        "reason": (
+                            f"Justificación para {criterion_id}."
+                        ),
+                        "evidence_refs": [
+                            "a1.i1.action1",
+                        ],
+                    }),
+                ),
+            ],
+        )
+        for criterion_id in (
+            "Q1.1",
+            "Q1.2",
+            "Q1.3",
+            "Q1.4",
+        )
+    ]
+    llm = MockLLMClient(
+        responses
+    )
+    agent = MyAgent(
+        llm_client=llm,
+    )
+
+    decisions = judge_case(
+        agent,
+        case,
+        max_repair_attempts=0,
+    )
+
+    assert list(decisions) == [
+        "Q1.1",
+        "Q1.2",
+        "Q1.3",
+        "Q1.4",
+    ]
+    assert llm.call_count == 4
+    assert (
+        CRITERIA_BY_ID["Q1.4"].question
+        in llm.calls[3]["messages"][0]["content"]
+    )
+
+
+def test_llm_judge_builds_reproducible_case_prediction() -> None:
+    case = _qualitative_case()
+    decisions = {
+        criterion_id: JudgeCriterionDecision(
+            verdict="PASS",
+            reason=f"Justificación para {criterion_id}.",
+            evidence_refs=[
+                "a1.i1.action1",
+            ],
+        )
+        for criterion_id in (
+            "Q1.1",
+            "Q1.2",
+            "Q1.3",
+        )
+    }
+
+    prediction = build_judge_case_prediction(
+        case,
+        decisions,
+    )
+
+    assert prediction == JudgeCasePrediction(
+        schema_version=JUDGE_PREDICTION_SCHEMA_VERSION,
+        case_schema_version=case.schema_version,
+        case_view_version=case.case_view_version,
+        presentation_version=PRESENTATION_VERSION,
+        rubric_version=RUBRIC_VERSION,
+        judge_prompt_version=JUDGE_PROMPT_VERSION,
+        case_id=case.case_id,
+        criteria=decisions,
+    )
+
+
+def test_llm_judge_prediction_requires_exactly_applicable_criteria() -> None:
+    case = _qualitative_case()
+    incomplete = {
+        criterion_id: JudgeCriterionDecision(
+            verdict="PASS",
+            reason=f"Justificación para {criterion_id}.",
+            evidence_refs=[
+                "a1.i1.action1",
+            ],
+        )
+        for criterion_id in (
+            "Q1.1",
+            "Q1.2",
+        )
+    }
+
+    with pytest.raises(
+        ValueError,
+        match="debe contener exactamente los criterios aplicables",
+    ):
+        build_judge_case_prediction(
+            case,
+            incomplete,
+        )
+
+    with_unexpected = {
+        **incomplete,
+        "Q1.3": JudgeCriterionDecision(
+            verdict="PASS",
+            reason="Justificación para Q1.3.",
+            evidence_refs=[
+                "a1.i1.action1",
+            ],
+        ),
+        "Q1.4": JudgeCriterionDecision(
+            verdict="PASS",
+            reason="Q1.4 no debería estar presente.",
+            evidence_refs=[
+                "a1.i1.action1",
+            ],
+        ),
+    }
+
+    with pytest.raises(
+        ValueError,
+        match="debe contener exactamente los criterios aplicables",
+    ):
+        build_judge_case_prediction(
+            case,
+            with_unexpected,
+        )
+
+
+def test_llm_judge_prediction_revalidates_evidence_refs() -> None:
+    case = _qualitative_case()
+    decisions = {
+        criterion_id: JudgeCriterionDecision(
+            verdict="PASS",
+            reason=f"Justificación para {criterion_id}.",
+            evidence_refs=[
+                (
+                    "a1.i99.action1"
+                    if criterion_id == "Q1.2"
+                    else "a1.i1.action1"
+                ),
+            ],
+        )
+        for criterion_id in (
+            "Q1.1",
+            "Q1.2",
+            "Q1.3",
+        )
+    }
+
+    with pytest.raises(
+        ValueError,
+        match="Q1.2 contiene referencias de evidencia inexistentes",
+    ):
+        build_judge_case_prediction(
+            case,
+            decisions,
+        )
+
+
+def test_llm_judge_rejects_non_applicable_criterion_before_call() -> None:
+    llm = MockLLMClient([])
+    agent = MyAgent(
+        llm_client=llm,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Q1.4 no aplica",
+    ):
+        judge_case_criterion(
+            agent,
+            _qualitative_case(),
+            "Q1.4",
+        )
+
+    assert llm.call_count == 0
+
+
+def test_llm_judge_repairs_unknown_evidence_ref() -> None:
+    responses = [
+        LLMResponse(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id="judge-invalid-ref",
+                    name=FINAL_RESULT_TOOL_NAME,
+                    arguments=json.dumps({
+                        "verdict": "FAIL",
+                        "reason": (
+                            "La decisión contradice la evidencia."
+                        ),
+                        "evidence_refs": [
+                            "a1.i99.action1",
+                        ],
+                    }),
+                ),
+            ],
+        ),
+        LLMResponse(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id="judge-valid-ref",
+                    name=FINAL_RESULT_TOOL_NAME,
+                    arguments=json.dumps({
+                        "verdict": "FAIL",
+                        "reason": (
+                            "La decisión contradice la evidencia."
+                        ),
+                        "evidence_refs": [
+                            "a1.i1.action1",
+                        ],
+                    }),
+                ),
+            ],
+        ),
+    ]
+    llm = MockLLMClient(
+        responses
+    )
+    agent = MyAgent(
+        llm_client=llm,
+    )
+
+    decision = judge_case_criterion(
+        agent,
+        _qualitative_case(),
+        "Q1.1",
+        max_repair_attempts=1,
+    )
+
+    assert decision == JudgeCriterionDecision(
+        verdict="FAIL",
+        reason=(
+            "La decisión contradice la evidencia."
+        ),
+        evidence_refs=[
+            "a1.i1.action1",
+        ],
+    )
+    assert llm.call_count == 2
+    assert any(
+        message.get("role") == "tool"
+        and (
+            "referencias de evidencia inexistentes"
+            in message.get(
+                "content",
+                "",
+            )
+        )
+        for message in llm.calls[1][
+            "messages"
+        ]
+    )
+
+
+def test_llm_judge_rejects_unknown_evidence_ref() -> None:
+    response = LLMResponse(
+        content=None,
+        tool_calls=[
+            ToolCall(
+                id="judge-1",
+                name=FINAL_RESULT_TOOL_NAME,
+                arguments=json.dumps({
+                    "verdict": "FAIL",
+                    "reason": (
+                        "La decisión contradice la evidencia."
+                    ),
+                    "evidence_refs": [
+                        "a1.i99.action1",
+                    ],
+                }),
+            ),
+        ],
+    )
+    llm = MockLLMClient([
+        response,
+    ])
+    agent = MyAgent(
+        llm_client=llm,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="referencias de evidencia inexistentes",
+    ):
+        judge_case_criterion(
+            agent,
+            _qualitative_case(),
+            "Q1.1",
+            max_repair_attempts=0,
         )
 
 

@@ -203,6 +203,33 @@ class CaseSource(_StrictModel):
     split: CaseSplit
 
 
+JudgeVerdict = Literal["PASS", "FAIL"]
+
+
+class JudgeCriterionDecision(_StrictModel):
+    """Decisión estructurada del LLM judge para un criterio aplicable."""
+
+    verdict: JudgeVerdict
+    reason: str = Field(min_length=1)
+    evidence_refs: list[str] = Field(min_length=1)
+
+
+class JudgeCasePrediction(_StrictModel):
+    """Predicción cualitativa reproducible del judge para un caso."""
+
+    schema_version: int = Field(ge=1)
+    case_schema_version: int = Field(ge=1)
+    case_view_version: str = Field(min_length=1)
+    presentation_version: str = Field(min_length=1)
+    rubric_version: str = Field(min_length=1)
+    judge_prompt_version: str = Field(min_length=1)
+    case_id: str = Field(min_length=1)
+    criteria: dict[
+        CriterionId,
+        JudgeCriterionDecision,
+    ]
+
+
 HumanVerdict = Literal["PASS", "FAIL"]
 
 
