@@ -30,12 +30,12 @@ from eval.analyses.tool_call_repair_analysis import (
     render_markdown as render_tool_call_repair_markdown,
 )
 
-RUN_ID = "m3-planner-run-001"
+RUN_ID = "m3-planner-run-002"
 EVALUATION_RUN_IDS = [
-    "m3-nova-tool-repair-comparison-run-003",
+    "m3-nova-multi-attempt-run-004",
     RUN_ID,
 ]
-EVAL_ID = "m3-planner-comparison-eval-001"
+EVAL_ID = "m3-planner-comparison-eval-002"
 
 RUN_CONFIG = M3_PLANNER_RUN_CONFIG
 EVALUATION_CONFIG = M3_EVALUATION_CONFIG

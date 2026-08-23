@@ -145,7 +145,7 @@ M3_PLANNER_RUN_CONFIG: dict[str, Any] = {
         },
     ],
     "trial_configs": [
-        "single_attempt",
+        "multi_attempt",
     ],
     "scenarios": [
         "study-with-key",
