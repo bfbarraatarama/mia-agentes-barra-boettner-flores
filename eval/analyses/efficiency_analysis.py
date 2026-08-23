@@ -43,10 +43,10 @@ def _accumulate_trial(
             event_type = event.get("type")
             purpose = event.get("purpose")
 
-            if event.get("retry_index", 0) > 0:
-                metrics["retries_total"] += 1
-
             if event_type == "llm_call":
+                if event.get("retry_index", 0) > 0:
+                    metrics["retries_total"] += 1
+
                 metrics["llm_calls_total"] += 1
                 metrics["llm_calls_by_purpose"][purpose] += 1
 
@@ -152,14 +152,14 @@ def analyze_efficiency(
 
     run_ids = [source["run_id"] for source in run_sources]
 
-    # (agent_config, llm_config) -> scenario -> metrics
+    # (agent_config, llm_config, trial_config) -> scenario -> metrics
     systems: dict[
-        tuple[str, str],
+        tuple[str, str, str],
         dict[str, dict[str, Any]],
     ] = defaultdict(lambda: defaultdict(_empty_metrics))
 
-    # (agent_config, llm_config) -> global metrics
-    global_metrics: dict[tuple[str, str], dict[str, Any]] = defaultdict(
+    # (agent_config, llm_config, trial_config) -> global metrics
+    global_metrics: dict[tuple[str, str, str], dict[str, Any]] = defaultdict(
         _empty_metrics
     )
 
@@ -167,20 +167,22 @@ def analyze_efficiency(
         for case in source["result"]["results"]:
             agent_config = case["agent_config"]
             llm_config = case["llm_config"]
+            trial_config = case["trial_config"]
             scenario = case["scenario"]
-            key = (agent_config, llm_config)
+            key = (agent_config, llm_config, trial_config)
 
             for trial in case["trials"]:
                 _accumulate_trial(systems[key][scenario], trial)
                 _accumulate_trial(global_metrics[key], trial)
 
     results = {}
-    for (agent_config, llm_config), scenarios in systems.items():
-        key = (agent_config, llm_config)
-        system_key = f"{agent_config} / {llm_config}"
+    for (agent_config, llm_config, trial_config), scenarios in systems.items():
+        key = (agent_config, llm_config, trial_config)
+        system_key = f"{agent_config} / {llm_config} / {trial_config}"
         results[system_key] = {
             "agent_config": agent_config,
             "llm_config": llm_config,
+            "trial_config": trial_config,
             "by_scenario": {
                 scenario: _averages(metrics)
                 for scenario, metrics in scenarios.items()
@@ -198,7 +200,7 @@ def _fmt(value: float | None, decimals: int = 1) -> str:
     if value is None:
         return "N/A"
     if decimals == 0:
-        return f"{int(value):,}"
+        return f"{value:,.0f}"
     return f"{value:,.{decimals}f}"
 
 
@@ -227,8 +229,8 @@ def render_markdown(analysis: dict[str, Any]) -> str:
         lines.append(
             "*Valores promedio por trial. "
             "**Attempts**: número de veces que el agente intentó resolver el escenario dentro del mismo trial. "
-            "**Retries**: número de llamadas al LLM que debieron reintentarse por cualquier error "
-            "en la respuesta del proveedor (timeout, rate limit, respuesta malformada, etc.).*\n"
+            "**Retries**: número de intentos adicionales de llamadas al LLM "
+            "debidos a errores transitorios (timeout, 5xx, rate limit, excepciones de red).*\n"
         )
         lines.append(
             "| Escenario | Trials | Attempts | Retries | LLM calls | Tools | Steps "
