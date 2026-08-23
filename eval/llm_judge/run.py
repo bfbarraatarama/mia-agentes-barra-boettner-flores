@@ -23,6 +23,10 @@ from eval.llm_judge.runner import (
     resume_judge_evaluation,
     start_judge_evaluation,
 )
+from eval.llm_judge.report import (
+    build_judge_evaluation_status,
+    render_judge_evaluation_status,
+)
 
 
 def execute_judge_config(
@@ -99,6 +103,10 @@ def main() -> int:
         / "judge_evaluations"
         / judge_eval_id
     )
+    status = build_judge_evaluation_status(
+        dataset_id,
+        judge_eval_id,
+    )
 
     action = (
         "iniciada"
@@ -109,11 +117,11 @@ def main() -> int:
     print(
         f"Evaluación del judge {action}: {judge_eval_id}"
     )
+    print()
     print(
-        f"Dataset: {dataset_id}"
-    )
-    print(
-        f"Casos completos: {len(result['predictions'])}"
+        render_judge_evaluation_status(
+            status
+        )
     )
     print()
     print(

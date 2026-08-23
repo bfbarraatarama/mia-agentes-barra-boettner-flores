@@ -36,6 +36,7 @@ from eval.llm_judge.persistence import (
     load_judge_trace,
     load_qualitative_cases,
     save_judge_case_prediction,
+    save_judge_criterion_progress,
 )
 from eval.llm_judge.rubric import (
     BOUNDARY_RULES,
@@ -103,10 +104,23 @@ from eval.llm_judge.run import (
     main as judge_run_main,
 )
 from eval.llm_judge.comparison import (
+    AgreementStats,
     ConfusionMatrix,
+    HumanAgreementReport,
+    JudgeAgreementReport,
     compare_human_and_judge,
     compare_human_annotators,
     compute_agreement_stats,
+)
+from eval.llm_judge.report import (
+    build_judge_evaluation_status,
+    render_human_agreement_report,
+    render_judge_agreement_report,
+    render_judge_evaluation_status,
+)
+from eval.llm_judge.report_run import (
+    execute_report_config,
+    main as judge_report_main,
 )
 from mia_agents.testing.mock_llm import MockLLMClient
 from mia_agents.tool_schema import FINAL_RESULT_TOOL_NAME
@@ -2861,6 +2875,84 @@ def test_execute_judge_config_resumes_existing_evaluation(
     ]
 
 
+def test_judge_run_main_renders_reconstructed_status(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys,
+) -> None:
+    judge_config = {
+        "dataset_id": "test-dataset",
+        "judge_eval_id": "judge-eval-001",
+        "split": "dev",
+        "judge_llm_config": "nova-lite",
+        "max_repair_attempts": 2,
+    }
+    status = object()
+    status_calls = []
+
+    monkeypatch.setattr(
+        "eval.llm_judge.run.JUDGE_CONFIG",
+        judge_config,
+    )
+    monkeypatch.setattr(
+        "eval.llm_judge.run.execute_judge_config",
+        lambda config: {
+            "mode": "resume",
+            "predictions": [],
+        },
+    )
+
+    def fake_build_status(
+        dataset_id,
+        judge_eval_id,
+    ):
+        status_calls.append(
+            (
+                dataset_id,
+                judge_eval_id,
+            )
+        )
+        return status
+
+    monkeypatch.setattr(
+        "eval.llm_judge.run.build_judge_evaluation_status",
+        fake_build_status,
+    )
+
+    def fake_render_status(
+        received_status,
+    ):
+        assert received_status is status
+        return "REPORTE OPERATIVO RECONSTRUIDO"
+
+    monkeypatch.setattr(
+        "eval.llm_judge.run.render_judge_evaluation_status",
+        fake_render_status,
+    )
+
+    assert judge_run_main() == 0
+
+    captured = capsys.readouterr()
+
+    assert status_calls == [
+        (
+            "test-dataset",
+            "judge-eval-001",
+        ),
+    ]
+    assert (
+        "Evaluación del judge reanudada: judge-eval-001"
+        in captured.out
+    )
+    assert (
+        "REPORTE OPERATIVO RECONSTRUIDO"
+        in captured.out
+    )
+    assert "manifest.json" in captured.out
+    assert "predictions.jsonl" in captured.out
+    assert "progress.json" in captured.out
+    assert "trace.jsonl" in captured.out
+
+
 def test_judge_run_main_requires_explicit_active_config(
     monkeypatch: pytest.MonkeyPatch,
     capsys,
@@ -3688,6 +3780,401 @@ def test_compare_human_annotators_requires_distinct_annotators(
             split="dev",
             results_dir=tmp_path,
         )
+
+
+def test_llm_judge_report_reconstructs_operational_status(
+    tmp_path,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+    create_judge_evaluation(
+        "test-dataset",
+        "judge-eval-001",
+        split="dev",
+        judge_llm_config="nova-lite",
+        max_repair_attempts=2,
+        results_dir=tmp_path,
+    )
+
+    decision = JudgeCriterionDecision(
+        verdict="PASS",
+        reason="Checkpoint de Q1.1.",
+        evidence_refs=[
+            "a1.i1",
+        ],
+    )
+    save_judge_criterion_progress(
+        "test-dataset",
+        "judge-eval-001",
+        "qc-001",
+        "Q1.1",
+        decision,
+        results_dir=tmp_path,
+    )
+
+    append_judge_trace_event(
+        "test-dataset",
+        "judge-eval-001",
+        "qc-001",
+        "Q1.1",
+        {
+            "type": "llm_call",
+            "purpose": "structured_call",
+            "retry_index": 0,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Evaluá Q1.1.",
+                },
+            ],
+            "response": LLMResponse(
+                content=None,
+                tool_calls=[],
+                input_tokens=100,
+                output_tokens=10,
+            ),
+        },
+        results_dir=tmp_path,
+    )
+    append_judge_trace_event(
+        "test-dataset",
+        "judge-eval-001",
+        "qc-001",
+        "Q1.1",
+        {
+            "type": "llm_call",
+            "purpose": "structured_call",
+            "retry_index": 0,
+            "messages": [
+                {
+                    "role": "tool",
+                    "content": (
+                        "Error de validación: "
+                        "evidence_ref inexistente."
+                    ),
+                },
+            ],
+            "response": LLMResponse(
+                content=None,
+                tool_calls=[],
+                input_tokens=120,
+                output_tokens=12,
+            ),
+        },
+        results_dir=tmp_path,
+    )
+    append_judge_trace_event(
+        "test-dataset",
+        "judge-eval-001",
+        "qc-001",
+        "Q1.2",
+        {
+            "type": "llm_call",
+            "purpose": "structured_call",
+            "retry_index": 0,
+            "messages": [],
+            "error": RuntimeError(
+                "corte simulado"
+            ),
+        },
+        results_dir=tmp_path,
+    )
+
+    status = build_judge_evaluation_status(
+        "test-dataset",
+        "judge-eval-001",
+        results_dir=tmp_path,
+    )
+
+    assert status.total_cases == 1
+    assert status.completed_case_ids == ()
+    assert status.pending_case_ids == (
+        "qc-001",
+    )
+    assert status.checkpointed_criteria == {
+        "qc-001": (
+            "Q1.1",
+        ),
+    }
+    assert (
+        status.completed_with_checkpoint_case_ids
+        == ()
+    )
+
+    assert status.trace.trace_events == 3
+    assert status.trace.llm_calls == 3
+    assert status.trace.successful_llm_calls == 2
+    assert status.trace.failed_llm_calls == 1
+    assert status.trace.repair_llm_calls == 1
+    assert status.trace.input_tokens == 220
+    assert status.trace.output_tokens == 22
+
+    rendered = render_judge_evaluation_status(
+        status
+    )
+
+    assert "Casos completos: 0/1" in rendered
+    assert "Casos pendientes: qc-001" in rendered
+    assert "Criterios checkpointed: 1 en 1 casos" in rendered
+    assert (
+        "Llamadas LLM: 3 "
+        "(respuesta=2, error=1, repair=1)"
+        in rendered
+    )
+    assert "Tokens de entrada: 220" in rendered
+    assert "Tokens de salida: 22" in rendered
+
+
+def test_llm_judge_report_renders_agreement_orientation() -> None:
+    overall = compute_agreement_stats([
+        ("PASS", "PASS"),
+        ("FAIL", "PASS"),
+    ])
+    empty = compute_agreement_stats([])
+
+    by_criterion = {
+        criterion_id: (
+            overall
+            if criterion_id == "Q1.1"
+            else empty
+        )
+        for criterion_id in CRITERION_IDS
+    }
+
+    judge_report = JudgeAgreementReport(
+        dataset_id="test-dataset",
+        judge_eval_id="judge-eval-001",
+        annotator_id="annotator-a",
+        split="dev",
+        case_ids=(
+            "qc-001",
+        ),
+        overall=overall,
+        by_criterion=by_criterion,
+    )
+    human_report = HumanAgreementReport(
+        dataset_id="test-dataset",
+        annotator_a_id="annotator-a",
+        annotator_b_id="annotator-b",
+        split="dev",
+        case_ids=(
+            "qc-001",
+        ),
+        overall=overall,
+        by_criterion=by_criterion,
+    )
+
+    judge_text = render_judge_agreement_report(
+        judge_report
+    )
+    human_text = render_human_agreement_report(
+        human_report
+    )
+
+    assert (
+        "Global (humano en filas, judge en columnas):"
+        in judge_text
+    )
+    assert (
+        "humano=FAIL / judge=PASS: 1"
+        in judge_text
+    )
+    assert "Q1.4: n=0; agreement=N/A; kappa=N/A" in judge_text
+
+    assert (
+        "Global (A en filas, B en columnas):"
+        in human_text
+    )
+    assert "A=FAIL / B=PASS: 1" in human_text
+    assert "Q1.4: n=0; agreement=N/A; kappa=N/A" in human_text
+
+
+def test_execute_report_config_renders_selected_sections(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    report_config = {
+        "status": {
+            "dataset_id": "test-dataset",
+            "judge_eval_id": "judge-eval-001",
+        },
+        "judge_agreement": {
+            "dataset_id": "test-dataset",
+            "judge_eval_id": "judge-eval-001",
+            "annotator_id": "annotator-a",
+        },
+        "human_agreement": {
+            "dataset_id": "test-dataset",
+            "annotator_a_id": "annotator-a",
+            "annotator_b_id": "annotator-b",
+            "split": "dev",
+        },
+    }
+    calls = []
+
+    status = object()
+    judge_report = object()
+    human_report = object()
+
+    def fake_status(
+        dataset_id,
+        judge_eval_id,
+        *,
+        results_dir,
+    ):
+        calls.append(
+            (
+                "status",
+                dataset_id,
+                judge_eval_id,
+                results_dir,
+            )
+        )
+        return status
+
+    def fake_judge_agreement(
+        dataset_id,
+        judge_eval_id,
+        annotator_id,
+        *,
+        results_dir,
+    ):
+        calls.append(
+            (
+                "judge",
+                dataset_id,
+                judge_eval_id,
+                annotator_id,
+                results_dir,
+            )
+        )
+        return judge_report
+
+    def fake_human_agreement(
+        dataset_id,
+        annotator_a_id,
+        annotator_b_id,
+        *,
+        split,
+        results_dir,
+    ):
+        calls.append(
+            (
+                "human",
+                dataset_id,
+                annotator_a_id,
+                annotator_b_id,
+                split,
+                results_dir,
+            )
+        )
+        return human_report
+
+    monkeypatch.setattr(
+        "eval.llm_judge.report_run.build_judge_evaluation_status",
+        fake_status,
+    )
+    monkeypatch.setattr(
+        "eval.llm_judge.report_run.compare_human_and_judge",
+        fake_judge_agreement,
+    )
+    monkeypatch.setattr(
+        "eval.llm_judge.report_run.compare_human_annotators",
+        fake_human_agreement,
+    )
+    monkeypatch.setattr(
+        "eval.llm_judge.report_run.render_judge_evaluation_status",
+        lambda received: (
+            "ESTADO"
+            if received is status
+            else pytest.fail("Estado inesperado.")
+        ),
+    )
+    monkeypatch.setattr(
+        "eval.llm_judge.report_run.render_judge_agreement_report",
+        lambda received: (
+            "JUDGE"
+            if received is judge_report
+            else pytest.fail("Reporte judge inesperado.")
+        ),
+    )
+    monkeypatch.setattr(
+        "eval.llm_judge.report_run.render_human_agreement_report",
+        lambda received: (
+            "HUMANOS"
+            if received is human_report
+            else pytest.fail("Reporte humano inesperado.")
+        ),
+    )
+
+    rendered = execute_report_config(
+        report_config,
+        results_dir=tmp_path,
+    )
+
+    assert rendered == (
+        "ESTADO\n\n"
+        "JUDGE\n\n"
+        "HUMANOS"
+    )
+    assert calls == [
+        (
+            "status",
+            "test-dataset",
+            "judge-eval-001",
+            tmp_path,
+        ),
+        (
+            "judge",
+            "test-dataset",
+            "judge-eval-001",
+            "annotator-a",
+            tmp_path,
+        ),
+        (
+            "human",
+            "test-dataset",
+            "annotator-a",
+            "annotator-b",
+            "dev",
+            tmp_path,
+        ),
+    ]
+
+
+def test_execute_report_config_requires_at_least_one_section(
+    tmp_path,
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match="no selecciona ninguna sección",
+    ):
+        execute_report_config(
+            {},
+            results_dir=tmp_path,
+        )
+
+
+def test_judge_report_main_requires_explicit_active_config(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys,
+) -> None:
+    monkeypatch.setattr(
+        "eval.llm_judge.report_run.REPORT_CONFIG",
+        None,
+    )
+
+    assert judge_report_main() == 1
+
+    captured = capsys.readouterr()
+
+    assert (
+        "No hay una REPORT_CONFIG activa."
+        in captured.err
+    )
 
 
 def test_human_annotation_accepts_only_applicable_criteria() -> None:
