@@ -228,7 +228,7 @@ M3_QUALITATIVE_PILOT_V2_COMPACTION_RUN_CONFIG: dict[str, Any] = {
         "multi_attempt",
     ],
     "scenarios": [
-        "library-search",
+        "office-sequence",
     ],
     "trials_per_case": 3,
 }
