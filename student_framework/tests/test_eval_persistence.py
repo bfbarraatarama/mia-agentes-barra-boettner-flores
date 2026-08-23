@@ -4,7 +4,10 @@ import subprocess
 
 from eval import evaluation, persistence, run_execution
 from eval.configs.agent_configs import AGENT_CONFIGS
-from eval.configs.run_configs import M3_RUN_CONFIG
+from eval.configs.run_configs import (
+    M3_PLANNER_RUN_CONFIG,
+    M3_RUN_CONFIG,
+)
 from eval.configs.trial_configs import TRIAL_CONFIGS
 
 
@@ -96,6 +99,37 @@ def test_build_run_manifest_contains_reproducible_run_spec(
         manifest,
         ensure_ascii=False,
     )
+
+
+def test_build_planner_run_manifest_contains_effective_planner_config(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        persistence,
+        "_created_at",
+        lambda: "2026-08-23T00:00:00+00:00",
+    )
+    monkeypatch.setattr(
+        persistence,
+        "_git_metadata",
+        lambda: {
+            "commit": "abc123",
+            "branch": "m3/planner-agent",
+            "dirty": False,
+        },
+    )
+
+    manifest = persistence.build_run_manifest(
+        run_id="test-planner-run",
+        run_config=M3_PLANNER_RUN_CONFIG,
+    )
+
+    assert manifest["agent_configs"] == {
+        "planner": AGENT_CONFIGS["planner"],
+    }
+    assert manifest["trial_configs"] == {
+        "multi_attempt": TRIAL_CONFIGS["multi_attempt"],
+    }
 
 
 def test_build_run_manifest_rejects_empty_run_id() -> None:

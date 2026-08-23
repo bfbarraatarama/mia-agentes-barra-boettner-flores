@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from typing import Any
 
 from mia_agents._env import load_env_files
@@ -67,9 +66,6 @@ def build_llm_client(config: dict[str, Any]) -> LLMClient:
 
     config = dict(config)
     provider_name = config.pop("provider")
-
-    if provider_name == "bedrock" and "region" not in config:
-        config["region"] = os.environ.get("AWS_REGION", "us-west-2")
     temperature = config.pop("temperature", 0.2)
 
     if provider_name not in PROVIDERS:

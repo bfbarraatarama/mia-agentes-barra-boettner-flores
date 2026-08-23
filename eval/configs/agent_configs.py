@@ -5,6 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 from student_framework.escape_room import ESCAPE_ROOM_MINIMAL_SYSTEM_PROMPT
+from student_framework.planner_agent import (
+    DEFAULT_PLAN_GUIDANCE,
+    DEFAULT_PLANNING_PROMPT,
+    DEFAULT_PLANNING_REPAIR_MAX_ATTEMPTS,
+)
 
 
 MINIMAL_AGENT_CONFIG: dict[str, Any] = {
@@ -24,6 +29,9 @@ MINIMAL_TOOL_REPAIR_AGENT_CONFIG: dict[str, Any] = {
 PLANNER_AGENT_CONFIG: dict[str, Any] = {
     **MINIMAL_AGENT_CONFIG,
     "use_planner": True,
+    "planning_prompt": DEFAULT_PLANNING_PROMPT,
+    "plan_guidance": DEFAULT_PLAN_GUIDANCE,
+    "planning_repair_max_attempts": DEFAULT_PLANNING_REPAIR_MAX_ATTEMPTS,
 }
 
 AGENT_CONFIGS: dict[str, dict[str, Any]] = {

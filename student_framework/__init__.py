@@ -52,7 +52,18 @@ def build_agent(config: dict[str, Any] | None = None) -> Agent:
     if "trace_callback" in config:
         kwargs["trace_callback"] = config["trace_callback"]
 
-    agent_class = PlannerAgent if config.get("use_planner") else MyAgent
+    use_planner = bool(config.get("use_planner"))
+
+    if use_planner:
+        for parameter_name in (
+            "planning_prompt",
+            "plan_guidance",
+            "planning_repair_max_attempts",
+        ):
+            if parameter_name in config:
+                kwargs[parameter_name] = config[parameter_name]
+
+    agent_class = PlannerAgent if use_planner else MyAgent
     agent = agent_class(**kwargs)
 
     if config.get("register_default_tools", True):
