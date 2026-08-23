@@ -50,6 +50,14 @@ MINIMAL_COMPACTION_AGENT_CONFIG: dict[str, Any] = {
 }
 
 
+# Variante del piloto cualitativo: reduce solamente la ventana para
+# provocar compactaciones observables sin alterar el mecanismo.
+QUALITATIVE_PILOT_COMPACTION_AGENT_CONFIG: dict[str, Any] = {
+    **MINIMAL_COMPACTION_AGENT_CONFIG,
+    "max_history_messages": 50,
+}
+
+
 # Resumen por LLM: abstrae lo descartado a estado estructurado.
 MINIMAL_SUMMARY_AGENT_CONFIG: dict[str, Any] = {
     **MINIMAL_AGENT_CONFIG,
@@ -65,5 +73,6 @@ AGENT_CONFIGS: dict[str, dict[str, Any]] = {
     "planner": PLANNER_AGENT_CONFIG,
     "minimal_history_200": MINIMAL_HISTORY_200_AGENT_CONFIG,
     "minimal_compaction": MINIMAL_COMPACTION_AGENT_CONFIG,
+    "qualitative_pilot_compaction": QUALITATIVE_PILOT_COMPACTION_AGENT_CONFIG,
     "minimal_summary": MINIMAL_SUMMARY_AGENT_CONFIG,
 }

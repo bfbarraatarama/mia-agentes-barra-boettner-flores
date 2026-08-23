@@ -220,7 +220,7 @@ M3_QUALITATIVE_PILOT_V2_PLANNER_RUN_CONFIG: dict[str, Any] = {
 M3_QUALITATIVE_PILOT_V2_COMPACTION_RUN_CONFIG: dict[str, Any] = {
     "systems": [
         {
-            "agent_config": "minimal_compaction",
+            "agent_config": "qualitative_pilot_compaction",
             "llm_config": "nova-lite",
         },
     ],
@@ -230,7 +230,7 @@ M3_QUALITATIVE_PILOT_V2_COMPACTION_RUN_CONFIG: dict[str, Any] = {
     "scenarios": [
         "vault-combination",
     ],
-    "trials_per_case": 5,
+    "trials_per_case": 3,
 }
 
 
