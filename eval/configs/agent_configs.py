@@ -5,6 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 from student_framework.escape_room import ESCAPE_ROOM_MINIMAL_SYSTEM_PROMPT
+from student_framework.planner_agent import (
+    DEFAULT_PLAN_GUIDANCE,
+    DEFAULT_PLANNING_PROMPT,
+    DEFAULT_PLANNING_REPAIR_MAX_ATTEMPTS,
+)
 
 
 MINIMAL_AGENT_CONFIG: dict[str, Any] = {
@@ -21,6 +26,13 @@ MINIMAL_TOOL_REPAIR_AGENT_CONFIG: dict[str, Any] = {
     "tool_call_repair_max_attempts": 3,
 }
 
+PLANNER_AGENT_CONFIG: dict[str, Any] = {
+    **MINIMAL_AGENT_CONFIG,
+    "use_planner": True,
+    "planning_prompt": DEFAULT_PLANNING_PROMPT,
+    "plan_guidance": DEFAULT_PLAN_GUIDANCE,
+    "planning_repair_max_attempts": DEFAULT_PLANNING_REPAIR_MAX_ATTEMPTS,
+}
 
 # Control barato de la issue #26: cuánto del problema de contexto se
 # resuelve solo subiendo el presupuesto.
@@ -50,6 +62,7 @@ MINIMAL_SUMMARY_AGENT_CONFIG: dict[str, Any] = {
 AGENT_CONFIGS: dict[str, dict[str, Any]] = {
     "minimal": MINIMAL_AGENT_CONFIG,
     "minimal_tool_repair": MINIMAL_TOOL_REPAIR_AGENT_CONFIG,
+    "planner": PLANNER_AGENT_CONFIG,
     "minimal_history_200": MINIMAL_HISTORY_200_AGENT_CONFIG,
     "minimal_compaction": MINIMAL_COMPACTION_AGENT_CONFIG,
     "minimal_summary": MINIMAL_SUMMARY_AGENT_CONFIG,

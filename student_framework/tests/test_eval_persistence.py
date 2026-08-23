@@ -4,7 +4,10 @@ import subprocess
 
 from eval import evaluation, persistence, run_execution
 from eval.configs.agent_configs import AGENT_CONFIGS
-from eval.configs.run_configs import M3_RUN_CONFIG
+from eval.configs.run_configs import (
+    M3_PLANNER_RUN_CONFIG,
+    M3_RUN_CONFIG,
+)
 from eval.configs.trial_configs import TRIAL_CONFIGS
 
 
@@ -98,11 +101,19 @@ def test_build_run_manifest_contains_reproducible_run_spec(
     )
 
 
+def test_build_planner_run_manifest_contains_effective_planner_config(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        persistence,
+        "_created_at",
+        lambda: "2026-08-23T00:00:00+00:00",
+    )
+    
 def test_build_run_manifest_materializes_history_compaction_policy(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """El manifest conserva la política efectiva de compactación."""
-
     monkeypatch.setattr(
         persistence,
         "_created_at",
@@ -113,41 +124,22 @@ def test_build_run_manifest_materializes_history_compaction_policy(
         "_git_metadata",
         lambda: {
             "commit": "abc123",
-            "branch": "issue-26",
+            "branch": "m3/planner-agent",
             "dirty": False,
         },
     )
 
-    run_config = {
-        "systems": [
-            {
-                "agent_config": "minimal_compaction",
-                "llm_config": "nova-lite",
-            },
-            {
-                "agent_config": "minimal_summary",
-                "llm_config": "nova-lite",
-            },
-        ],
-        "trial_configs": ["multi_attempt"],
-        "scenarios": ["study-with-key"],
-        "trials_per_case": 1,
-    }
-
     manifest = persistence.build_run_manifest(
-        run_id="test-context-run",
-        run_config=run_config,
+        run_id="test-planner-run",
+        run_config=M3_PLANNER_RUN_CONFIG,
     )
 
-    assert manifest["agent_configs"]["minimal_compaction"][
-        "compaction_keep_recent_rounds"
-    ] == 2
-    assert manifest["agent_configs"]["minimal_summary"][
-        "compaction_keep_recent_rounds"
-    ] == 2
-    assert manifest["agent_configs"]["minimal_summary"][
-        "history_compaction_repair_max_attempts"
-    ] == 1
+    assert manifest["agent_configs"] == {
+        "planner": AGENT_CONFIGS["planner"],
+    }
+    assert manifest["trial_configs"] == {
+        "multi_attempt": TRIAL_CONFIGS["multi_attempt"],
+    }
 
 
 def test_build_run_manifest_rejects_empty_run_id() -> None:

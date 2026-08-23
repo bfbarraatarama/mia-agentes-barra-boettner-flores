@@ -14,6 +14,7 @@ from mia_agents.llm_client import LLMClient
 from mia_agents.protocols import Agent
 
 from .agent import MyAgent
+from .planner_agent import PlannerAgent
 
 from student_framework.tools.calculator import  calculator, calculator_schema
 from student_framework.tools.distance_converter import distance_converter, distance_converter_schema
@@ -60,7 +61,19 @@ def build_agent(config: dict[str, Any] | None = None) -> Agent:
             "compaction_keep_recent_rounds"
         ]
 
-    agent = MyAgent(**kwargs)
+    use_planner = bool(config.get("use_planner"))
+
+    if use_planner:
+        for parameter_name in (
+            "planning_prompt",
+            "plan_guidance",
+            "planning_repair_max_attempts",
+        ):
+            if parameter_name in config:
+                kwargs[parameter_name] = config[parameter_name]
+
+    agent_class = PlannerAgent if use_planner else MyAgent
+    agent = agent_class(**kwargs)
 
     # Estrategia de compactación declarativa, para que las configs de
     # eval/ sigan siendo serializables en el manifest del run. También
