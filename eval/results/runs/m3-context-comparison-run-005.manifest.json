@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "run_id": "m3-context-comparison-run-005",
+  "created_at": "2026-08-22T13:55:45+00:00",
+  "git": {
+    "commit": "c2d20da58ae9479d3c593cd4abab271987f312f6",
+    "branch": "issue-26",
+    "dirty": true
+  },
+  "run": {
+    "systems": [
+      {
+        "agent_config": "minimal_history_200",
+        "llm_config": "nova-lite"
+      },
+      {
+        "agent_config": "minimal_compaction",
+        "llm_config": "nova-lite"
+      },
+      {
+        "agent_config": "minimal_summary",
+        "llm_config": "nova-lite"
+      }
+    ],
+    "trial_configs": [
+      "multi_attempt"
+    ],
+    "scenarios": [
+      "study-with-key",
+      "color-locks",
+      "apartment-keys",
+      "library-search",
+      "office-sequence",
+      "extreme-archive",
+      "vault-combination",
+      "backtracking-vault"
+    ],
+    "trials_per_case": 10
+  },
+  "agent_configs": {
+    "minimal_compaction": {
+      "system_prompt": "Estás resolviendo una sala de escape en un mundo simulado.\n\nTenés que cumplir el objetivo indicado en el mensaje del escenario utilizando las herramientas disponibles.",
+      "register_default_tools": false,
+      "max_iterations": 40,
+      "max_history_messages": 100,
+      "tool_call_repair_max_attempts": 0,
+      "history_compaction": "deterministic"
+    },
+    "minimal_history_200": {
+      "system_prompt": "Estás resolviendo una sala de escape en un mundo simulado.\n\nTenés que cumplir el objetivo indicado en el mensaje del escenario utilizando las herramientas disponibles.",
+      "register_default_tools": false,
+      "max_iterations": 40,
+      "max_history_messages": 200,
+      "tool_call_repair_max_attempts": 0
+    },
+    "minimal_summary": {
+      "system_prompt": "Estás resolviendo una sala de escape en un mundo simulado.\n\nTenés que cumplir el objetivo indicado en el mensaje del escenario utilizando las herramientas disponibles.",
+      "register_default_tools": false,
+      "max_iterations": 40,
+      "max_history_messages": 100,
+      "tool_call_repair_max_attempts": 0,
+      "history_compaction": "llm"
+    }
+  },
+  "llm_configs": {
+    "nova-lite": {
+      "provider": "bedrock",
+      "model": "amazon.nova-lite-v1:0",
+      "region": "us-west-2",
+      "temperature": 0.2,
+      "max_tokens": 4096
+    }
+  },
+  "trial_configs": {
+    "multi_attempt": {
+      "max_attempts": 10,
+      "continuation_message": "El desafío todavía no está completado. Continuá."
+    }
+  },
+  "scenario_metadata": {
+    "study-with-key": {
+      "difficulty": "easy",
+      "goal": {
+        "type": "item_open",
+        "item": "puerta_principal"
+      }
+    },
+    "color-locks": {
+      "difficulty": "medium",
+      "goal": {
+        "type": "item_open",
+        "item": "puerta_principal"
+      }
+    },
+    "apartment-keys": {
+      "difficulty": "medium",
+      "goal": {
+        "type": "item_open",
+        "item": "puerta_principal"
+      }
+    },
+    "library-search": {
+      "difficulty": "hard",
+      "goal": {
+        "type": "item_open",
+        "item": "puerta_principal"
+      }
+    },
+    "office-sequence": {
+      "difficulty": "hard",
+      "goal": {
+        "type": "sequence",
+        "goals": [
+          {
+            "type": "item_in_inventory",
+            "item": "documento_confidencial"
+          },
+          {
+            "type": "item_open",
+            "item": "puerta_principal"
+          }
+        ]
+      }
+    },
+    "extreme-archive": {
+      "difficulty": "extreme",
+      "goal": {
+        "type": "item_open",
+        "item": "puerta_principal"
+      }
+    },
+    "vault-combination": {
+      "difficulty": "extreme",
+      "goal": {
+        "type": "item_open",
+        "item": "puerta_principal"
+      }
+    },
+    "backtracking-vault": {
+      "difficulty": "extreme",
+      "goal": {
+        "type": "item_open",
+        "item": "puerta_principal"
+      }
+    }
+  }
+}

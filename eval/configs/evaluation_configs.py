@@ -13,6 +13,7 @@ M3_EVALUATION_CONFIG: dict[str, Any] = {
         "error_analysis",
         "tool_call_repair_analysis",
         "efficiency_analysis",
+        "context_analysis",
         # "cost_analysis",
         # "qualitative_analysis",
     ],

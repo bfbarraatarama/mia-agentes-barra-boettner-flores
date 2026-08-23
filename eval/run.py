@@ -18,7 +18,7 @@ from eval.evaluation import start_evaluation
 from eval.persistence import RUNS_DIR, evaluation_dir
 from eval.configs.evaluation_configs import M3_EVALUATION_CONFIG
 from eval.configs.run_configs import (
-    M3_NOVA_MULTI_ATTEMPT_RUN_CONFIG,
+    M3_CONTEXT_COMPARISON_RUN_CONFIG,
 )
 from eval.run_execution import resume_run, start_run
 from eval.report import (
@@ -31,15 +31,20 @@ from eval.analyses.tool_call_repair_analysis import (
 )
 from eval.analyses.efficiency_analysis import (
     render_markdown as render_efficiency_markdown,
+from eval.analyses.context_analysis import (
+    render_markdown as render_context_markdown,
 )
 
-RUN_ID = "m3-nova-multi-attempt-run-004"
+RUN_ID = "m3-context-comparison-run-005"
+# El baseline "minimal" no se vuelve a correr: entra a la evaluación
+# desde run-004, que usó el mismo trial_config y los mismos escenarios.
 EVALUATION_RUN_IDS = [
+    "m3-nova-multi-attempt-run-004",
     RUN_ID,
 ]
-EVAL_ID = "m3-nova-multi-attempt-eval-004"
+EVAL_ID = "m3-context-comparison-eval-006"
 
-RUN_CONFIG = M3_NOVA_MULTI_ATTEMPT_RUN_CONFIG
+RUN_CONFIG = M3_CONTEXT_COMPARISON_RUN_CONFIG
 EVALUATION_CONFIG = M3_EVALUATION_CONFIG
 
 
@@ -112,6 +117,8 @@ def main() -> int:
     efficiency_analysis_path = (
         evaluation_output_dir
         / "efficiency_analysis.md"
+    context_analysis_path = (
+        evaluation_output_dir / "context_analysis.md"
     )
 
     print_success_rate_summary(
@@ -147,6 +154,15 @@ def main() -> int:
         encoding="utf-8",
     )
 
+    context_analysis = (
+        evaluation_result["analyses"]["context_analysis"]
+    )
+
+    context_analysis_path.write_text(
+        render_context_markdown(context_analysis),
+        encoding="utf-8",
+    )
+
     print()
 
     for run_id in EVALUATION_RUN_IDS:
@@ -178,6 +194,8 @@ def main() -> int:
     )
     print(
         f"Análisis de eficiencia: {efficiency_analysis_path}"
+        "Análisis de presión de contexto: "
+        f"{context_analysis_path}"
     )
 
     return 0
