@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import json
+import re
 import sys
 import threading
 import webbrowser
@@ -79,7 +80,7 @@ def _default_annotator_id(
     if annotators:
         return annotators[0]
 
-    return "annotator-a"
+    return ""
 
 
 def _load_selected_cases(
@@ -264,6 +265,266 @@ def _rubric_overview_html() -> str:
     """
 
 
+def _attempt_index_from_ref(
+    evidence_ref: str,
+) -> int:
+    match = re.fullmatch(
+        r"a(\d+)(?:\..+)?",
+        evidence_ref,
+    )
+
+    if match is None:
+        raise ValueError(
+            f"Referencia de evidencia inválida: {evidence_ref!r}."
+        )
+
+    return int(match.group(1))
+
+
+def _iteration_position_from_ref(
+    evidence_ref: str,
+) -> tuple[int, int]:
+    match = re.fullmatch(
+        r"a(\d+)\.i(\d+)(?:\..+)?",
+        evidence_ref,
+    )
+
+    if match is None:
+        raise ValueError(
+            "El trigger de Q1.4 no referencia una iteración válida: "
+            f"{evidence_ref!r}."
+        )
+
+    return (
+        int(match.group(1)),
+        int(match.group(2)),
+    )
+
+
+def _q1_4_trigger_ui_data(
+    review_case: ReviewCase,
+) -> list[dict[str, object]]:
+    """Deriva una entrada humana por oportunidad de adaptación."""
+
+    presentation = json.loads(
+        review_case.presentation.text
+    )
+    q1_4 = presentation.get(
+        "q1_4_applicability",
+        {},
+    )
+    triggers = q1_4.get(
+        "triggers",
+        [],
+    )
+    multiple_attempts = (
+        len(review_case.case.attempts) > 1
+    )
+    items = []
+
+    for trigger_index, trigger in enumerate(
+        triggers,
+        start=1,
+    ):
+        trigger_id = f"D{trigger_index}"
+        target_ref = str(
+            trigger.get(
+                "target_ref",
+                "",
+            )
+        )
+        components = trigger.get(
+            "components",
+            [],
+        )
+
+        if not target_ref or not components:
+            raise ValueError(
+                "Un trigger agrupado de Q1.4 debe contener "
+                "target y componentes."
+            )
+
+        evidence_refs = []
+        marker_refs = []
+        has_continuation = False
+        error_refs = []
+        repetition_refs = []
+
+        for component in components:
+            kind = component.get(
+                "kind"
+            )
+            component_refs = [
+                str(evidence_ref)
+                for evidence_ref in component.get(
+                    "evidence_refs",
+                    [],
+                )
+            ]
+
+            if not component_refs:
+                raise ValueError(
+                    "Un componente de Q1.4 debe contener evidencia."
+                )
+
+            evidence_refs.extend(
+                component_refs
+            )
+
+            if kind == "attempt_continuation":
+                has_continuation = True
+
+            elif kind == "error_before_later_decision":
+                error_refs.extend(
+                    component_refs
+                )
+                marker_refs.extend(
+                    component_refs
+                )
+
+            elif kind == "consecutive_exact_repetition":
+                if len(component_refs) < 2:
+                    raise ValueError(
+                        "Una repetición consecutiva de Q1.4 debe "
+                        "contener al menos dos acciones."
+                    )
+
+                repetition_refs = component_refs
+                marker_refs.extend(
+                    component_refs
+                )
+
+            else:
+                raise ValueError(
+                    "Tipo de componente de Q1.4 desconocido: "
+                    f"{kind!r}."
+                )
+
+        label_parts = []
+
+        if has_continuation:
+            label_parts.append(
+                "Nuevo attempt"
+            )
+
+        if error_refs:
+            label_parts.append(
+                (
+                    "1 error previo"
+                    if len(error_refs) == 1
+                    else f"{len(error_refs)} errores previos"
+                )
+            )
+
+        if repetition_refs:
+            if len(repetition_refs) == 2:
+                label_parts.append(
+                    "Repetición consecutiva"
+                )
+            else:
+                label_parts.append(
+                    "Repetición consecutiva · "
+                    f"{len(repetition_refs)} ejecuciones iguales"
+                )
+
+        target_attempt = _attempt_index_from_ref(
+            target_ref
+        )
+        target_iteration_match = re.fullmatch(
+            r"a(\d+)\.i(\d+)",
+            target_ref,
+        )
+
+        if target_iteration_match is not None:
+            target_iteration = int(
+                target_iteration_match.group(2)
+            )
+
+            if multiple_attempts:
+                opportunity_location = (
+                    f"Attempt {target_attempt} · "
+                    f"iter. {target_iteration}"
+                )
+            else:
+                opportunity_location = (
+                    f"Iter. {target_iteration}"
+                )
+        else:
+            opportunity_location = (
+                f"Attempt {target_attempt}"
+            )
+
+        episode_location = None
+
+        if repetition_refs:
+            start_attempt, start_iteration = (
+                _iteration_position_from_ref(
+                    repetition_refs[0]
+                )
+            )
+            end_attempt, end_iteration = (
+                _iteration_position_from_ref(
+                    repetition_refs[-1]
+                )
+            )
+
+            if start_attempt == end_attempt:
+                if multiple_attempts:
+                    episode_location = (
+                        f"Attempt {start_attempt} · "
+                        f"iter. {start_iteration} → {end_iteration}"
+                    )
+                else:
+                    episode_location = (
+                        f"Iter. {start_iteration} → {end_iteration}"
+                    )
+            else:
+                episode_location = (
+                    f"Attempt {start_attempt} · iter. "
+                    f"{start_iteration} → Attempt {end_attempt} · "
+                    f"iter. {end_iteration}"
+                )
+
+            target = repetition_refs[1]
+
+        else:
+            target = (
+                error_refs[0]
+                if error_refs
+                else f"attempt-{target_attempt}"
+            )
+
+        unique_evidence_refs = tuple(
+            dict.fromkeys(
+                evidence_refs
+            )
+        )
+        unique_marker_refs = tuple(
+            dict.fromkeys(
+                marker_refs
+            )
+        )
+
+        items.append({
+            "id": trigger_id,
+            "label": " · ".join(
+                label_parts
+            ),
+            "location": opportunity_location,
+            "episode_location": episode_location,
+            "target": target,
+            "evidence_refs": unique_evidence_refs,
+            "marker_refs": unique_marker_refs,
+            "marker_attempt": (
+                target_attempt
+                if has_continuation
+                else None
+            ),
+        })
+
+    return items
+
+
 def _criterion_html(
     review_case: ReviewCase,
     criterion_id: str,
@@ -347,11 +608,20 @@ def _criterion_html(
             if applicable
             else "N/A"
         )
+        reason_html = (
+            (
+                " "
+                + html.escape(
+                    applicability_reason
+                )
+            )
+            if applicability_reason
+            else ""
+        )
 
         applicability_html = f"""
         <details
           class="criterion-applicability"
-          open
         >
           <summary>
             Aplicabilidad de {criterion_id}
@@ -369,11 +639,11 @@ def _criterion_html(
               Estado en este caso:
               {applicability_status}
             </strong>
-            {html.escape(applicability_reason)}
+            {reason_html}
           </p>
 
           <p>
-            <strong>Triggers:</strong>
+            <strong>Tipos de disparador:</strong>
           </p>
 
           <ul>
@@ -468,6 +738,87 @@ def _criterion_html(
     """
 
 
+def _q1_4_auxiliary_html(
+    review_case: ReviewCase,
+) -> str:
+    """Renderiza la navegación auxiliar de disparadores de Q1.4."""
+
+    applicability = (
+        review_case.case.criteria_applicability[
+            "Q1.4"
+        ]
+    )
+
+    if not applicability.applicable:
+        return ""
+
+    trigger_items = _q1_4_trigger_ui_data(
+        review_case
+    )
+
+    if not trigger_items:
+        return ""
+
+    trigger_rows = "".join(
+        (
+            '<button type="button" '
+            'class="q14-trigger-link" '
+            f'data-trigger-id="{item["id"]}" '
+            f'data-trigger-target="{html.escape(str(item["target"]))}" '
+            'data-trigger-refs="'
+            + html.escape(
+                json.dumps(
+                    item["evidence_refs"],
+                    ensure_ascii=False,
+                ),
+                quote=True,
+            )
+            + '">'
+            "<strong>"
+            f'Disparador {index} · {html.escape(str(item["label"]))}'
+            "</strong>"
+            '<span class="q14-trigger-location">'
+            "<strong>Oportunidad de adaptación:</strong> "
+            f'{html.escape(str(item["location"]))}'
+            "</span>"
+            + (
+                (
+                    '<span class="q14-trigger-location">'
+                    "<strong>Episodio:</strong> "
+                    f'{html.escape(str(item["episode_location"]))}'
+                    "</span>"
+                )
+                if item["episode_location"] is not None
+                else ""
+            )
+            + "</button>"
+        )
+        for index, item in enumerate(
+            trigger_items,
+            start=1,
+        )
+    )
+
+    return f"""
+    <section class="q14-auxiliary q14-detected-triggers">
+      <p>
+        <strong>
+          Disparadores detectados ({len(trigger_items)})
+        </strong>
+      </p>
+
+      <p class="q14-trigger-disclaimer">
+        Estos disparadores determinan que Q1.4 debe evaluarse;
+        no implican por sí mismos PASS ni FAIL.
+      </p>
+
+      <div class="q14-trigger-list">
+        {trigger_rows}
+      </div>
+    </section>
+    """
+
+
 def _evidence_cards_html(
     review_case: ReviewCase,
 ) -> str:
@@ -485,6 +836,25 @@ def _evidence_cards_html(
         criterion_id: set()
         for criterion_id in applicable
     }
+    trigger_markers_by_ref: dict[str, list[str]] = {}
+    attempt_trigger_markers: dict[int, list[str]] = {}
+
+    for item in _q1_4_trigger_ui_data(review_case):
+        trigger_id = str(item["id"])
+
+        for evidence_ref in item["marker_refs"]:
+            trigger_markers_by_ref.setdefault(
+                str(evidence_ref),
+                [],
+            ).append(trigger_id)
+
+        marker_attempt = item["marker_attempt"]
+
+        if marker_attempt is not None:
+            attempt_trigger_markers.setdefault(
+                int(marker_attempt),
+                [],
+            ).append(trigger_id)
 
     if review_case.annotation is not None:
         for criterion_id, annotation in (
@@ -513,6 +883,19 @@ def _evidence_cards_html(
             for criterion_id in applicable
         )
 
+    def trigger_markers(
+        trigger_ids: list[str] | tuple[str, ...],
+    ) -> str:
+        return "".join(
+            (
+                '<span class="q14-trigger-marker" '
+                f'data-trigger-id="{html.escape(trigger_id)}">'
+                f"Q1.4 · {html.escape(trigger_id)}"
+                "</span>"
+            )
+            for trigger_id in trigger_ids
+        )
+
     def card(
         evidence_ref: str,
         card_type: str,
@@ -535,6 +918,12 @@ def _evidence_cards_html(
             </strong>
 
             <span class="evidence-meta">
+              {trigger_markers(
+                  trigger_markers_by_ref.get(
+                      evidence_ref,
+                      [],
+                  )
+              )}
               <span class="evidence-ref">
                 {html.escape(evidence_ref)}
               </span>
@@ -622,14 +1011,14 @@ def _evidence_cards_html(
 
         if kind == "plan":
             label = "PLAN"
-            title = "Plan interno disponible antes de la decisión"
+            title = "Plan previo del agente"
         else:
-            label = "CONTEXTO RETENIDO"
+            label = "CONTEXTO REDUCIDO"
             title = (
-                "Representación interna disponible antes de la decisión"
+                "Contexto reducido disponible antes de la decisión"
                 if before_decision
                 else (
-                    "Representación interna disponible "
+                    "Contexto reducido disponible "
                     "para decisiones posteriores"
                 )
             )
@@ -644,9 +1033,16 @@ def _evidence_cards_html(
             title,
             (
                 '<div class="internal-context-note">'
-                "Representación interna del sistema; "
-                "no constituye una observación del mundo."
-                "</div>"
+                + (
+                    "Estrategia previa del agente; "
+                    "no es una observación del mundo."
+                    if kind == "plan"
+                    else (
+                        "Representación reducida de la trayectoria anterior; "
+                        "no es una observación del mundo."
+                    )
+                )
+                + "</div>"
                 '<div class="evidence-text">'
                 + html.escape(str(content))
                 + "</div>"
@@ -661,9 +1057,15 @@ def _evidence_cards_html(
             "attempt_index"
         )
         parts.append(
-            '<h3 class="attempt-heading">'
+            f'<h3 class="attempt-heading" id="attempt-{attempt_index}">'
             f"Attempt {attempt_index}"
-            "</h3>"
+            + trigger_markers(
+                attempt_trigger_markers.get(
+                    attempt_index,
+                    [],
+                )
+            )
+            + "</h3>"
         )
 
         user_message = (
@@ -923,6 +1325,24 @@ def _evidence_cards_html(
     return "".join(parts)
 
 
+def _available_dataset_ids() -> list[str]:
+    """Lista los datasets cualitativos materializados."""
+
+    if not RESULTS_DIR.exists():
+        return []
+
+    return sorted(
+        path.name
+        for path in RESULTS_DIR.iterdir()
+        if (
+            path.is_dir()
+            and (path / "manifest.json").is_file()
+            and (path / "cases.jsonl").is_file()
+            and (path / "case_sources.jsonl").is_file()
+        )
+    )
+
+
 def _page_html(
     *,
     dataset_id: str,
@@ -933,16 +1353,35 @@ def _page_html(
     review_case: ReviewCase | None,
     message: str | None = None,
 ) -> str:
+    dataset_options = "".join(
+        (
+            f'<option value="{html.escape(existing_dataset_id)}"'
+            f'{" selected" if existing_dataset_id == dataset_id else ""}>'
+            f'{html.escape(existing_dataset_id)}'
+            "</option>"
+        )
+        for existing_dataset_id in _available_dataset_ids()
+    )
+
     annotators = list_annotators(
         dataset_id,
         results_dir=RESULTS_DIR,
     )
-    annotator_options = "".join(
-        (
-            f'<option value="{html.escape(existing_annotator)}">'
+
+    if annotators:
+        annotator_options = "".join(
+            (
+                f'<option value="{html.escape(existing_annotator)}"'
+                f'{" selected" if existing_annotator == annotator_id else ""}>'
+                f'{html.escape(existing_annotator)}'
+                "</option>"
+            )
+            for existing_annotator in annotators
         )
-        for existing_annotator in annotators
-    )
+    else:
+        annotator_options = (
+            '<option value="">Sin anotadores registrados</option>'
+        )
     case_list_html = "".join(
         (
             '<a class="case-item'
@@ -1031,6 +1470,11 @@ def _page_html(
                 ),
             )
             for criterion_id in CRITERION_IDS
+        )
+        q1_4_auxiliary_html = (
+            _q1_4_auxiliary_html(
+                review_case
+            )
         )
 
         evidence_html = (
@@ -1140,6 +1584,8 @@ def _page_html(
 
                   {delete_annotation_html}
                 </div>
+
+                {q1_4_auxiliary_html}
               </section>
             </form>
           </div>
@@ -1352,6 +1798,9 @@ header h1 {{
   margin: 1.15rem 0 .5rem;
   font-size: .95rem;
   color: #555;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
 }}
 
 .evidence-card {{
@@ -1436,6 +1885,84 @@ header h1 {{
 
 .selected-evidence .evidence-mark {{
   color: #2d6a4f;
+}}
+
+.q14-trigger-marker {{
+  display: none;
+  padding: .15rem .4rem;
+  border: 1px solid #9b7b27;
+  border-radius: .3rem;
+  background: #fff4c7;
+  color: #6d5418;
+  font-size: .65rem;
+  font-weight: 700;
+  white-space: nowrap;
+}}
+
+.evidence.q14-active .q14-trigger-marker {{
+  display: inline-flex;
+}}
+
+.q14-trigger-highlight {{
+  box-shadow:
+    0 0 0 3px #d3a82f
+    !important;
+}}
+
+.attempt-heading.q14-trigger-highlight {{
+  padding: .3rem .45rem;
+  border-radius: .35rem;
+  background: #fff4c7;
+}}
+
+.q14-auxiliary {{
+  display: none;
+}}
+
+.rubric.q14-active .q14-auxiliary {{
+  display: block;
+}}
+
+.q14-detected-triggers {{
+  margin: 1.5rem 0 0;
+  padding: .65rem .75rem;
+  border: 1px solid #d8c780;
+  border-radius: .4rem;
+  background: #fffdf2;
+}}
+
+.q14-detected-triggers > p:first-child {{
+  margin-top: 0;
+}}
+
+.q14-trigger-list {{
+  display: grid;
+  gap: .4rem;
+}}
+
+.q14-trigger-disclaimer {{
+  color: #555;
+  font-size: .85rem;
+}}
+
+.q14-trigger-link {{
+  width: 100%;
+  padding: .45rem .55rem;
+  border: 1px solid #ccc;
+  border-radius: .35rem;
+  background: white;
+  text-align: left;
+}}
+
+.q14-trigger-link strong,
+.q14-trigger-location {{
+  display: block;
+}}
+
+.q14-trigger-location {{
+  margin-top: .15rem;
+  color: #666;
+  font-size: .8rem;
 }}
 
 .evidence-text {{
@@ -1647,25 +2174,30 @@ button {{
   >
     <label>
       Dataset
-      <input
+      <select
         name="dataset_id"
-        value="{html.escape(dataset_id)}"
-        readonly
+        class="navigation-control"
       >
+        {dataset_options}
+      </select>
     </label>
 
     <label>
       Anotador
-      <input
+      <select
         name="annotator_id"
-        value="{html.escape(annotator_id)}"
-        list="annotators"
         class="navigation-control"
-        required
       >
-      <datalist id="annotators">
         {annotator_options}
-      </datalist>
+      </select>
+    </label>
+
+    <label>
+      Nuevo anotador
+      <input
+        name="new_annotator_id"
+        autocomplete="off"
+      >
     </label>
 
     <label>
@@ -1738,6 +2270,11 @@ const panels = [
 const cards = [
   ...document.querySelectorAll(
     ".evidence-card"
+  ),
+];
+const q14TriggerLinks = [
+  ...document.querySelectorAll(
+    ".q14-trigger-link"
   ),
 ];
 const evidencePanel =
@@ -1954,7 +2491,96 @@ function activateCriterion(
   }});
 
   refreshCards();
+
+  evidencePanel?.classList.toggle(
+    "q14-active",
+    criterionId === "Q1.4"
+  );
+  rubricPanel?.classList.toggle(
+    "q14-active",
+    criterionId === "Q1.4"
+  );
 }}
+
+let q14HighlightTimeout = null;
+
+function clearQ14Highlight() {{
+  document
+    .querySelectorAll(
+      ".q14-trigger-highlight"
+    )
+    .forEach((element) => {{
+      element.classList.remove(
+        "q14-trigger-highlight"
+      );
+    }});
+}}
+
+q14TriggerLinks.forEach((link) => {{
+  link.addEventListener(
+    "click",
+    () => {{
+      clearQ14Highlight();
+
+      let evidenceRefs = [];
+
+      try {{
+        evidenceRefs = JSON.parse(
+          link.dataset.triggerRefs
+          || "[]"
+        );
+      }} catch {{
+        return;
+      }}
+
+      evidenceRefs.forEach(
+        (evidenceRef) => {{
+          const card = cards.find(
+            (item) =>
+              item.dataset.evidenceRef
+              === evidenceRef
+          );
+
+          card?.classList.add(
+            "q14-trigger-highlight"
+          );
+        }}
+      );
+
+      const targetId =
+        link.dataset.triggerTarget;
+      const target =
+        cards.find(
+          (item) =>
+            item.dataset.evidenceRef
+            === targetId
+        )
+        || document.getElementById(
+          targetId
+        );
+
+      target?.classList.add(
+        "q14-trigger-highlight"
+      );
+      target?.scrollIntoView({{
+        behavior: "smooth",
+        block: "center",
+      }});
+
+      if (q14HighlightTimeout) {{
+        window.clearTimeout(
+          q14HighlightTimeout
+        );
+      }}
+
+      q14HighlightTimeout =
+        window.setTimeout(
+          clearQ14Highlight,
+          1800
+        );
+    }}
+  );
+}});
 
 tabs.forEach((tab) => {{
   tab.addEventListener(
@@ -2266,8 +2892,12 @@ class AnnotationHandler(BaseHTTPRequestHandler):
             "annotator_id",
             "",
         )
+        annotators = list_annotators(
+            dataset_id,
+            results_dir=RESULTS_DIR,
+        )
 
-        if not annotator_id:
+        if annotator_id not in annotators:
             annotator_id = _default_annotator_id(
                 dataset_id
             )
@@ -2288,16 +2918,20 @@ class AnnotationHandler(BaseHTTPRequestHandler):
         )
 
         try:
-            review_cases = _load_selected_cases(
-                dataset_id,
-                annotator_id,
-                split,
-                status,
-            )
-            review_case = _selected_case(
-                review_cases,
-                case_id or None,
-            )
+            if annotator_id:
+                review_cases = _load_selected_cases(
+                    dataset_id,
+                    annotator_id,
+                    split,
+                    status,
+                )
+                review_case = _selected_case(
+                    review_cases,
+                    case_id or None,
+                )
+            else:
+                review_cases = []
+                review_case = None
             page = _page_html(
                 dataset_id=dataset_id,
                 annotator_id=annotator_id,
@@ -2370,21 +3004,30 @@ class AnnotationHandler(BaseHTTPRequestHandler):
         }:
             try:
                 if self.path == "/annotator/create":
+                    managed_annotator_id = _query_value(
+                        form,
+                        "new_annotator_id",
+                        "",
+                    ).strip()
                     create_annotator(
                         dataset_id,
-                        annotator_id,
+                        managed_annotator_id,
                         results_dir=RESULTS_DIR,
                     )
+                    redirect_annotator_id = managed_annotator_id
                 else:
                     delete_annotator(
                         dataset_id,
                         annotator_id,
                         results_dir=RESULTS_DIR,
                     )
+                    redirect_annotator_id = _default_annotator_id(
+                        dataset_id
+                    )
 
                 location = "/?" + urlencode({
                     "dataset_id": dataset_id,
-                    "annotator_id": annotator_id,
+                    "annotator_id": redirect_annotator_id,
                     "status": status,
                     "split": split,
                 })

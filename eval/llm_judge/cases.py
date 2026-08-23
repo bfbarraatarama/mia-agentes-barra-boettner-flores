@@ -7,6 +7,9 @@ from typing import Any
 
 from eval.llm_judge.models import (
     ActionObservation,
+    ApplicabilityTrigger,
+    ApplicabilityTriggerComponent,
+    ApplicabilityTriggerKind,
     AttemptTermination,
     CriterionApplicability,
     QualitativeAction,
@@ -17,17 +20,11 @@ from eval.llm_judge.models import (
     ToolCallView,
     ActionExecution,
 )
-from eval.llm_judge.rubric import (
-    Q1_4_CONTINUATION_TRIGGER,
-    Q1_4_ERROR_TRIGGER,
-    Q1_4_NO_TRIGGER_REASON,
-    Q1_4_REPETITION_TRIGGER,
-)
+from eval.llm_judge.rubric import Q1_4_NO_TRIGGER_REASON
 
 
-QUALITATIVE_CASE_SCHEMA_VERSION = 2
-CASE_VIEW_VERSION = "trajectory-planning-v2"
-
+QUALITATIVE_CASE_SCHEMA_VERSION = 5
+CASE_VIEW_VERSION = "trajectory-planning-v5"
 
 def _parse_arguments(arguments_raw: str | None) -> dict[str, Any] | None:
     """Parsea argumentos JSON sólo cuando representan un objeto."""
@@ -397,49 +394,219 @@ def _action_key(
     )
 
 
+def _next_decision_ref(
+    attempts: list[QualitativeAttempt],
+    *,
+    attempt_position: int,
+    iteration_position: int,
+) -> str | None:
+    """Ubica la primera decisión posterior observable dentro del trial."""
+
+    attempt = attempts[attempt_position]
+
+    if iteration_position + 1 < len(attempt.iterations):
+        next_iteration = attempt.iterations[
+            iteration_position + 1
+        ]
+        return (
+            f"a{attempt.attempt_index}."
+            f"i{next_iteration.iteration_index}"
+        )
+
+    for later_attempt in attempts[attempt_position + 1:]:
+        if later_attempt.iterations:
+            next_iteration = later_attempt.iterations[0]
+            return (
+                f"a{later_attempt.attempt_index}."
+                f"i{next_iteration.iteration_index}"
+            )
+
+    return None
+
+
+def _add_q1_4_component(
+    grouped_components: dict[
+        str,
+        dict[ApplicabilityTriggerKind, list[str]],
+    ],
+    target_order: list[str],
+    *,
+    target_ref: str,
+    kind: ApplicabilityTriggerKind,
+    evidence_refs: list[str],
+) -> None:
+    """Acumula una condición elemental en su oportunidad de adaptación."""
+
+    if target_ref not in grouped_components:
+        grouped_components[target_ref] = {}
+        target_order.append(target_ref)
+
+    component_refs = grouped_components[
+        target_ref
+    ].setdefault(
+        kind,
+        [],
+    )
+
+    for evidence_ref in evidence_refs:
+        if evidence_ref not in component_refs:
+            component_refs.append(
+                evidence_ref
+            )
+
+
 def _q1_4_applicability(
     attempts: list[QualitativeAttempt],
 ) -> CriterionApplicability:
-    """Determina si el trial contiene una oportunidad observable de adaptación."""
+    """Agrupa oportunidades observables de adaptación por decisión posterior."""
 
-    if len(attempts) > 1:
+    grouped_components: dict[
+        str,
+        dict[ApplicabilityTriggerKind, list[str]],
+    ] = {}
+    target_order: list[str] = []
+
+    previous_action_key: (
+        tuple[str, str | None, str | None, str | None]
+        | None
+    ) = None
+    previous_action_ref: str | None = None
+    previous_attempt_index: int | None = None
+    previous_iteration_index: int | None = None
+    active_repetition_target_ref: str | None = None
+
+    for attempt_position, attempt in enumerate(attempts):
+        for iteration_position, iteration in enumerate(
+            attempt.iterations
+        ):
+            iteration_ref = (
+                f"a{attempt.attempt_index}."
+                f"i{iteration.iteration_index}"
+            )
+            next_decision_ref = _next_decision_ref(
+                attempts,
+                attempt_position=attempt_position,
+                iteration_position=iteration_position,
+            )
+
+            for action in iteration.actions:
+                if action.execution is None:
+                    continue
+
+                if (
+                    action.execution.observation.is_error
+                    and next_decision_ref is not None
+                ):
+                    _add_q1_4_component(
+                        grouped_components,
+                        target_order,
+                        target_ref=next_decision_ref,
+                        kind="error_before_later_decision",
+                        evidence_refs=[
+                            action.action_id,
+                        ],
+                    )
+
+                action_key = _action_key(
+                    action
+                )
+                comes_from_later_decision = (
+                    previous_action_ref is not None
+                    and (
+                        previous_attempt_index
+                        != attempt.attempt_index
+                        or previous_iteration_index
+                        != iteration.iteration_index
+                    )
+                )
+                repeats_previous_action = (
+                    comes_from_later_decision
+                    and previous_action_key == action_key
+                )
+
+                if repeats_previous_action:
+                    if active_repetition_target_ref is None:
+                        active_repetition_target_ref = iteration_ref
+
+                        _add_q1_4_component(
+                            grouped_components,
+                            target_order,
+                            target_ref=active_repetition_target_ref,
+                            kind="consecutive_exact_repetition",
+                            evidence_refs=[
+                                previous_action_ref,
+                                action.action_id,
+                            ],
+                        )
+                    else:
+                        _add_q1_4_component(
+                            grouped_components,
+                            target_order,
+                            target_ref=active_repetition_target_ref,
+                            kind="consecutive_exact_repetition",
+                            evidence_refs=[
+                                action.action_id,
+                            ],
+                        )
+                else:
+                    active_repetition_target_ref = None
+
+                previous_action_key = action_key
+                previous_action_ref = action.action_id
+                previous_attempt_index = attempt.attempt_index
+                previous_iteration_index = iteration.iteration_index
+
+        if attempt_position + 1 < len(attempts):
+            next_attempt = attempts[
+                attempt_position + 1
+            ]
+
+            if next_attempt.iterations:
+                first_iteration = next_attempt.iterations[0]
+                target_ref = (
+                    f"a{next_attempt.attempt_index}."
+                    f"i{first_iteration.iteration_index}"
+                )
+            else:
+                target_ref = (
+                    f"a{next_attempt.attempt_index}."
+                    "user_message"
+                )
+
+            _add_q1_4_component(
+                grouped_components,
+                target_order,
+                target_ref=target_ref,
+                kind="attempt_continuation",
+                evidence_refs=[
+                    f"a{attempt.attempt_index}.termination",
+                    f"a{next_attempt.attempt_index}.user_message",
+                ],
+            )
+
+    triggers = [
+        ApplicabilityTrigger(
+            target_ref=target_ref,
+            components=[
+                ApplicabilityTriggerComponent(
+                    kind=kind,
+                    evidence_refs=evidence_refs,
+                )
+                for kind, evidence_refs in (
+                    grouped_components[
+                        target_ref
+                    ].items()
+                )
+            ],
+        )
+        for target_ref in target_order
+    ]
+
+    if triggers:
         return CriterionApplicability(
             applicable=True,
-            reason=Q1_4_CONTINUATION_TRIGGER,
+            triggers=triggers,
         )
-
-    attempt = attempts[0]
-    seen_actions: set[
-        tuple[str, str | None, str | None, str | None]
-    ] = set()
-
-    for iteration_position, iteration in enumerate(attempt.iterations):
-        iteration_action_keys = []
-
-        for action in iteration.actions:
-            if action.execution is None:
-                continue
-
-            if (
-                action.execution.observation.is_error
-                and iteration_position < len(attempt.iterations) - 1
-            ):
-                return CriterionApplicability(
-                    applicable=True,
-                    reason=Q1_4_ERROR_TRIGGER,
-                )
-
-            action_key = _action_key(action)
-
-            if action_key in seen_actions:
-                return CriterionApplicability(
-                    applicable=True,
-                    reason=Q1_4_REPETITION_TRIGGER,
-                )
-
-            iteration_action_keys.append(action_key)
-
-        seen_actions.update(iteration_action_keys)
 
     return CriterionApplicability(
         applicable=False,

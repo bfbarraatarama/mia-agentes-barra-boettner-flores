@@ -11,6 +11,12 @@ from eval.llm_judge.rubric import CRITERION_IDS, CriterionId
 
 CaseSplit = Literal["dev", "holdout"]
 InternalContextKind = Literal["plan", "summary"]
+ApplicabilityTriggerKind = Literal[
+    "attempt_continuation",
+    "error_before_later_decision",
+    "repeated_effective_action",
+    "consecutive_exact_repetition",
+]
 
 
 class _StrictModel(BaseModel):
@@ -89,11 +95,41 @@ class QualitativeAttempt(_StrictModel):
     termination: AttemptTermination
 
 
+class ApplicabilityTriggerComponent(_StrictModel):
+    """Condición programática que contribuye a una oportunidad de adaptación."""
+
+    kind: ApplicabilityTriggerKind
+    evidence_refs: list[str] = Field(min_length=1)
+
+
+class ApplicabilityTrigger(_StrictModel):
+    """Oportunidad de adaptación agrupada por decisión posterior."""
+
+    target_ref: str = Field(min_length=1)
+    components: list[ApplicabilityTriggerComponent] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _validate_components(self) -> ApplicabilityTrigger:
+        kinds = [
+            component.kind
+            for component in self.components
+        ]
+
+        if len(kinds) != len(set(kinds)):
+            raise ValueError(
+                "Un trigger agrupado de Q1.4 no puede repetir "
+                "el mismo tipo de componente."
+            )
+
+        return self
+
+
 class CriterionApplicability(_StrictModel):
     """Aplicabilidad determinística de un criterio para un caso."""
 
     applicable: bool
     reason: str | None = None
+    triggers: list[ApplicabilityTrigger] = Field(default_factory=list)
 
 
 class QualitativeCase(_StrictModel):
@@ -116,6 +152,40 @@ class QualitativeCase(_StrictModel):
                 "criteria_applicability debe definir exactamente "
                 "Q1.1, Q1.2, Q1.3 y Q1.4."
             )
+
+        if self.schema_version >= 4:
+            q1_4 = self.criteria_applicability["Q1.4"]
+
+            if q1_4.applicable != bool(q1_4.triggers):
+                raise ValueError(
+                    "En schema_version >= 4, Q1.4 debe ser aplicable "
+                    "si y sólo si contiene triggers determinísticos."
+                )
+
+            target_refs = [
+                trigger.target_ref
+                for trigger in q1_4.triggers
+            ]
+
+            if len(target_refs) != len(set(target_refs)):
+                raise ValueError(
+                    "Los triggers agrupados de Q1.4 deben tener "
+                    "targets únicos."
+                )
+
+            if self.schema_version >= 5:
+                legacy_repetitions = [
+                    component
+                    for trigger in q1_4.triggers
+                    for component in trigger.components
+                    if component.kind == "repeated_effective_action"
+                ]
+
+                if legacy_repetitions:
+                    raise ValueError(
+                        "En schema_version >= 5, las repeticiones de Q1.4 "
+                        "deben usar consecutive_exact_repetition."
+                    )
 
         return self
 

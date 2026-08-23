@@ -6,6 +6,8 @@ from pydantic import ValidationError
 from eval.llm_judge.cases import build_qualitative_case
 from eval.llm_judge.models import (
     ActionObservation,
+    ApplicabilityTrigger,
+    ApplicabilityTriggerComponent,
     AttemptTermination,
     CaseSource,
     CriterionApplicability,
@@ -40,11 +42,8 @@ from eval.llm_judge.rubric import (
     Q1_4_APPLICABILITY_DESCRIPTION,
     Q1_4_APPLICABILITY_NOTES,
     Q1_4_APPLICABILITY_TRIGGERS,
-    Q1_4_CONTINUATION_TRIGGER,
-    Q1_4_ERROR_TRIGGER,
     Q1_4_GUIDANCE,
     Q1_4_NO_TRIGGER_REASON,
-    Q1_4_REPETITION_TRIGGER,
     RUBRIC_VERSION,
 )
 from eval.llm_judge.configs.dataset_configs import (
@@ -90,8 +89,8 @@ from eval.llm_judge.annotate import (
 
 def _qualitative_case() -> QualitativeCase:
     return QualitativeCase(
-        schema_version=2,
-        case_view_version="trajectory-planning-v2",
+        schema_version=5,
+        case_view_version="trajectory-planning-v5",
         case_id="qc-001",
         task="Abrí la puerta principal.",
         criteria_applicability={
@@ -155,10 +154,10 @@ def _human_annotation() -> HumanAnnotation:
 
     return HumanAnnotation(
         schema_version=HUMAN_ANNOTATION_SCHEMA_VERSION,
-        case_schema_version=2,
-        case_view_version="trajectory-planning-v2",
+        case_schema_version=5,
+        case_view_version="trajectory-planning-v5",
         presentation_version=PRESENTATION_VERSION,
-        rubric_version="planning-quality-v2",
+        rubric_version=RUBRIC_VERSION,
         case_id="qc-001",
         annotator_id="annotator-a",
         criteria={
@@ -353,7 +352,7 @@ def _dataset_config_for_persistence() -> dict:
 
 
 def test_llm_judge_rubric_defines_planning_quality_criteria() -> None:
-    assert RUBRIC_VERSION == "planning-quality-v2"
+    assert RUBRIC_VERSION == "planning-quality-v4"
     assert DIMENSION_ID == "Q1"
     assert CRITERION_IDS == (
         "Q1.1",
@@ -430,6 +429,23 @@ def test_qualitative_case_requires_all_criteria_applicability() -> None:
         match="criteria_applicability debe definir exactamente",
     ):
         QualitativeCase.model_validate(case_data)
+
+
+def test_qualitative_case_requires_q1_4_triggers_when_applicable() -> None:
+    case_data = _qualitative_case().model_dump()
+    case_data["criteria_applicability"]["Q1.4"] = {
+        "applicable": True,
+        "reason": None,
+        "triggers": [],
+    }
+
+    with pytest.raises(
+        ValidationError,
+        match="si y sólo si contiene triggers",
+    ):
+        QualitativeCase.model_validate(
+            case_data
+        )
 
 
 def test_case_source_keeps_experimental_metadata_separate() -> None:
@@ -797,10 +813,20 @@ def test_build_qualitative_case_marks_world_error_as_q1_4_trigger() -> None:
     assert observation.is_error is True
     assert case.criteria_applicability["Q1.4"].applicable is True
 
-    assert (
-        case.criteria_applicability["Q1.4"].reason
-        == Q1_4_ERROR_TRIGGER
-    )
+    assert case.criteria_applicability["Q1.4"].reason is None
+    assert case.criteria_applicability["Q1.4"].triggers == [
+        ApplicabilityTrigger(
+            target_ref="a1.i2",
+            components=[
+                ApplicabilityTriggerComponent(
+                    kind="error_before_later_decision",
+                    evidence_refs=[
+                        "a1.i1.action1",
+                    ],
+                ),
+            ],
+        ),
+    ]
 
 
 def test_build_qualitative_case_marks_continuation_as_q1_4_trigger() -> None:
@@ -829,10 +855,21 @@ def test_build_qualitative_case_marks_continuation_as_q1_4_trigger() -> None:
     assert len(case.attempts) == 2
     assert case.criteria_applicability["Q1.4"].applicable is True
 
-    assert (
-        case.criteria_applicability["Q1.4"].reason
-        == Q1_4_CONTINUATION_TRIGGER
-    )
+    assert case.criteria_applicability["Q1.4"].reason is None
+    assert case.criteria_applicability["Q1.4"].triggers == [
+        ApplicabilityTrigger(
+            target_ref="a2.i1",
+            components=[
+                ApplicabilityTriggerComponent(
+                    kind="attempt_continuation",
+                    evidence_refs=[
+                        "a1.termination",
+                        "a2.user_message",
+                    ],
+                ),
+            ],
+        ),
+    ]
 
 
 def test_build_qualitative_case_rejects_unmatched_steps() -> None:
@@ -911,6 +948,7 @@ def test_build_qualitative_case_does_not_mark_same_iteration_repetition_as_adapt
         case.criteria_applicability["Q1.4"].reason
         == Q1_4_NO_TRIGGER_REASON
     )
+    assert case.criteria_applicability["Q1.4"].triggers == []
 
 
 def test_build_qualitative_case_requires_decision_after_error_for_q1_4() -> None:
@@ -955,6 +993,7 @@ def test_build_qualitative_case_requires_decision_after_error_for_q1_4() -> None
         case.criteria_applicability["Q1.4"].reason
         == Q1_4_NO_TRIGGER_REASON
     )
+    assert case.criteria_applicability["Q1.4"].triggers == []
 
 
 def test_build_qualitative_case_compares_tool_arguments_structurally() -> None:
@@ -1046,10 +1085,392 @@ def test_build_qualitative_case_marks_repetition_across_iterations_as_q1_4_trigg
 
     assert case.criteria_applicability["Q1.4"].applicable is True
 
-    assert (
-        case.criteria_applicability["Q1.4"].reason
-        == Q1_4_REPETITION_TRIGGER
+    assert case.criteria_applicability["Q1.4"].reason is None
+    assert case.criteria_applicability["Q1.4"].triggers == [
+        ApplicabilityTrigger(
+            target_ref="a1.i2",
+            components=[
+                ApplicabilityTriggerComponent(
+                    kind="consecutive_exact_repetition",
+                    evidence_refs=[
+                        "a1.i1.action1",
+                        "a1.i2.action1",
+                    ],
+                ),
+            ],
+        ),
+    ]
+
+
+def test_build_qualitative_case_compacts_consecutive_repetition_episode() -> None:
+    trace = [
+        _agent_call(
+            content=None,
+            tool_calls=[
+                {
+                    "id": f"look-{iteration_index}",
+                    "name": "look",
+                    "arguments": "{}",
+                },
+            ],
+        )
+        for iteration_index in range(1, 4)
+    ]
+    steps = [
+        {
+            "tool_name": "look",
+            "tool_input": "{}",
+            "tool_output": "No ves nada nuevo.",
+            "error": None,
+        }
+        for _ in range(3)
+    ]
+    trial = {
+        "trial_index": 1,
+        "goal_achieved": False,
+        "goal_reason": "pendiente",
+        "attempts": [
+            _attempt(trace=trace, steps=steps),
+        ],
+    }
+
+    case = build_qualitative_case(
+        trial,
+        case_id="qc-repetition-chain",
     )
+
+    assert case.criteria_applicability["Q1.4"].triggers == [
+        ApplicabilityTrigger(
+            target_ref="a1.i2",
+            components=[
+                ApplicabilityTriggerComponent(
+                    kind="consecutive_exact_repetition",
+                    evidence_refs=[
+                        "a1.i1.action1",
+                        "a1.i2.action1",
+                        "a1.i3.action1",
+                    ],
+                ),
+            ],
+        ),
+    ]
+
+
+def test_build_qualitative_case_collects_multiple_q1_4_trigger_types() -> None:
+    first_attempt = _attempt(
+        attempt_index=1,
+        user_message="Abrí la puerta.",
+        trace=[
+            _agent_call(
+                content=None,
+                tool_calls=[
+                    {
+                        "id": "go-1",
+                        "name": "go",
+                        "arguments": json.dumps({
+                            "direction": "norte",
+                        }),
+                    },
+                ],
+            ),
+            _agent_call(content="Voy a corregirlo."),
+        ],
+        steps=[
+            {
+                "tool_name": "go",
+                "tool_input": json.dumps({
+                    "direction": "norte",
+                }),
+                "tool_output": (
+                    "Error: no hay salida 'norte' desde aquí."
+                ),
+                "error": None,
+            },
+        ],
+        answer="No terminé.",
+    )
+    second_attempt = _attempt(
+        attempt_index=2,
+        user_message=(
+            "El desafío todavía no está completado. Continuá."
+        ),
+        trace=[
+            _agent_call(content="Continúo."),
+        ],
+        answer="Continúo.",
+    )
+    trial = {
+        "trial_index": 1,
+        "goal_achieved": False,
+        "goal_reason": "pendiente",
+        "attempts": [
+            first_attempt,
+            second_attempt,
+        ],
+    }
+
+    case = build_qualitative_case(
+        trial,
+        case_id="qc-multiple-triggers",
+    )
+
+    assert case.criteria_applicability["Q1.4"].triggers == [
+        ApplicabilityTrigger(
+            target_ref="a1.i2",
+            components=[
+                ApplicabilityTriggerComponent(
+                    kind="error_before_later_decision",
+                    evidence_refs=[
+                        "a1.i1.action1",
+                    ],
+                ),
+            ],
+        ),
+        ApplicabilityTrigger(
+            target_ref="a2.i1",
+            components=[
+                ApplicabilityTriggerComponent(
+                    kind="attempt_continuation",
+                    evidence_refs=[
+                        "a1.termination",
+                        "a2.user_message",
+                    ],
+                ),
+            ],
+        ),
+    ]
+
+
+def test_build_qualitative_case_does_not_mark_non_consecutive_repetition() -> None:
+    trace = [
+        _agent_call(
+            content=None,
+            tool_calls=[
+                {
+                    "id": "look-1",
+                    "name": "look",
+                    "arguments": "{}",
+                },
+            ],
+        ),
+        _agent_call(
+            content=None,
+            tool_calls=[
+                {
+                    "id": "examine-1",
+                    "name": "examine",
+                    "arguments": json.dumps({
+                        "target": "puerta",
+                    }),
+                },
+            ],
+        ),
+        _agent_call(
+            content=None,
+            tool_calls=[
+                {
+                    "id": "look-2",
+                    "name": "look",
+                    "arguments": "{}",
+                },
+            ],
+        ),
+    ]
+    steps = [
+        {
+            "tool_name": "look",
+            "tool_input": "{}",
+            "tool_output": "No ves nada nuevo.",
+            "error": None,
+        },
+        {
+            "tool_name": "examine",
+            "tool_input": json.dumps({
+                "target": "puerta",
+            }),
+            "tool_output": "La puerta está cerrada.",
+            "error": None,
+        },
+        {
+            "tool_name": "look",
+            "tool_input": "{}",
+            "tool_output": "No ves nada nuevo.",
+            "error": None,
+        },
+    ]
+    trial = {
+        "trial_index": 1,
+        "goal_achieved": False,
+        "goal_reason": "pendiente",
+        "attempts": [
+            _attempt(
+                trace=trace,
+                steps=steps,
+            ),
+        ],
+    }
+
+    case = build_qualitative_case(
+        trial,
+        case_id="qc-non-consecutive-repetition",
+    )
+
+    assert case.criteria_applicability["Q1.4"].applicable is False
+    assert case.criteria_applicability["Q1.4"].triggers == []
+
+
+def test_build_qualitative_case_requires_same_repetition_observation() -> None:
+    trace = [
+        _agent_call(
+            content=None,
+            tool_calls=[
+                {
+                    "id": "go-1",
+                    "name": "go",
+                    "arguments": json.dumps({
+                        "direction": "este",
+                    }),
+                },
+            ],
+        ),
+        _agent_call(
+            content=None,
+            tool_calls=[
+                {
+                    "id": "go-2",
+                    "name": "go",
+                    "arguments": json.dumps({
+                        "direction": "este",
+                    }),
+                },
+            ],
+        ),
+    ]
+    steps = [
+        {
+            "tool_name": "go",
+            "tool_input": json.dumps({
+                "direction": "este",
+            }),
+            "tool_output": "Llegas a Galería central.",
+            "error": None,
+        },
+        {
+            "tool_name": "go",
+            "tool_input": json.dumps({
+                "direction": "este",
+            }),
+            "tool_output": "Llegas a Taller.",
+            "error": None,
+        },
+    ]
+    trial = {
+        "trial_index": 1,
+        "goal_achieved": False,
+        "goal_reason": "pendiente",
+        "attempts": [
+            _attempt(
+                trace=trace,
+                steps=steps,
+            ),
+        ],
+    }
+
+    case = build_qualitative_case(
+        trial,
+        case_id="qc-different-observation",
+    )
+
+    assert case.criteria_applicability["Q1.4"].applicable is False
+    assert case.criteria_applicability["Q1.4"].triggers == []
+
+
+def test_build_qualitative_case_groups_q1_4_signals_by_decision() -> None:
+    trace = [
+        _agent_call(
+            content="Voy a mirar dos veces.",
+            tool_calls=[
+                {
+                    "id": "look-1",
+                    "name": "look",
+                    "arguments": "{}",
+                },
+                {
+                    "id": "look-2",
+                    "name": "look",
+                    "arguments": "{}",
+                },
+            ],
+        ),
+        _agent_call(
+            content="Voy a volver a mirar.",
+            tool_calls=[
+                {
+                    "id": "look-3",
+                    "name": "look",
+                    "arguments": "{}",
+                },
+            ],
+        ),
+    ]
+    steps = [
+        {
+            "tool_name": "look",
+            "tool_input": "{}",
+            "tool_output": "Error: no ves nada útil.",
+            "error": None,
+        },
+        {
+            "tool_name": "look",
+            "tool_input": "{}",
+            "tool_output": "Error: no ves nada útil.",
+            "error": None,
+        },
+        {
+            "tool_name": "look",
+            "tool_input": "{}",
+            "tool_output": "Error: no ves nada útil.",
+            "error": None,
+        },
+    ]
+    trial = {
+        "trial_index": 1,
+        "goal_achieved": False,
+        "goal_reason": "pendiente",
+        "attempts": [
+            _attempt(
+                trace=trace,
+                steps=steps,
+            ),
+        ],
+    }
+
+    case = build_qualitative_case(
+        trial,
+        case_id="qc-grouped-trigger",
+    )
+
+    assert case.criteria_applicability["Q1.4"].triggers == [
+        ApplicabilityTrigger(
+            target_ref="a1.i2",
+            components=[
+                ApplicabilityTriggerComponent(
+                    kind="error_before_later_decision",
+                    evidence_refs=[
+                        "a1.i1.action1",
+                        "a1.i1.action2",
+                    ],
+                ),
+                ApplicabilityTriggerComponent(
+                    kind="consecutive_exact_repetition",
+                    evidence_refs=[
+                        "a1.i1.action2",
+                        "a1.i2.action1",
+                    ],
+                ),
+            ],
+        ),
+    ]
 
 
 def test_build_qualitative_case_preserves_unexecuted_terminal_actions() -> None:
@@ -1415,8 +1836,8 @@ def test_load_dataset_manifest_preserves_dataset_config(
         "population": dataset_config["population"],
         "sampling": dataset_config["sampling"],
     }
-    assert manifest["rubric_version"] == "planning-quality-v2"
-    assert manifest["case_view_version"] == "trajectory-planning-v2"
+    assert manifest["rubric_version"] == "planning-quality-v4"
+    assert manifest["case_view_version"] == "trajectory-planning-v5"
 
 
 def test_create_qualitative_dataset_rejects_existing_dataset(
@@ -1790,6 +2211,11 @@ def test_case_presentation_preserves_canonical_blind_evidence() -> None:
     assert action["execution"]["observation"]["content"] == (
         "Ves una llave."
     )
+    assert data["q1_4_applicability"] == {
+        "applicable": False,
+        "reason": "No hubo feedback adverso explícito.",
+        "triggers": [],
+    }
 
 
 def test_case_presentation_exposes_internal_context_as_evidence() -> None:
@@ -1874,10 +2300,20 @@ def test_case_presentation_exposes_internal_context_as_evidence() -> None:
     )
 
     assert "PLAN" in rendered
-    assert "CONTEXTO RETENIDO" in rendered
+    assert "Plan previo del agente" in rendered
     assert (
-        "Representación interna del sistema; "
-        "no constituye una observación del mundo."
+        "Estrategia previa del agente; "
+        "no es una observación del mundo."
+    ) in rendered
+
+    assert "CONTEXTO REDUCIDO" in rendered
+    assert (
+        "Contexto reducido disponible "
+        "para decisiones posteriores"
+    ) in rendered
+    assert (
+        "Representación reducida de la trayectoria anterior; "
+        "no es una observación del mundo."
     ) in rendered
     assert "a1.i1.plan1" in rendered
     assert "a1.i1.summary1" in rendered
@@ -1889,11 +2325,91 @@ def test_case_presentation_excludes_evaluation_metadata() -> None:
     )
 
     assert "criteria_applicability" not in presentation.text
+    assert "q1_4_applicability" in presentation.text
     assert "goal_achieved" not in presentation.text
     assert "goal_reason" not in presentation.text
     assert "agent_config" not in presentation.text
     assert "llm_config" not in presentation.text
     assert "trial_config" not in presentation.text
+
+
+def test_case_presentation_exposes_q1_4_triggers_to_all_evaluators() -> None:
+    case = _qualitative_case()
+    case.attempts[0].iterations.append(
+        QualitativeIteration(
+            iteration_index=2,
+            assistant_content="Voy a corregir la estrategia.",
+        )
+    )
+    case.criteria_applicability["Q1.4"] = CriterionApplicability(
+        applicable=True,
+        triggers=[
+            ApplicabilityTrigger(
+                target_ref="a1.i2",
+                components=[
+                    ApplicabilityTriggerComponent(
+                        kind="error_before_later_decision",
+                        evidence_refs=[
+                            "a1.i1.action1",
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+
+    presentation = build_case_presentation(
+        case
+    )
+    data = json.loads(
+        presentation.text
+    )
+
+    assert data["q1_4_applicability"] == {
+        "applicable": True,
+        "reason": None,
+        "triggers": [
+            {
+                "target_ref": "a1.i2",
+                "components": [
+                    {
+                        "kind": "error_before_later_decision",
+                        "evidence_refs": [
+                            "a1.i1.action1",
+                        ],
+                    },
+                ],
+            },
+        ],
+    }
+
+
+def test_case_presentation_rejects_unknown_trigger_evidence_ref() -> None:
+    case = _qualitative_case()
+    case.criteria_applicability["Q1.4"] = CriterionApplicability(
+        applicable=True,
+        triggers=[
+            ApplicabilityTrigger(
+                target_ref="a1.i1",
+                components=[
+                    ApplicabilityTriggerComponent(
+                        kind="error_before_later_decision",
+                        evidence_refs=[
+                            "a1.i99.action1",
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="referencia evidencia inexistente",
+    ):
+        build_case_presentation(
+            case
+        )
 
 
 def test_human_annotation_rejects_mismatched_presentation_version() -> None:
@@ -2363,6 +2879,164 @@ def test_annotate_page_case_links_preserve_filters(
     ) in page
 
 
+def test_annotate_page_allows_selecting_existing_dataset(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    other_dataset_config = (
+        _dataset_config_for_persistence()
+    )
+    other_dataset_config["dataset_id"] = (
+        "other-dataset"
+    )
+
+    create_qualitative_dataset(
+        other_dataset_config,
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    (
+        tmp_path / "incomplete-dataset"
+    ).mkdir()
+
+    monkeypatch.setattr(
+        "eval.llm_judge.annotate.RESULTS_DIR",
+        tmp_path,
+    )
+
+    review_cases = load_review_cases(
+        "test-dataset",
+        "annotator-a",
+        results_dir=tmp_path,
+    )
+
+    page = _page_html(
+        dataset_id="test-dataset",
+        annotator_id="annotator-a",
+        split="all",
+        status="all",
+        review_cases=review_cases,
+        review_case=review_cases[0],
+    )
+
+    assert (
+        '<option value="test-dataset" selected>'
+        "test-dataset</option>"
+    ) in page
+    assert (
+        '<option value="other-dataset">'
+        "other-dataset</option>"
+    ) in page
+    assert "incomplete-dataset" not in page
+    assert '<select' in page
+    assert 'name="dataset_id"' in page
+    assert 'class="navigation-control"' in page
+
+
+def test_annotate_without_registered_annotator_has_no_review_case(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    monkeypatch.setattr(
+        "eval.llm_judge.annotate.RESULTS_DIR",
+        tmp_path,
+    )
+
+    assert (
+        _default_annotator_id(
+            "test-dataset"
+        )
+        == ""
+    )
+
+    page = _page_html(
+        dataset_id="test-dataset",
+        annotator_id="",
+        split="all",
+        status="all",
+        review_cases=[],
+        review_case=None,
+    )
+
+    assert "Sin anotadores registrados" in page
+    assert 'id="annotation-form"' not in page
+    assert 'class="review-layout"' not in page
+
+
+def test_annotate_page_allows_selecting_registered_annotator(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    create_annotator(
+        "test-dataset",
+        "test-a",
+        results_dir=tmp_path,
+    )
+    create_annotator(
+        "test-dataset",
+        "test-b",
+        results_dir=tmp_path,
+    )
+
+    monkeypatch.setattr(
+        "eval.llm_judge.annotate.RESULTS_DIR",
+        tmp_path,
+    )
+
+    review_cases = load_review_cases(
+        "test-dataset",
+        "test-b",
+        results_dir=tmp_path,
+    )
+
+    page = _page_html(
+        dataset_id="test-dataset",
+        annotator_id="test-b",
+        split="all",
+        status="all",
+        review_cases=review_cases,
+        review_case=review_cases[0],
+    )
+
+    assert (
+        '<option value="test-a">test-a</option>'
+        in page
+    )
+    assert (
+        '<option value="test-b" selected>'
+        "test-b</option>"
+        in page
+    )
+    assert (
+        '<select\n'
+        '        name="annotator_id"\n'
+        '        class="navigation-control"\n'
+        '      >'
+        in page
+    )
+    assert 'name="new_annotator_id"' in page
+    assert 'list="annotators"' not in page
+
+
 def test_annotate_defaults_to_existing_annotator(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2521,6 +3195,225 @@ def test_annotate_evidence_inputs_belong_to_annotation_form(
         'hidden '
         'form="annotation-form"'
     ) in page
+
+
+def test_annotate_page_exposes_q1_4_trigger_navigation(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    monkeypatch.setattr(
+        "eval.llm_judge.annotate.RESULTS_DIR",
+        tmp_path,
+    )
+
+    case = _qualitative_case()
+    case.attempts[0].iterations.append(
+        QualitativeIteration(
+            iteration_index=2,
+            assistant_content="Voy a corregir la estrategia.",
+        )
+    )
+    case.criteria_applicability["Q1.4"] = CriterionApplicability(
+        applicable=True,
+        triggers=[
+            ApplicabilityTrigger(
+                target_ref="a1.i2",
+                components=[
+                    ApplicabilityTriggerComponent(
+                        kind="error_before_later_decision",
+                        evidence_refs=[
+                            "a1.i1.action1",
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+    review_case = ReviewCase(
+        case=case,
+        split="dev",
+        presentation=build_case_presentation(
+            case
+        ),
+        annotation=None,
+    )
+
+    page = _page_html(
+        dataset_id="test-dataset",
+        annotator_id="annotator-a",
+        split="all",
+        status="all",
+        review_cases=[review_case],
+        review_case=review_case,
+    )
+
+    assert "Disparadores detectados (1)" in page
+    assert "Disparador 1 · 1 error previo" in page
+    assert "Oportunidad de adaptación:</strong> Iter. 2" in page
+    assert "no implican por sí mismos PASS ni FAIL" in page
+    assert 'data-trigger-id="D1"' in page
+    assert 'data-trigger-target="a1.i1.action1"' in page
+    assert "Q1.4 · D1" in page
+    assert 'class="q14-trigger-marker"' in page
+    assert 'criterionId === "Q1.4"' in page
+    assert "scrollIntoView" in page
+    assert 'class="q14-auxiliary q14-detected-triggers"' in page
+    assert 'class="criterion-applicability"' in page
+    assert (
+        'class="criterion-applicability"\n'
+        '          open'
+    ) not in page
+    assert (
+        page.index('class="annotation-actions"')
+        < page.index(
+            'class="q14-auxiliary q14-detected-triggers"'
+        )
+    )
+    assert (
+        'rubricPanel?.classList.toggle('
+        in page
+    )
+
+
+def test_annotate_page_describes_q1_4_repetition_episode(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        _sampled_trials_for_persistence(),
+        results_dir=tmp_path,
+    )
+
+    monkeypatch.setattr(
+        "eval.llm_judge.annotate.RESULTS_DIR",
+        tmp_path,
+    )
+
+    case = _qualitative_case()
+    case.attempts[0].iterations.append(
+        QualitativeIteration(
+            iteration_index=2,
+            actions=[
+                QualitativeAction(
+                    action_id="a1.i2.action1",
+                    proposed_action=ToolCallView(
+                        tool="look",
+                        arguments_raw="{}",
+                        arguments={},
+                    ),
+                    execution=ActionExecution(
+                        action=ToolCallView(
+                            tool="look",
+                            arguments_raw="{}",
+                            arguments={},
+                        ),
+                        differs_from_proposal=False,
+                        observation=ActionObservation(
+                            content="Ves una llave.",
+                        ),
+                    ),
+                ),
+            ],
+        )
+    )
+    case.criteria_applicability["Q1.4"] = CriterionApplicability(
+        applicable=True,
+        triggers=[
+            ApplicabilityTrigger(
+                target_ref="a1.i2",
+                components=[
+                    ApplicabilityTriggerComponent(
+                        kind="consecutive_exact_repetition",
+                        evidence_refs=[
+                            "a1.i1.action1",
+                            "a1.i2.action1",
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+    review_case = ReviewCase(
+        case=case,
+        split="dev",
+        presentation=build_case_presentation(
+            case
+        ),
+        annotation=None,
+    )
+
+    page = _page_html(
+        dataset_id="test-dataset",
+        annotator_id="annotator-a",
+        split="all",
+        status="all",
+        review_cases=[review_case],
+        review_case=review_case,
+    )
+
+    assert "Disparador 1 · Repetición consecutiva" in page
+    assert "Oportunidad de adaptación:</strong> Iter. 2" in page
+    assert "Episodio:</strong> Iter. 1 → 2" in page
+
+
+def test_annotate_page_marks_attempt_continuation_for_q1_4() -> None:
+    case = _qualitative_case()
+    case.attempts.append(
+        QualitativeAttempt(
+            attempt_index=2,
+            user_message=(
+                "El desafío todavía no está completado. Continuá."
+            ),
+            iterations=[
+                QualitativeIteration(
+                    iteration_index=1,
+                    assistant_content="Continúo.",
+                ),
+            ],
+            termination=AttemptTermination(
+                answer="Continúo.",
+            ),
+        )
+    )
+    case.criteria_applicability["Q1.4"] = CriterionApplicability(
+        applicable=True,
+        triggers=[
+            ApplicabilityTrigger(
+                target_ref="a2.i1",
+                components=[
+                    ApplicabilityTriggerComponent(
+                        kind="attempt_continuation",
+                        evidence_refs=[
+                            "a1.termination",
+                            "a2.user_message",
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+    review_case = ReviewCase(
+        case=case,
+        split="dev",
+        presentation=build_case_presentation(
+            case
+        ),
+        annotation=None,
+    )
+
+    rendered = _evidence_cards_html(
+        review_case
+    )
+
+    assert 'id="attempt-2"' in rendered
+    assert "Q1.4 · D1" in rendered
 
 
 def test_annotate_page_exposes_complete_canonical_rubric(
