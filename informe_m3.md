@@ -337,3 +337,122 @@ Cada escenario, definido declarativamente en `scenarios/`, especifica su **estad
 
 Esta infraestructura, provista como parte del framework base, se utilizó sin modificar su lógica para evaluar de manera uniforme todas las configuraciones y experimentos de M3.
 
+---
+
+## 4. Métricas y análisis
+
+Los análisis de M3 operan exclusivamente sobre la evidencia persistida por los runs y se invocan desde `eval/evaluation.py`. El conjunto de análisis aplicados a cada evaluation se configura en `eval/configs/evaluation_configs.py`.
+
+### 4.1 Tasa de éxito (`success_rate`)
+
+La métrica principal de evaluación cuantitativa es `success_rate`, definida en `eval/metrics.py`.
+
+\[
+\text{success rate} =
+\frac{\text{trials exitosos}}
+{\text{trials totales}}
+\]
+
+La unidad de medición es el **trial**: un trial es exitoso si `goal_achieved` es `True` en al menos uno de sus attempts. Los attempts adicionales dentro de un mismo trial no se contabilizan como unidades independientes, ya que comparten el estado del mundo y el agente.
+
+La tasa de éxito se calcula por case (combinación de `agent_config`, `llm_config`, `trial_config`, escenario). Los resultados comparativos entre sistemas se obtienen agregando los trials de todos los cases de un mismo sistema, o agrupando por escenario para identificar casos de dificultad diferenciada.
+
+### 4.2 Análisis de errores
+
+`analyze_errors()` en `eval/analyses/error_analysis.py` clasifica los trials fallidos a partir de la evidencia del último attempt de cada trial.
+
+La taxonomía cubre ocho modos de fallo:
+
+| Modo | Descripción |
+|---|---|
+| `context_overflow` | El historial superó `max_history_messages` y la ejecución terminó por presupuesto de contexto |
+| `max_iterations` | El agente agotó el presupuesto de pasos sin alcanzar el objetivo |
+| `hallucination` | El agente narró tool calls como texto en lugar de ejecutarlas, o declaró éxito cuando el objetivo no se cumplió |
+| `wrong_tool_use` | Algún paso devolvió un error de herramienta |
+| `gave_up_early` | El agente terminó voluntariamente en cuatro pasos o menos sin error |
+| `planning_order` | En escenarios con goal de secuencia, las condiciones se cumplieron en orden incorrecto |
+| `navigation_error` | En escenarios multi-sala, el agente no utilizó la herramienta `go` |
+| `planning_failure` | El agente exploró múltiples pasos sin alcanzar el objetivo (modo residual) |
+
+La clasificación se determina a partir del contenido del `agent_result` del último attempt: error del agente, respuesta final, pasos ejecutados y `goal_reason`. La asignación es secuencial: el primer criterio que se satisface determina el modo. `planning_failure` funciona como categoría residual para los trials que no encajan en ningún modo anterior.
+
+El análisis permite obtener la distribución de fallos por modelo, sistema y escenario, facilitando la identificación de patrones que no resultan visibles únicamente a partir de `success_rate`.
+
+### 4.3 Análisis de reparación de tool calls
+
+`analyze_tool_call_repair()` en `eval/analyses/tool_call_repair_analysis.py` cuantifica la activación del mecanismo de reparación implementado con `tool_call_repair_max_attempts`.
+
+El análisis opera sobre los eventos de traza de tipo `llm_call` con `purpose="tool_call_repair"`. Para cada sistema reporta:
+
+- cantidad de trials en los que se activó al menos una reparación;
+- total de llamadas físicas al LLM destinadas a reparación;
+- respuestas recibidas y errores producidos durante esas llamadas;
+- tokens de entrada y salida consumidos por las llamadas de reparación;
+- cobertura de uso de tokens: si todas las llamadas de reparación devolvieron información de tokens completa.
+
+La identificación de estas llamadas mediante su `purpose` permite separar el consumo introducido por la reparación del correspondiente al loop principal del agente, utilizando únicamente la evidencia persistida durante la ejecución.
+
+### 4.4 Análisis de eficiencia y consumo
+
+`analyze_efficiency()` en `eval/analyses/efficiency_analysis.py` produce un resumen cuantitativo del consumo de recursos por sistema, agrupando por la tripla `(agent_config, llm_config, trial_config)`.
+
+Las métricas agregadas incluyen:
+
+- **por trial**: attempts, retries, llamadas al LLM, ejecuciones de herramientas, steps, tokens de entrada, tokens de salida, tokens totales;
+- **por éxito**: mismas métricas condicionadas a los trials en que se alcanzó el objetivo, para cuantificar el costo efectivo de resolver el escenario.
+
+Las métricas de llamadas al LLM y de tokens se desglosan además por **`purpose`**. Esto permite distinguir el consumo del loop principal del agente (`"agent"`) del introducido por planificación (`"planning"`), reparación de tool calls (`"tool_call_repair"`) y compactación del historial (`"history_compaction"`).
+
+Las ejecuciones de herramientas se desglosan por nombre de herramienta, ordenadas por frecuencia. La comparación entre sistemas con y sin una funcionalidad adicional —como reparación o planificación— puede realizarse sobre estas métricas sin ejecutar nuevamente los modelos.
+
+### 4.5 Análisis de presión de contexto
+
+`analyze_context()` en `eval/analyses/context_analysis.py` caracteriza la relación entre el tamaño del historial y el desempeño del agente, comparando estrategias de gestión de contexto.
+
+El análisis mide las siguientes dimensiones:
+
+**Terminaciones por presupuesto**: trials y attempts que terminaron porque el historial superó `max_history_messages` y no pudo obtenerse una representación que satisficiera el presupuesto. Se reporta en qué attempt_index ocurrió la terminación y cuántas iteraciones ReAct había ejecutado el agente al momento de la terminación.
+
+**Presión estructural**: distribución de la cantidad de tool calls por iteración. Dado que cada iteración agrega al historial al menos un mensaje del assistant y un resultado por cada tool call, las iteraciones con múltiples tool calls ejercen una presión desproporcionada sobre el presupuesto disponible.
+
+**Acciones repetidas intra-trial**: proporción de acciones cuya combinación de herramienta, argumentos y resultado ya había aparecido anteriormente en el mismo trial. La clave de comparación es estructural para argumentos JSON y literal para el resto, con la misma semántica que utiliza el LLM judge en `eval/llm_judge/cases.py`. Un ratio elevado indica que el agente está re-ejecutando acciones sin obtener nueva información.
+
+**Re-derivación entre attempts**: de las acciones ejecutadas a partir del segundo attempt, qué proporción ya había sido ejecutada con el mismo resultado en attempts anteriores del mismo trial. Este indicador refleja si el agente reutiliza el progreso acumulado o vuelve a derivar información ya disponible en el historial.
+
+**Ocupación de la ventana**: máximo de mensajes enviados al LLM en una única llamada y cantidad de llamadas realizadas estando la ventana en su límite máximo.
+
+**Costo del compactor**: cuando está activa una estrategia de compactación, el análisis reporta la cantidad de eventos de compactación, la cantidad de fallos de compactación y los tokens de entrada y salida consumidos por el proceso, distinguibles en la traza por `purpose="history_compaction"`.
+
+Los resultados se agregan por sistema (`agent_config` × `llm_config`) y por case completo, lo que permite comparar directamente el comportamiento de distintas estrategias de contexto ante los mismos escenarios.
+
+### 4.6 Evaluación cualitativa mediante LLM-as-judge
+
+Además de las métricas cuantitativas, M3 incluye una evaluación cualitativa de la calidad de planificación del agente sobre trayectorias seleccionadas. La infraestructura correspondiente se encuentra en `eval/llm_judge/`.
+
+**Rúbrica**
+
+La evaluación utiliza la rúbrica `planning-quality-v1` (definida en `eval/llm_judge/rubric.py`), que cubre una única dimensión:
+
+**Q1 — Calidad de la planificación durante la trayectoria**: evalúa la capacidad del agente para construir y mantener una estrategia orientada al objetivo, fundamentarla en la información obtenida, traducirla en acciones coherentes y revisarla cuando nueva evidencia lo requiere.
+
+La dimensión se evalúa mediante cuatro criterios:
+
+| Criterio | Nombre | Aplicabilidad |
+|---|---|---|
+| Q1.1 | Consistencia factual con la evidencia | Siempre |
+| Q1.2 | Estructuración de subobjetivos y dependencias | Siempre |
+| Q1.3 | Consistencia de la ejecución con la estrategia | Siempre |
+| Q1.4 | Monitoreo y replanificación | Condicional |
+
+Q1.4 es el único criterio condicional: sólo aplica cuando la trayectoria contiene una oportunidad observable de monitorear el resultado de una conducta y, cuando corresponde, revisar el curso de acción. Tres triggers determinísticos activan la evaluabilidad de este criterio: la presencia de más de un attempt en el trial, la existencia de una observación marcada como error —ya sea porque el paso persistido contiene un error o porque el contenido de la observación comienza con `"Error:"`— seguida de una iteración posterior, o la repetición de una acción con idéntica herramienta, argumentos y resultado. Si ninguno de estos triggers está presente, el criterio se registra como N/A porque la trayectoria no permite observar capacidad de replanificación.
+
+Cada criterio se evalúa con un veredicto binario PASS/FAIL. La rúbrica establece reglas de evidencia sobre qué constituye evidencia primaria (las acciones ejecutadas y las observaciones del mundo prevalecen sobre las verbalizaciones del agente), y una regla de materialidad que impide que un error aislado y corregido produzca automáticamente un FAIL.
+
+**Protocolo de evaluación**
+
+Para desacoplar el juicio de la identidad del sistema evaluado, las trayectorias se presentan como **casos ciegos**: la información que permitiría identificar la configuración del agente o el modelo utilizado no se incluye en la presentación.
+
+Los casos se preparan mediante `eval/llm_judge/prepare_dataset.py` y se gestionan a través de las funciones de persistencia en `eval/llm_judge/persistence.py`. La interfaz de revisión, disponible en `eval/llm_judge/reviewer.py`, acompaña la presentación de cada caso con referencias canónicas a la evidencia de la trayectoria necesaria para aplicar la rúbrica de manera consistente.
+
+Las anotaciones se registran por criterio y se distingue entre casos completados (todos los criterios aplicables anotados), en progreso y pendientes.
+
