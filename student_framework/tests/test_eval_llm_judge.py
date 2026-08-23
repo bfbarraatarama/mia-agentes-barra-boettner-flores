@@ -98,6 +98,10 @@ from eval.llm_judge.runner import (
     resume_judge_evaluation,
     start_judge_evaluation,
 )
+from eval.llm_judge.run import (
+    execute_judge_config,
+    main as judge_run_main,
+)
 from eval.llm_judge.comparison import (
     ConfusionMatrix,
     compare_human_and_judge,
@@ -2702,6 +2706,177 @@ def test_judge_evaluation_traces_repairs_and_token_usage(
             "",
         )
         for message in q11_messages
+    )
+
+
+def test_execute_judge_config_starts_when_evaluation_does_not_exist(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    judge_config = {
+        "dataset_id": "test-dataset",
+        "judge_eval_id": "judge-eval-001",
+        "split": "dev",
+        "judge_llm_config": "nova-lite",
+        "max_repair_attempts": 2,
+    }
+    calls = []
+
+    def missing_manifest(
+        dataset_id,
+        judge_eval_id,
+        *,
+        results_dir,
+    ):
+        raise FileNotFoundError
+
+    def fake_start(
+        dataset_id,
+        judge_eval_id,
+        *,
+        split,
+        judge_llm_config,
+        max_repair_attempts,
+        results_dir,
+    ):
+        calls.append({
+            "dataset_id": dataset_id,
+            "judge_eval_id": judge_eval_id,
+            "split": split,
+            "judge_llm_config": judge_llm_config,
+            "max_repair_attempts": max_repair_attempts,
+            "results_dir": results_dir,
+        })
+        return []
+
+    def unexpected_resume(*args, **kwargs):
+        pytest.fail(
+            "No debe reanudarse una evaluación inexistente."
+        )
+
+    monkeypatch.setattr(
+        "eval.llm_judge.run.load_judge_evaluation_manifest",
+        missing_manifest,
+    )
+    monkeypatch.setattr(
+        "eval.llm_judge.run.start_judge_evaluation",
+        fake_start,
+    )
+    monkeypatch.setattr(
+        "eval.llm_judge.run.resume_judge_evaluation",
+        unexpected_resume,
+    )
+
+    result = execute_judge_config(
+        judge_config,
+        results_dir=tmp_path,
+    )
+
+    assert result == {
+        "mode": "start",
+        "predictions": [],
+    }
+    assert calls == [
+        {
+            "dataset_id": "test-dataset",
+            "judge_eval_id": "judge-eval-001",
+            "split": "dev",
+            "judge_llm_config": "nova-lite",
+            "max_repair_attempts": 2,
+            "results_dir": tmp_path,
+        },
+    ]
+
+
+def test_execute_judge_config_resumes_existing_evaluation(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    judge_config = {
+        "dataset_id": "test-dataset",
+        "judge_eval_id": "judge-eval-001",
+        "split": "dev",
+        "judge_llm_config": "nova-lite",
+        "max_repair_attempts": 2,
+    }
+    calls = []
+
+    def existing_manifest(
+        dataset_id,
+        judge_eval_id,
+        *,
+        results_dir,
+    ):
+        return {
+            "dataset_id": dataset_id,
+            "judge_eval_id": judge_eval_id,
+        }
+
+    def unexpected_start(*args, **kwargs):
+        pytest.fail(
+            "No debe iniciarse nuevamente una evaluación existente."
+        )
+
+    def fake_resume(
+        dataset_id,
+        judge_eval_id,
+        *,
+        results_dir,
+    ):
+        calls.append({
+            "dataset_id": dataset_id,
+            "judge_eval_id": judge_eval_id,
+            "results_dir": results_dir,
+        })
+        return []
+
+    monkeypatch.setattr(
+        "eval.llm_judge.run.load_judge_evaluation_manifest",
+        existing_manifest,
+    )
+    monkeypatch.setattr(
+        "eval.llm_judge.run.start_judge_evaluation",
+        unexpected_start,
+    )
+    monkeypatch.setattr(
+        "eval.llm_judge.run.resume_judge_evaluation",
+        fake_resume,
+    )
+
+    result = execute_judge_config(
+        judge_config,
+        results_dir=tmp_path,
+    )
+
+    assert result == {
+        "mode": "resume",
+        "predictions": [],
+    }
+    assert calls == [
+        {
+            "dataset_id": "test-dataset",
+            "judge_eval_id": "judge-eval-001",
+            "results_dir": tmp_path,
+        },
+    ]
+
+
+def test_judge_run_main_requires_explicit_active_config(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys,
+) -> None:
+    monkeypatch.setattr(
+        "eval.llm_judge.run.JUDGE_CONFIG",
+        None,
+    )
+
+    assert judge_run_main() == 1
+
+    captured = capsys.readouterr()
+
+    assert (
+        "No hay una JUDGE_CONFIG activa."
+        in captured.err
     )
 
 
