@@ -18,8 +18,7 @@ from eval.evaluation import start_evaluation
 from eval.persistence import RUNS_DIR, evaluation_dir
 from eval.configs.evaluation_configs import M3_EVALUATION_CONFIG
 from eval.configs.run_configs import (
-    M3_PLANNER_RUN_CONFIG,
-    M3_CONTEXT_COMPARISON_RUN_CONFIG,
+    M3_QUALITATIVE_PILOT_V2_PLANNER_RUN_CONFIG,
 )
 from eval.run_execution import resume_run, start_run
 from eval.report import (
@@ -37,14 +36,13 @@ from eval.analyses.context_analysis import (
     render_markdown as render_context_markdown,
 )
 
-RUN_ID = "m3-planner-run-002"
+RUN_ID = "m3-qualitative-pilot-v2-planner-run-001"
 EVALUATION_RUN_IDS = [
-    "m3-nova-multi-attempt-run-004",
     RUN_ID,
 ]
-EVAL_ID = "m3-planner-comparison-eval-002"
+EVAL_ID = "m3-qualitative-pilot-v2-planner-eval-001"
 
-RUN_CONFIG = M3_PLANNER_RUN_CONFIG
+RUN_CONFIG = M3_QUALITATIVE_PILOT_V2_PLANNER_RUN_CONFIG
 EVALUATION_CONFIG = M3_EVALUATION_CONFIG
 
 

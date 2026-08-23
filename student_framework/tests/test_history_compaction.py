@@ -515,6 +515,18 @@ def test_llm_compactor_tokens_accumulate_in_agent_result():
     ]
     assert len(compaction_calls) == 2
 
+    compaction_events = [
+        event
+        for event in events
+        if event.get("type") == "history_compaction"
+        and event.get("error") is None
+    ]
+    assert len(compaction_events) == 2
+
+    for event in compaction_events:
+        assert "Hechos descubiertos:" in event["summary"]
+        assert event["summary_chars"] == len(event["summary"])
+
     # El resumen estructurado quedó renderizado en el historial.
     assert any(
         "Hechos descubiertos" in (message.get("content") or "")

@@ -96,6 +96,23 @@ def test_planner_run_counts_planning_repair_and_agent_tokens() -> None:
         "agent",
     ]
 
+    planning_events = [
+        event
+        for event in trace_events
+        if event["type"] == "planning"
+    ]
+
+    assert planning_events == [
+        {
+            "type": "planning",
+            "plan": {
+                "steps": [
+                    {"description": "Examinar la puerta"},
+                ],
+            },
+        },
+    ]
+
 
 def test_planner_respects_planning_repair_limit() -> None:
     mock = MockLLMClient([

@@ -9,7 +9,7 @@ from typing import Literal
 CriterionId = Literal["Q1.1", "Q1.2", "Q1.3", "Q1.4"]
 CriterionApplicability = Literal["always", "conditional"]
 
-RUBRIC_VERSION = "planning-quality-v1"
+RUBRIC_VERSION = "planning-quality-v2"
 DIMENSION_ID = "Q1"
 DIMENSION_NAME = "Calidad de la planificación durante la trayectoria"
 DIMENSION_DESCRIPTION = (
@@ -35,9 +35,17 @@ EVIDENCE_RULES = (
         "constituyen la evidencia primaria sobre lo que ocurrió."
     ),
     (
-        "El contenido textual del agente puede aportar evidencia sobre una "
-        "estrategia, subobjetivo o intención expresados, pero no prevalece "
-        "sobre las acciones ni sobre las observaciones del mundo."
+        "El contenido textual del agente y las representaciones internas "
+        "producidas por el sistema, como planes y resúmenes de contexto, "
+        "pueden aportar evidencia sobre la estrategia, los subobjetivos y la "
+        "información disponible para decisiones posteriores. No constituyen "
+        "por sí mismos hechos sobre el mundo ni prevalecen sobre las acciones "
+        "ejecutadas o las observaciones originales."
+    ),
+    (
+        "Una omisión, distorsión o contradicción en una representación "
+        "interna no constituye por sí sola un fallo; es relevante cuando "
+        "afecta materialmente la estrategia o las decisiones posteriores."
     ),
     (
         "No expresar explícitamente un plan no constituye por sí mismo un "

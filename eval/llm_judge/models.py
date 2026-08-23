@@ -10,6 +10,7 @@ from eval.llm_judge.rubric import CRITERION_IDS, CriterionId
 
 
 CaseSplit = Literal["dev", "holdout"]
+InternalContextKind = Literal["plan", "summary"]
 
 
 class _StrictModel(BaseModel):
@@ -50,11 +51,25 @@ class QualitativeAction(_StrictModel):
     execution: ActionExecution | None = None
 
 
+class QualitativeInternalContext(_StrictModel):
+    """Representación interna producida por el sistema durante la trayectoria."""
+
+    context_id: str = Field(min_length=1)
+    kind: InternalContextKind
+    content: str
+
+
 class QualitativeIteration(_StrictModel):
     """Una iteración del agente y las acciones decididas en ella."""
 
     iteration_index: int = Field(ge=1)
+    context_before_decision: list[QualitativeInternalContext] = Field(
+        default_factory=list
+    )
     assistant_content: str | None = None
+    context_after_decision: list[QualitativeInternalContext] = Field(
+        default_factory=list
+    )
     actions: list[QualitativeAction] = Field(default_factory=list)
 
 

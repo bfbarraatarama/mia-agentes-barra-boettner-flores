@@ -13,7 +13,7 @@ from eval.llm_judge.models import (
 from eval.llm_judge.rubric import EVIDENCE_RULES
 
 
-PRESENTATION_VERSION = "planning-evidence-v1"
+PRESENTATION_VERSION = "planning-evidence-v2"
 
 
 @dataclass(frozen=True)
@@ -58,7 +58,28 @@ def build_case_presentation(
             iteration_ref = (
                 f"{attempt_ref}.i{iteration.iteration_index}"
             )
+
+            context_before_decision = []
+
+            for context in iteration.context_before_decision:
+                evidence_refs.append(context.context_id)
+                context_before_decision.append({
+                    "ref": context.context_id,
+                    "kind": context.kind,
+                    "content": context.content,
+                })
+
             evidence_refs.append(iteration_ref)
+
+            context_after_decision = []
+
+            for context in iteration.context_after_decision:
+                evidence_refs.append(context.context_id)
+                context_after_decision.append({
+                    "ref": context.context_id,
+                    "kind": context.kind,
+                    "content": context.content,
+                })
 
             actions = []
 
@@ -98,7 +119,9 @@ def build_case_presentation(
 
             iterations.append({
                 "ref": iteration_ref,
+                "context_before_decision": context_before_decision,
                 "assistant_content": iteration.assistant_content,
+                "context_after_decision": context_after_decision,
                 "actions": actions,
             })
 

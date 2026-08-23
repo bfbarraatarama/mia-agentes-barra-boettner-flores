@@ -609,6 +609,50 @@ def _evidence_cards_html(
     ]
     rendered_refs: list[str] = []
 
+    def append_internal_context(
+        context: dict,
+        *,
+        before_decision: bool,
+    ) -> None:
+        context_ref = str(
+            context.get("ref", "")
+        )
+        kind = context.get("kind")
+        content = context.get("content", "")
+
+        if kind == "plan":
+            label = "PLAN"
+            title = "Plan interno disponible antes de la decisión"
+        else:
+            label = "CONTEXTO RETENIDO"
+            title = (
+                "Representación interna disponible antes de la decisión"
+                if before_decision
+                else (
+                    "Representación interna disponible "
+                    "para decisiones posteriores"
+                )
+            )
+
+        rendered_refs.append(
+            context_ref
+        )
+        parts.append(card(
+            context_ref,
+            "internal-context",
+            label,
+            title,
+            (
+                '<div class="internal-context-note">'
+                "Representación interna del sistema; "
+                "no constituye una observación del mundo."
+                "</div>"
+                '<div class="evidence-text">'
+                + html.escape(str(content))
+                + "</div>"
+            ),
+        ))
+
     for attempt in data.get(
         "attempts",
         [],
@@ -664,6 +708,16 @@ def _evidence_cards_html(
                     f"i{iteration_index}"
                 )
             )
+
+            for context in iteration.get(
+                "context_before_decision",
+                [],
+            ):
+                append_internal_context(
+                    context,
+                    before_decision=True,
+                )
+
             rendered_refs.append(
                 iteration_ref
             )
@@ -690,6 +744,15 @@ def _evidence_cards_html(
                 f"Iteración {iteration_index}",
                 iteration_body,
             ))
+
+            for context in iteration.get(
+                "context_after_decision",
+                [],
+            ):
+                append_internal_context(
+                    context,
+                    before_decision=False,
+                )
 
             for action_index, action in enumerate(
                 iteration.get(
@@ -1314,6 +1377,11 @@ header h1 {{
   border-left-color: #4b86b4;
 }}
 
+.evidence-internal-context {{
+  background: #f3f3f3;
+  border-left-color: #777;
+}}
+
 .evidence-iteration {{
   background: #fff8e8;
   border-left-color: #c58a24;
@@ -1374,6 +1442,13 @@ header h1 {{
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   line-height: 1.4;
+}}
+
+.internal-context-note {{
+  margin-bottom: .45rem;
+  color: #666;
+  font-size: .8rem;
+  font-style: italic;
 }}
 
 .evidence-body > div {{

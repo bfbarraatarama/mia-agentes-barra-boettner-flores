@@ -261,6 +261,7 @@ class MyAgent:
             self._trace_callback({
                 "type": "history_compaction",
                 "evicted_messages": len(evicted),
+                "summary": summary,
                 "summary_chars": len(summary),
             })
 

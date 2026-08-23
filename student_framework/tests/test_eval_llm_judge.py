@@ -12,6 +12,7 @@ from eval.llm_judge.models import (
     QualitativeAction,
     QualitativeAttempt,
     QualitativeCase,
+    QualitativeInternalContext,
     QualitativeIteration,
     ToolCallView,
     ActionExecution,
@@ -75,10 +76,12 @@ from eval.llm_judge.presentation import (
     build_case_presentation,
 )
 from eval.llm_judge.reviewer import (
+    ReviewCase,
     load_review_cases,
 )
 from eval.llm_judge.annotate import (
     _annotation_from_form,
+    _evidence_cards_html,
     _load_selected_cases,
     _page_html,
     _selected_case,
@@ -87,8 +90,8 @@ from eval.llm_judge.annotate import (
 
 def _qualitative_case() -> QualitativeCase:
     return QualitativeCase(
-        schema_version=1,
-        case_view_version="trajectory-planning-v1",
+        schema_version=2,
+        case_view_version="trajectory-planning-v2",
         case_id="qc-001",
         task="Abrí la puerta principal.",
         criteria_applicability={
@@ -152,10 +155,10 @@ def _human_annotation() -> HumanAnnotation:
 
     return HumanAnnotation(
         schema_version=HUMAN_ANNOTATION_SCHEMA_VERSION,
-        case_schema_version=1,
-        case_view_version="trajectory-planning-v1",
+        case_schema_version=2,
+        case_view_version="trajectory-planning-v2",
         presentation_version=PRESENTATION_VERSION,
-        rubric_version="planning-quality-v1",
+        rubric_version="planning-quality-v2",
         case_id="qc-001",
         annotator_id="annotator-a",
         criteria={
@@ -350,7 +353,7 @@ def _dataset_config_for_persistence() -> dict:
 
 
 def test_llm_judge_rubric_defines_planning_quality_criteria() -> None:
-    assert RUBRIC_VERSION == "planning-quality-v1"
+    assert RUBRIC_VERSION == "planning-quality-v2"
     assert DIMENSION_ID == "Q1"
     assert CRITERION_IDS == (
         "Q1.1",
@@ -528,6 +531,159 @@ def test_build_qualitative_case_preserves_iteration_boundaries() -> None:
     ] == ["go", "look"]
     assert case.attempts[0].iterations[1].assistant_content == "Terminé."
     assert case.attempts[0].iterations[1].actions == []
+
+
+def test_build_qualitative_case_preserves_internal_context_temporally() -> None:
+    first_summary = (
+        "Hechos descubiertos:\n"
+        "- La puerta requiere una llave."
+    )
+    continuation_summary = (
+        "Subobjetivos pendientes:\n"
+        "- Encontrar la llave."
+    )
+    unused_summary = "Este resumen ya no puede afectar otra decisión."
+
+    first_attempt_trace = [
+        {
+            "type": "llm_call",
+            "purpose": "planning",
+            "retry_index": 0,
+            "messages": [],
+            "response": {
+                "content": None,
+                "tool_calls": [],
+            },
+        },
+        {
+            "type": "planning",
+            "plan": {
+                "steps": [
+                    {"description": "Examinar la puerta"},
+                    {"description": "Encontrar la llave"},
+                ],
+            },
+        },
+        _agent_call(
+            content="Primero examino la puerta.",
+            tool_calls=[
+                {
+                    "id": "examine-1",
+                    "name": "examine",
+                    "arguments": json.dumps({"target": "puerta"}),
+                },
+            ],
+        ),
+        {
+            "type": "history_compaction",
+            "evicted_messages": 4,
+            "summary": first_summary,
+            "summary_chars": len(first_summary),
+        },
+        {
+            "type": "tool_execution",
+            "retry_index": 0,
+            "tool_name": "examine",
+            "arguments": {"target": "puerta"},
+            "output": "La puerta está cerrada.",
+        },
+        _agent_call(
+            content="Todavía no terminé.",
+        ),
+        {
+            "type": "history_compaction",
+            "evicted_messages": 3,
+            "summary": continuation_summary,
+            "summary_chars": len(continuation_summary),
+        },
+    ]
+    first_attempt_steps = [
+        {
+            "tool_name": "examine",
+            "tool_input": json.dumps({"target": "puerta"}),
+            "tool_output": "La puerta está cerrada.",
+            "error": None,
+        },
+    ]
+    second_attempt_trace = [
+        _agent_call(
+            content="Continúo buscando la llave.",
+        ),
+        {
+            "type": "history_compaction",
+            "evicted_messages": 3,
+            "summary": unused_summary,
+            "summary_chars": len(unused_summary),
+        },
+    ]
+    trial = {
+        "trial_index": 1,
+        "goal_achieved": False,
+        "goal_reason": "pendiente",
+        "attempts": [
+            _attempt(
+                attempt_index=1,
+                trace=first_attempt_trace,
+                steps=first_attempt_steps,
+                answer="Todavía no terminé.",
+            ),
+            _attempt(
+                attempt_index=2,
+                user_message=(
+                    "El desafío todavía no está completado. Continuá."
+                ),
+                trace=second_attempt_trace,
+                answer="Continúo buscando la llave.",
+            ),
+        ],
+    }
+
+    case = build_qualitative_case(
+        trial,
+        case_id="qc-internal-context",
+    )
+
+    first_iteration = case.attempts[0].iterations[0]
+    final_first_attempt_iteration = case.attempts[0].iterations[1]
+    second_attempt_iteration = case.attempts[1].iterations[0]
+
+    assert [
+        context.model_dump()
+        for context in first_iteration.context_before_decision
+    ] == [
+        {
+            "context_id": "a1.i1.plan1",
+            "kind": "plan",
+            "content": (
+                "1. Examinar la puerta\n"
+                "2. Encontrar la llave"
+            ),
+        },
+    ]
+    assert [
+        context.model_dump()
+        for context in first_iteration.context_after_decision
+    ] == [
+        {
+            "context_id": "a1.i1.summary1",
+            "kind": "summary",
+            "content": first_summary,
+        },
+    ]
+    assert [
+        context.model_dump()
+        for context in (
+            final_first_attempt_iteration.context_after_decision
+        )
+    ] == [
+        {
+            "context_id": "a1.i2.summary1",
+            "kind": "summary",
+            "content": continuation_summary,
+        },
+    ]
+    assert second_attempt_iteration.context_before_decision == []
+    assert second_attempt_iteration.context_after_decision == []
 
 
 def test_build_qualitative_case_distinguishes_repaired_action() -> None:
@@ -1259,8 +1415,8 @@ def test_load_dataset_manifest_preserves_dataset_config(
         "population": dataset_config["population"],
         "sampling": dataset_config["sampling"],
     }
-    assert manifest["rubric_version"] == "planning-quality-v1"
-    assert manifest["case_view_version"] == "trajectory-planning-v1"
+    assert manifest["rubric_version"] == "planning-quality-v2"
+    assert manifest["case_view_version"] == "trajectory-planning-v2"
 
 
 def test_create_qualitative_dataset_rejects_existing_dataset(
@@ -1634,6 +1790,97 @@ def test_case_presentation_preserves_canonical_blind_evidence() -> None:
     assert action["execution"]["observation"]["content"] == (
         "Ves una llave."
     )
+
+
+def test_case_presentation_exposes_internal_context_as_evidence() -> None:
+    case = _qualitative_case()
+    first_iteration = case.attempts[0].iterations[0]
+
+    first_iteration.context_before_decision = [
+        QualitativeInternalContext(
+            context_id="a1.i1.plan1",
+            kind="plan",
+            content=(
+                "1. Examinar la puerta\n"
+                "2. Encontrar la llave"
+            ),
+        ),
+    ]
+    first_iteration.context_after_decision = [
+        QualitativeInternalContext(
+            context_id="a1.i1.summary1",
+            kind="summary",
+            content=(
+                "Hechos descubiertos:\n"
+                "- La puerta requiere una llave."
+            ),
+        ),
+    ]
+    case.attempts[0].iterations.append(
+        QualitativeIteration(
+            iteration_index=2,
+            assistant_content="Ahora voy a buscar la llave.",
+        )
+    )
+
+    presentation = build_case_presentation(
+        case
+    )
+
+    assert presentation.evidence_refs == (
+        "a1.user_message",
+        "a1.i1.plan1",
+        "a1.i1",
+        "a1.i1.summary1",
+        "a1.i1.action1",
+        "a1.i2",
+        "a1.termination",
+    )
+
+    data = json.loads(presentation.text)
+    first_iteration_data = data["attempts"][0][
+        "iterations"
+    ][0]
+
+    assert first_iteration_data["context_before_decision"] == [
+        {
+            "ref": "a1.i1.plan1",
+            "kind": "plan",
+            "content": (
+                "1. Examinar la puerta\n"
+                "2. Encontrar la llave"
+            ),
+        },
+    ]
+    assert first_iteration_data["context_after_decision"] == [
+        {
+            "ref": "a1.i1.summary1",
+            "kind": "summary",
+            "content": (
+                "Hechos descubiertos:\n"
+                "- La puerta requiere una llave."
+            ),
+        },
+    ]
+
+    review_case = ReviewCase(
+        case=case,
+        split="dev",
+        presentation=presentation,
+        annotation=None,
+    )
+    rendered = _evidence_cards_html(
+        review_case
+    )
+
+    assert "PLAN" in rendered
+    assert "CONTEXTO RETENIDO" in rendered
+    assert (
+        "Representación interna del sistema; "
+        "no constituye una observación del mundo."
+    ) in rendered
+    assert "a1.i1.plan1" in rendered
+    assert "a1.i1.summary1" in rendered
 
 
 def test_case_presentation_excludes_evaluation_metadata() -> None:
