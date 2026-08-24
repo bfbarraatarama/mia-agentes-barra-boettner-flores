@@ -266,3 +266,39 @@ M3_LLM_JUDGE_SMOKE_SUMMARY_RUN_CONFIG: dict[str, Any] = {
     ],
     "trials_per_case": 2,
 }
+
+
+M3_FINAL_RUN_CONFIG: dict[str, Any] = {
+    "systems": [
+        {
+            "agent_config": "baseline",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "planner",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "summary",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "planner_summary",
+            "llm_config": "nova-lite",
+        },
+    ],
+    "trial_configs": [
+        "multi_attempt",
+    ],
+    "scenarios": [
+        "study-with-key",
+        "color-locks",
+        "apartment-keys",
+        "library-search",
+        "office-sequence",
+        "extreme-archive",
+        "vault-combination",
+        "backtracking-vault",
+    ],
+    "trials_per_case": 10,
+}
