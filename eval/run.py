@@ -18,9 +18,7 @@ from eval.evaluation import start_evaluation
 from eval.persistence import RUNS_DIR, evaluation_dir
 from eval.configs.evaluation_configs import M3_EVALUATION_CONFIG
 from eval.configs.run_configs import (
-    M3_QUALITATIVE_PILOT_V2_COMPACTION_RUN_CONFIG,
-    M3_QUALITATIVE_PILOT_V2_PLANNER_RUN_CONFIG,
-    M3_QUALITATIVE_PILOT_V2_SUMMARY_RUN_CONFIG,
+    M3_LLM_JUDGE_SMOKE_SUMMARY_RUN_CONFIG,
 )
 from eval.run_execution import resume_run, start_run
 from eval.report import (
@@ -40,16 +38,8 @@ from eval.analyses.context_analysis import (
 
 RUNS = [
     (
-        "m3-qualitative-pilot-v2-planner-run-001",
-        M3_QUALITATIVE_PILOT_V2_PLANNER_RUN_CONFIG,
-    ),
-    (
-        "m3-qualitative-pilot-v2-compaction-run-001",
-        M3_QUALITATIVE_PILOT_V2_COMPACTION_RUN_CONFIG,
-    ),
-    (
-        "m3-qualitative-pilot-v2-summary-run-001",
-        M3_QUALITATIVE_PILOT_V2_SUMMARY_RUN_CONFIG,
+        "m3-llm-judge-smoke-summary-run-001",
+        M3_LLM_JUDGE_SMOKE_SUMMARY_RUN_CONFIG,
     ),
 ]
 
@@ -57,7 +47,7 @@ EVALUATION_RUN_IDS = [
     run_id
     for run_id, _ in RUNS
 ]
-EVAL_ID = "m3-qualitative-pilot-v2-eval-001"
+EVAL_ID = "m3-llm-judge-smoke-summary-eval-001"
 
 EVALUATION_CONFIG = M3_EVALUATION_CONFIG
 

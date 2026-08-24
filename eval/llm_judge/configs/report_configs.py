@@ -29,4 +29,32 @@ from typing import Any
 # }
 #
 # REPORT_CONFIG = M3_..._REPORT_CONFIG
-REPORT_CONFIG: dict[str, Any] | None = None
+M3_LLM_JUDGE_SMOKE_DEV_REPORT_CONFIG: dict[str, Any] = {
+    "report_id": "m3-llm-judge-smoke-dev-001",
+    "status": {
+        "dataset_id": "qualitative-llm-judge-smoke-v1",
+        "judge_eval_id": "m3-llm-judge-smoke-dev-001",
+    },
+    "judge_agreement": {
+        "dataset_id": "qualitative-llm-judge-smoke-v1",
+        "judge_eval_id": "m3-llm-judge-smoke-dev-001",
+        "annotator_id": "bruno",
+    },
+}
+
+
+M3_LLM_JUDGE_SMOKE_HOLDOUT_REPORT_CONFIG: dict[str, Any] = {
+    "report_id": "m3-llm-judge-smoke-holdout-001",
+    "status": {
+        "dataset_id": "qualitative-llm-judge-smoke-v1",
+        "judge_eval_id": "m3-llm-judge-smoke-holdout-001",
+    },
+    "judge_agreement": {
+        "dataset_id": "qualitative-llm-judge-smoke-v1",
+        "judge_eval_id": "m3-llm-judge-smoke-holdout-001",
+        "annotator_id": "bruno",
+    },
+}
+
+
+REPORT_CONFIG = M3_LLM_JUDGE_SMOKE_DEV_REPORT_CONFIG

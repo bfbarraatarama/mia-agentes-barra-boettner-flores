@@ -249,3 +249,20 @@ M3_QUALITATIVE_PILOT_V2_SUMMARY_RUN_CONFIG: dict[str, Any] = {
     ],
     "trials_per_case": 3,
 }
+
+
+M3_LLM_JUDGE_SMOKE_SUMMARY_RUN_CONFIG: dict[str, Any] = {
+    "systems": [
+        {
+            "agent_config": "minimal_summary",
+            "llm_config": "nova-lite",
+        },
+    ],
+    "trial_configs": [
+        "multi_attempt",
+    ],
+    "scenarios": [
+        "office-sequence",
+    ],
+    "trials_per_case": 2,
+}

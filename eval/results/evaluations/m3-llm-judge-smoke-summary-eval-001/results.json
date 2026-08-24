@@ -1,0 +1,271 @@
+{
+  "eval_id": "m3-llm-judge-smoke-summary-eval-001",
+  "run_ids": [
+    "m3-llm-judge-smoke-summary-run-001"
+  ],
+  "results": [
+    {
+      "agent_config": "minimal_summary",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt",
+      "scenario": "office-sequence",
+      "source_run_ids": [
+        "m3-llm-judge-smoke-summary-run-001"
+      ],
+      "trial_count": 2,
+      "metrics": {
+        "success_rate": 1.0
+      }
+    }
+  ],
+  "analyses": {
+    "error_analysis": {
+      "run_ids": [
+        "m3-llm-judge-smoke-summary-run-001"
+      ],
+      "total_trials": 2,
+      "successes": 2,
+      "failures": 0,
+      "success_rate": 1.0,
+      "coverage": "0/0 trials fallidos clasificados",
+      "failures_by_mode": {},
+      "failures_by_model": {},
+      "failures_by_system": {},
+      "failures_by_scenario": {},
+      "examples_by_mode": {},
+      "all_failures": [],
+      "run_id": "m3-llm-judge-smoke-summary-run-001"
+    },
+    "tool_call_repair_analysis": {
+      "run_ids": [
+        "m3-llm-judge-smoke-summary-run-001"
+      ],
+      "total_trials": 2,
+      "trials_with_repair": 0,
+      "repair_llm_calls": 0,
+      "repair_llm_responses": 0,
+      "repair_llm_errors": 0,
+      "repair_llm_calls_with_token_usage": 0,
+      "repair_llm_calls_without_token_usage": 0,
+      "repair_input_tokens": 0,
+      "repair_output_tokens": 0,
+      "token_usage_complete": true,
+      "systems": {
+        "minimal_summary": {
+          "nova-lite": {
+            "trials": 2,
+            "trials_with_repair": 0,
+            "repair_llm_calls": 0,
+            "repair_llm_responses": 0,
+            "repair_llm_errors": 0,
+            "repair_llm_calls_with_token_usage": 0,
+            "repair_llm_calls_without_token_usage": 0,
+            "repair_input_tokens": 0,
+            "repair_output_tokens": 0,
+            "token_usage_complete": true
+          }
+        }
+      },
+      "run_id": "m3-llm-judge-smoke-summary-run-001"
+    },
+    "efficiency_analysis": {
+      "run_ids": [
+        "m3-llm-judge-smoke-summary-run-001"
+      ],
+      "systems": {
+        "minimal_summary / nova-lite / multi_attempt": {
+          "agent_config": "minimal_summary",
+          "llm_config": "nova-lite",
+          "trial_config": "multi_attempt",
+          "by_scenario": {
+            "office-sequence": {
+              "trials": 2,
+              "successful_trials": 2,
+              "success_rate": 1.0,
+              "attempts_per_trial": 1.0,
+              "attempts_per_success": 1.0,
+              "retries_per_trial": 0.0,
+              "llm_calls_per_trial": 40.0,
+              "tool_executions_per_trial": 41.0,
+              "steps_per_trial": 41.0,
+              "input_tokens_per_trial": 121215.5,
+              "output_tokens_per_trial": 1989.5,
+              "total_tokens_per_trial": 123205.0,
+              "llm_calls_per_success": 40.0,
+              "tool_executions_per_success": 41.0,
+              "steps_per_success": 41.0,
+              "total_tokens_per_success": 123205.0,
+              "by_purpose": {
+                "agent": {
+                  "llm_calls_per_trial": 40.0,
+                  "input_tokens_per_trial": 121215.5,
+                  "output_tokens_per_trial": 1989.5,
+                  "total_tokens_per_trial": 123205.0
+                }
+              },
+              "by_tool": {
+                "go": 18.0,
+                "look": 13.5,
+                "take": 4.5,
+                "examine": 2.5,
+                "use": 2.5
+              }
+            }
+          },
+          "global": {
+            "trials": 2,
+            "successful_trials": 2,
+            "success_rate": 1.0,
+            "attempts_per_trial": 1.0,
+            "attempts_per_success": 1.0,
+            "retries_per_trial": 0.0,
+            "llm_calls_per_trial": 40.0,
+            "tool_executions_per_trial": 41.0,
+            "steps_per_trial": 41.0,
+            "input_tokens_per_trial": 121215.5,
+            "output_tokens_per_trial": 1989.5,
+            "total_tokens_per_trial": 123205.0,
+            "llm_calls_per_success": 40.0,
+            "tool_executions_per_success": 41.0,
+            "steps_per_success": 41.0,
+            "total_tokens_per_success": 123205.0,
+            "by_purpose": {
+              "agent": {
+                "llm_calls_per_trial": 40.0,
+                "input_tokens_per_trial": 121215.5,
+                "output_tokens_per_trial": 1989.5,
+                "total_tokens_per_trial": 123205.0
+              }
+            },
+            "by_tool": {
+              "go": 18.0,
+              "look": 13.5,
+              "take": 4.5,
+              "examine": 2.5,
+              "use": 2.5
+            }
+          }
+        }
+      }
+    },
+    "context_analysis": {
+      "run_ids": [
+        "m3-llm-judge-smoke-summary-run-001"
+      ],
+      "totals": {
+        "trials": 2,
+        "attempts": 2,
+        "budget_terminated_trials": 0,
+        "budget_terminated_attempts": 0,
+        "budget_termination_by_attempt_index": {},
+        "iterations_at_budget_termination": {
+          "min": null,
+          "mean": null,
+          "max": null
+        },
+        "tool_calls_per_iteration": {
+          "1": 78,
+          "2": 2
+        },
+        "max_messages_seen": 80,
+        "llm_calls_at_window_limit": 0,
+        "agent_llm_calls": 80,
+        "total_actions": 82,
+        "repeated_actions": 35,
+        "trials_with_repetition": 2,
+        "cross_attempt_actions": 0,
+        "cross_attempt_repeated": 0,
+        "input_tokens": 242431,
+        "output_tokens": 3979,
+        "compaction_events": 0,
+        "compaction_failures": 0,
+        "compaction_llm_calls": 0,
+        "compaction_input_tokens": 0,
+        "compaction_output_tokens": 0,
+        "repeated_action_ratio": 0.4268,
+        "cross_attempt_repeated_ratio": null
+      },
+      "systems": {
+        "minimal_summary": {
+          "nova-lite": {
+            "trials": 2,
+            "attempts": 2,
+            "budget_terminated_trials": 0,
+            "budget_terminated_attempts": 0,
+            "budget_termination_by_attempt_index": {},
+            "iterations_at_budget_termination": {
+              "min": null,
+              "mean": null,
+              "max": null
+            },
+            "tool_calls_per_iteration": {
+              "1": 78,
+              "2": 2
+            },
+            "max_messages_seen": 80,
+            "llm_calls_at_window_limit": 0,
+            "agent_llm_calls": 80,
+            "total_actions": 82,
+            "repeated_actions": 35,
+            "trials_with_repetition": 2,
+            "cross_attempt_actions": 0,
+            "cross_attempt_repeated": 0,
+            "input_tokens": 242431,
+            "output_tokens": 3979,
+            "compaction_events": 0,
+            "compaction_failures": 0,
+            "compaction_llm_calls": 0,
+            "compaction_input_tokens": 0,
+            "compaction_output_tokens": 0,
+            "max_history_messages": 100,
+            "repeated_action_ratio": 0.4268,
+            "cross_attempt_repeated_ratio": null
+          }
+        }
+      },
+      "cases": [
+        {
+          "agent_config": "minimal_summary",
+          "llm_config": "nova-lite",
+          "trial_config": "multi_attempt",
+          "scenario": "office-sequence",
+          "stats": {
+            "trials": 2,
+            "attempts": 2,
+            "budget_terminated_trials": 0,
+            "budget_terminated_attempts": 0,
+            "budget_termination_by_attempt_index": {},
+            "iterations_at_budget_termination": {
+              "min": null,
+              "mean": null,
+              "max": null
+            },
+            "tool_calls_per_iteration": {
+              "1": 78,
+              "2": 2
+            },
+            "max_messages_seen": 80,
+            "llm_calls_at_window_limit": 0,
+            "agent_llm_calls": 80,
+            "total_actions": 82,
+            "repeated_actions": 35,
+            "trials_with_repetition": 2,
+            "cross_attempt_actions": 0,
+            "cross_attempt_repeated": 0,
+            "input_tokens": 242431,
+            "output_tokens": 3979,
+            "compaction_events": 0,
+            "compaction_failures": 0,
+            "compaction_llm_calls": 0,
+            "compaction_input_tokens": 0,
+            "compaction_output_tokens": 0,
+            "max_history_messages": 100,
+            "repeated_action_ratio": 0.4268,
+            "cross_attempt_repeated_ratio": null
+          }
+        }
+      ],
+      "run_id": "m3-llm-judge-smoke-summary-run-001"
+    }
+  }
+}

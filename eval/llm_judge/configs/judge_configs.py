@@ -19,4 +19,13 @@ from typing import Any
 # }
 #
 # JUDGE_CONFIG = M3_..._JUDGE_CONFIG
-JUDGE_CONFIG: dict[str, Any] | None = None
+M3_LLM_JUDGE_SMOKE_HOLDOUT_CONFIG: dict[str, Any] = {
+    "dataset_id": "qualitative-llm-judge-smoke-v1",
+    "judge_eval_id": "m3-llm-judge-smoke-holdout-001",
+    "split": "holdout",
+    "judge_llm_config": "nova-pro",
+    "max_repair_attempts": 2,
+}
+
+
+JUDGE_CONFIG = M3_LLM_JUDGE_SMOKE_HOLDOUT_CONFIG

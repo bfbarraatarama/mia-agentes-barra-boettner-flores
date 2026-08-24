@@ -121,6 +121,7 @@ from eval.llm_judge.report import (
 from eval.llm_judge.report_run import (
     execute_report_config,
     main as judge_report_main,
+    render_judge_agreement_details,
 )
 from mia_agents.testing.mock_llm import MockLLMClient
 from mia_agents.tool_schema import FINAL_RESULT_TOOL_NAME
@@ -4102,6 +4103,10 @@ def test_execute_report_config_renders_selected_sections(
         ),
     )
     monkeypatch.setattr(
+        "eval.llm_judge.report_run.render_judge_agreement_details",
+        lambda *args, **kwargs: "DETALLE",
+    )
+    monkeypatch.setattr(
         "eval.llm_judge.report_run.render_human_agreement_report",
         lambda received: (
             "HUMANOS"
@@ -4118,6 +4123,7 @@ def test_execute_report_config_renders_selected_sections(
     assert rendered == (
         "ESTADO\n\n"
         "JUDGE\n\n"
+        "DETALLE\n\n"
         "HUMANOS"
     )
     assert calls == [
@@ -4156,6 +4162,135 @@ def test_execute_report_config_requires_at_least_one_section(
             {},
             results_dir=tmp_path,
         )
+
+
+def test_render_judge_agreement_details_exposes_decisions(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def item(**kwargs):
+        return type(
+            "ReportItem",
+            (),
+            kwargs,
+        )()
+
+    human_annotation = item(
+        case_id="qc-001",
+        criteria={
+            "Q1.1": item(
+                verdict="PASS",
+                reason="La representación factual se mantuvo consistente.",
+                evidence_refs=[
+                    "a1.i1.action1",
+                ],
+            ),
+            "Q1.2": item(
+                verdict="FAIL",
+                reason="Se abandonó un prerrequisito material.",
+                evidence_refs=[
+                    "a1.i2.action1",
+                ],
+            ),
+        },
+    )
+    judge_prediction = item(
+        case_id="qc-001",
+        criteria={
+            "Q1.1": item(
+                verdict="PASS",
+                reason="No se observa una contradicción material.",
+                evidence_refs=[
+                    "a1.i1.action1",
+                ],
+            ),
+            "Q1.2": item(
+                verdict="PASS",
+                reason="Los subobjetivos se mantuvieron razonablemente.",
+                evidence_refs=[
+                    "a1.i2.action1",
+                ],
+            ),
+        },
+    )
+
+    monkeypatch.setattr(
+        "eval.llm_judge.report_run.load_human_annotations",
+        lambda dataset_id, annotator_id, *, results_dir: [
+            human_annotation
+        ],
+    )
+    monkeypatch.setattr(
+        "eval.llm_judge.report_run.load_judge_case_predictions",
+        lambda dataset_id, judge_eval_id, *, results_dir: [
+            judge_prediction
+        ],
+    )
+
+    rendered = render_judge_agreement_details(
+        "test-dataset",
+        "judge-eval-001",
+        "annotator-a",
+        results_dir=tmp_path,
+    )
+
+    assert "## Detalle por caso y criterio" in rendered
+    assert "### qc-001" in rendered
+    assert "#### Q1.1" in rendered
+    assert "- Acuerdo: SÍ" in rendered
+    assert "#### Q1.2" in rendered
+    assert "- Acuerdo: NO" in rendered
+    assert "- Humano: `FAIL`" in rendered
+    assert "- LLM judge: `PASS`" in rendered
+    assert "Se abandonó un prerrequisito material." in rendered
+    assert "Los subobjetivos se mantuvieron razonablemente." in rendered
+    assert "`a1.i2.action1`" in rendered
+
+
+def test_judge_report_main_persists_rendered_report(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys,
+) -> None:
+    report_config = {
+        "report_id": "judge-report-001",
+        "judge_agreement": {
+            "dataset_id": "test-dataset",
+            "judge_eval_id": "judge-eval-001",
+            "annotator_id": "annotator-a",
+        },
+    }
+
+    monkeypatch.setattr(
+        "eval.llm_judge.report_run.REPORT_CONFIG",
+        report_config,
+    )
+    monkeypatch.setattr(
+        "eval.llm_judge.report_run.RESULTS_DIR",
+        tmp_path,
+    )
+    monkeypatch.setattr(
+        "eval.llm_judge.report_run.execute_report_config",
+        lambda config: "REPORTE HUMANO ↔ JUDGE",
+    )
+
+    assert judge_report_main() == 0
+
+    report_path = (
+        tmp_path
+        / "test-dataset"
+        / "reports"
+        / "judge-report-001.md"
+    )
+
+    assert report_path.read_text(
+        encoding="utf-8",
+    ) == "REPORTE HUMANO ↔ JUDGE\n"
+
+    captured = capsys.readouterr()
+
+    assert "REPORTE HUMANO ↔ JUDGE" in captured.out
+    assert str(report_path) in captured.out
 
 
 def test_judge_report_main_requires_explicit_active_config(
