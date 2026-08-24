@@ -12,6 +12,55 @@ from student_framework.planner_agent import (
 )
 
 
+BASE_AGENT_CONFIG: dict[str, Any] = {
+    "system_prompt": ESCAPE_ROOM_MINIMAL_SYSTEM_PROMPT,
+    "register_default_tools": False,
+    "max_iterations": 40,
+}
+
+
+BASELINE_AGENT_CONFIG: dict[str, Any] = {
+    **BASE_AGENT_CONFIG,
+    "max_history_messages": 100,
+    "tool_call_repair_max_attempts": 0,
+}
+
+
+PLANNER_AGENT_CONFIG: dict[str, Any] = {
+    **BASE_AGENT_CONFIG,
+    "max_history_messages": 100,
+    "tool_call_repair_max_attempts": 3,
+    "use_planner": True,
+    "planning_prompt": DEFAULT_PLANNING_PROMPT,
+    "plan_guidance": DEFAULT_PLAN_GUIDANCE,
+    "planning_repair_max_attempts": DEFAULT_PLANNING_REPAIR_MAX_ATTEMPTS,
+}
+
+
+SUMMARY_AGENT_CONFIG: dict[str, Any] = {
+    **BASE_AGENT_CONFIG,
+    "max_history_messages": 20,
+    "tool_call_repair_max_attempts": 3,
+    "history_compaction": "llm",
+    "compaction_keep_recent_rounds": 2,
+    "history_compaction_repair_max_attempts": 1,
+}
+
+
+PLANNER_SUMMARY_AGENT_CONFIG: dict[str, Any] = {
+    **BASE_AGENT_CONFIG,
+    "max_history_messages": 20,
+    "tool_call_repair_max_attempts": 3,
+    "use_planner": True,
+    "planning_prompt": DEFAULT_PLANNING_PROMPT,
+    "plan_guidance": DEFAULT_PLAN_GUIDANCE,
+    "planning_repair_max_attempts": DEFAULT_PLANNING_REPAIR_MAX_ATTEMPTS,
+    "history_compaction": "llm",
+    "compaction_keep_recent_rounds": 2,
+    "history_compaction_repair_max_attempts": 1,
+}
+
+
 MINIMAL_AGENT_CONFIG: dict[str, Any] = {
     "system_prompt": ESCAPE_ROOM_MINIMAL_SYSTEM_PROMPT,
     "register_default_tools": False,
@@ -24,14 +73,6 @@ MINIMAL_AGENT_CONFIG: dict[str, Any] = {
 MINIMAL_TOOL_REPAIR_AGENT_CONFIG: dict[str, Any] = {
     **MINIMAL_AGENT_CONFIG,
     "tool_call_repair_max_attempts": 3,
-}
-
-PLANNER_AGENT_CONFIG: dict[str, Any] = {
-    **MINIMAL_AGENT_CONFIG,
-    "use_planner": True,
-    "planning_prompt": DEFAULT_PLANNING_PROMPT,
-    "plan_guidance": DEFAULT_PLAN_GUIDANCE,
-    "planning_repair_max_attempts": DEFAULT_PLANNING_REPAIR_MAX_ATTEMPTS,
 }
 
 # Control barato de la issue #26: cuánto del problema de contexto se
@@ -50,6 +91,14 @@ MINIMAL_COMPACTION_AGENT_CONFIG: dict[str, Any] = {
 }
 
 
+# Variante del piloto cualitativo: reduce solamente la ventana para
+# provocar compactaciones observables sin alterar el mecanismo.
+QUALITATIVE_PILOT_COMPACTION_AGENT_CONFIG: dict[str, Any] = {
+    **MINIMAL_COMPACTION_AGENT_CONFIG,
+    "max_history_messages": 50,
+}
+
+
 # Resumen por LLM: abstrae lo descartado a estado estructurado.
 MINIMAL_SUMMARY_AGENT_CONFIG: dict[str, Any] = {
     **MINIMAL_AGENT_CONFIG,
@@ -60,10 +109,14 @@ MINIMAL_SUMMARY_AGENT_CONFIG: dict[str, Any] = {
 
 
 AGENT_CONFIGS: dict[str, dict[str, Any]] = {
+    "baseline": BASELINE_AGENT_CONFIG,
+    "planner": PLANNER_AGENT_CONFIG,
+    "summary": SUMMARY_AGENT_CONFIG,
+    "planner_summary": PLANNER_SUMMARY_AGENT_CONFIG,
     "minimal": MINIMAL_AGENT_CONFIG,
     "minimal_tool_repair": MINIMAL_TOOL_REPAIR_AGENT_CONFIG,
-    "planner": PLANNER_AGENT_CONFIG,
     "minimal_history_200": MINIMAL_HISTORY_200_AGENT_CONFIG,
     "minimal_compaction": MINIMAL_COMPACTION_AGENT_CONFIG,
+    "qualitative_pilot_compaction": QUALITATIVE_PILOT_COMPACTION_AGENT_CONFIG,
     "minimal_summary": MINIMAL_SUMMARY_AGENT_CONFIG,
 }

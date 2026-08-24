@@ -18,8 +18,7 @@ from eval.evaluation import start_evaluation
 from eval.persistence import RUNS_DIR, evaluation_dir
 from eval.configs.evaluation_configs import M3_EVALUATION_CONFIG
 from eval.configs.run_configs import (
-    M3_PLANNER_RUN_CONFIG,
-    M3_CONTEXT_COMPARISON_RUN_CONFIG,
+    M3_FINAL_RUN_CONFIG,
 )
 from eval.run_execution import resume_run, start_run
 from eval.report import (
@@ -37,14 +36,19 @@ from eval.analyses.context_analysis import (
     render_markdown as render_context_markdown,
 )
 
-RUN_ID = "m3-planner-run-002"
-EVALUATION_RUN_IDS = [
-    "m3-nova-multi-attempt-run-004",
-    RUN_ID,
+RUNS = [
+    (
+        "m3-final-run-001",
+        M3_FINAL_RUN_CONFIG,
+    ),
 ]
-EVAL_ID = "m3-planner-comparison-eval-002"
 
-RUN_CONFIG = M3_PLANNER_RUN_CONFIG
+EVALUATION_RUN_IDS = [
+    run_id
+    for run_id, _ in RUNS
+]
+EVAL_ID = "m3-final-eval-001"
+
 EVALUATION_CONFIG = M3_EVALUATION_CONFIG
 
 
@@ -70,27 +74,28 @@ def print_progress(
 
 
 def main() -> int:
-    run_manifest_path = (
-        RUNS_DIR / f"{RUN_ID}.manifest.json"
-    )
-    run_results_path = (
-        RUNS_DIR / f"{RUN_ID}.json"
-    )
+    for run_id, run_config in RUNS:
+        run_manifest_path = (
+            RUNS_DIR / f"{run_id}.manifest.json"
+        )
+        run_results_path = (
+            RUNS_DIR / f"{run_id}.json"
+        )
 
-    if (
-        not run_manifest_path.exists()
-        and not run_results_path.exists()
-    ):
-        start_run(
-            run_id=RUN_ID,
-            run_config=RUN_CONFIG,
-            progress_callback=print_progress,
-        )
-    else:
-        resume_run(
-            run_id=RUN_ID,
-            progress_callback=print_progress,
-        )
+        if (
+            not run_manifest_path.exists()
+            and not run_results_path.exists()
+        ):
+            start_run(
+                run_id=run_id,
+                run_config=run_config,
+                progress_callback=print_progress,
+            )
+        else:
+            resume_run(
+                run_id=run_id,
+                progress_callback=print_progress,
+            )
 
 
     evaluation_result = start_evaluation(

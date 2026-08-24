@@ -29,7 +29,12 @@ LLM_CONFIGS: dict[str, dict[str, Any]] = {
         "provider": "bedrock",
         "model": "amazon.nova-lite-v1:0",
         "region": "us-west-2",
-    }
+    },
+    "nova-pro": {
+        "provider": "bedrock",
+        "model": "us.amazon.nova-pro-v1:0",
+        "region": "us-west-2",
+    },
 }
 
 

@@ -6,15 +6,20 @@
 
 # --- Evidencia primaria de runs -> Git LFS ---
 eval/results/runs/*.json filter=lfs diff=lfs merge=lfs -text linguist-generated
+eval/results/historic/runs/*.json filter=lfs diff=lfs merge=lfs -text linguist-generated
 
-# Los manifests caen bajo el glob anterior, porque en gitattributes `*` tambien
-# matchea el punto. Se excluyen explicitamente: son metadata chica y revisable.
+# Los manifests caen bajo los globs anteriores, porque en gitattributes `*`
+# tambien matchea el punto. Se excluyen explicitamente: son metadata chica y
+# revisable.
 eval/results/runs/*.manifest.json !filter !diff !merge text -linguist-generated
+eval/results/historic/runs/*.manifest.json !filter !diff !merge text -linguist-generated
 
 # --- Resultados derivados de una evaluacion -> Git convencional ---
 # ~200 KB. Se marcan como generados para que GitHub colapse el diff por defecto,
 # pero se conserva el diff textual: es donde se leen los cambios de metricas.
 eval/results/evaluations/*/results.json linguist-generated
+eval/results/historic/evaluations/*/results.json linguist-generated
 
 # Graficos generados por la evaluacion.
 eval/results/evaluations/*/success_rate.png linguist-generated
+eval/results/historic/evaluations/*/success_rate.png linguist-generated

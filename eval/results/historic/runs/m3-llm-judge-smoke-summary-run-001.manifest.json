@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "run_id": "m3-llm-judge-smoke-summary-run-001",
+  "created_at": "2026-08-23T22:47:42+00:00",
+  "git": {
+    "commit": "cefcad002940c043936cbf3193ab57ca97525489",
+    "branch": "main",
+    "dirty": true
+  },
+  "run": {
+    "systems": [
+      {
+        "agent_config": "minimal_summary",
+        "llm_config": "nova-lite"
+      }
+    ],
+    "trial_configs": [
+      "multi_attempt"
+    ],
+    "scenarios": [
+      "office-sequence"
+    ],
+    "trials_per_case": 2
+  },
+  "agent_configs": {
+    "minimal_summary": {
+      "system_prompt": "Estás resolviendo una sala de escape en un mundo simulado.\n\nTenés que cumplir el objetivo indicado en el mensaje del escenario utilizando las herramientas disponibles.",
+      "register_default_tools": false,
+      "max_iterations": 40,
+      "max_history_messages": 100,
+      "tool_call_repair_max_attempts": 0,
+      "history_compaction": "llm",
+      "compaction_keep_recent_rounds": 2,
+      "history_compaction_repair_max_attempts": 1
+    }
+  },
+  "llm_configs": {
+    "nova-lite": {
+      "provider": "bedrock",
+      "model": "amazon.nova-lite-v1:0",
+      "region": "us-west-2",
+      "temperature": 0.2,
+      "max_tokens": 4096
+    }
+  },
+  "trial_configs": {
+    "multi_attempt": {
+      "max_attempts": 10,
+      "continuation_message": "El desafío todavía no está completado. Continuá."
+    }
+  },
+  "scenario_metadata": {
+    "office-sequence": {
+      "difficulty": "hard",
+      "goal": {
+        "type": "sequence",
+        "goals": [
+          {
+            "type": "item_in_inventory",
+            "item": "documento_confidencial"
+          },
+          {
+            "type": "item_open",
+            "item": "puerta_principal"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "dataset_id": "qualitative-llm-judge-smoke-v1",
+  "created_at": "2026-08-23T22:50:38+00:00",
+  "rubric_version": "planning-quality-v4",
+  "case_schema_version": 5,
+  "case_view_version": "trajectory-planning-v5",
+  "dataset": {
+    "run_ids": [
+      "m3-llm-judge-smoke-summary-run-001"
+    ],
+    "population": {
+      "agent_configs": [
+        "minimal_summary"
+      ],
+      "llm_configs": [
+        "nova-lite"
+      ],
+      "trial_configs": [
+        "multi_attempt"
+      ],
+      "scenarios": [
+        "office-sequence"
+      ]
+    },
+    "sampling": {
+      "method": "random_stratified_by_scenario_without_replacement",
+      "seed": 20260823,
+      "cases_per_scenario": 2,
+      "dev_per_scenario": 1
+    }
+  },
+  "counts": {
+    "total": 2,
+    "dev": 1,
+    "holdout": 1
+  },
+  "splits": {
+    "dev": [
+      "qc-001"
+    ],
+    "holdout": [
+      "qc-002"
+    ]
+  }
+}

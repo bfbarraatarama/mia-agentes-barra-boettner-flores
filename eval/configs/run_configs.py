@@ -195,3 +195,110 @@ M3_CONTEXT_COMPARISON_RUN_CONFIG: dict[str, Any] = {
     ],
     "trials_per_case": 10,
 }
+
+
+# Piloto funcional mínimo de la evaluación cualitativa v2.
+# Cada corrida apunta a producir evidencia real de uno de los artefactos
+# internos que ahora forman parte de la presentación cualitativa.
+M3_QUALITATIVE_PILOT_V2_PLANNER_RUN_CONFIG: dict[str, Any] = {
+    "systems": [
+        {
+            "agent_config": "planner",
+            "llm_config": "nova-lite",
+        },
+    ],
+    "trial_configs": [
+        "multi_attempt",
+    ],
+    "scenarios": [
+        "study-with-key",
+    ],
+    "trials_per_case": 3,
+}
+
+
+M3_QUALITATIVE_PILOT_V2_COMPACTION_RUN_CONFIG: dict[str, Any] = {
+    "systems": [
+        {
+            "agent_config": "qualitative_pilot_compaction",
+            "llm_config": "nova-lite",
+        },
+    ],
+    "trial_configs": [
+        "multi_attempt",
+    ],
+    "scenarios": [
+        "vault-combination",
+    ],
+    "trials_per_case": 3,
+}
+
+
+M3_QUALITATIVE_PILOT_V2_SUMMARY_RUN_CONFIG: dict[str, Any] = {
+    "systems": [
+        {
+            "agent_config": "minimal_summary",
+            "llm_config": "nova-lite",
+        },
+    ],
+    "trial_configs": [
+        "multi_attempt",
+    ],
+    "scenarios": [
+        "office-sequence",
+    ],
+    "trials_per_case": 3,
+}
+
+
+M3_LLM_JUDGE_SMOKE_SUMMARY_RUN_CONFIG: dict[str, Any] = {
+    "systems": [
+        {
+            "agent_config": "minimal_summary",
+            "llm_config": "nova-lite",
+        },
+    ],
+    "trial_configs": [
+        "multi_attempt",
+    ],
+    "scenarios": [
+        "office-sequence",
+    ],
+    "trials_per_case": 2,
+}
+
+
+M3_FINAL_RUN_CONFIG: dict[str, Any] = {
+    "systems": [
+        {
+            "agent_config": "baseline",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "planner",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "summary",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "planner_summary",
+            "llm_config": "nova-lite",
+        },
+    ],
+    "trial_configs": [
+        "multi_attempt",
+    ],
+    "scenarios": [
+        "study-with-key",
+        "color-locks",
+        "apartment-keys",
+        "library-search",
+        "office-sequence",
+        "extreme-archive",
+        "vault-combination",
+        "backtracking-vault",
+    ],
+    "trials_per_case": 10,
+}

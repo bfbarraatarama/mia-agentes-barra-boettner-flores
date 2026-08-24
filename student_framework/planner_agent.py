@@ -84,6 +84,12 @@ class PlannerAgent(MyAgent):
             purpose="planning",
         )
 
+        if self._trace_callback is not None:
+            self._trace_callback({
+                "type": "planning",
+                "plan": plan.model_dump(),
+            })
+
         plan_text = "Plan de acción:\n" + "\n".join(
             f"{i + 1}. {step.description}"
             for i, step in enumerate(plan.steps)
