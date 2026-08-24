@@ -5,10 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 
-# Se mantiene intencionalmente sin configurar hasta definir el dataset
-# de calibración y la configuración concreta del judge.
-#
-# Cuando exista una configuración real, se declarará con nombre propio:
+# La configuración activa corresponde exclusivamente al smoke reproducible.
+# La configuración de calibración final todavía no está definida; cuando se
+# defina, se declarará con un nombre propio:
 #
 # M3_..._JUDGE_CONFIG: dict[str, Any] = {
 #     "dataset_id": "...",

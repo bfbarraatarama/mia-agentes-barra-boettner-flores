@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 
-# Se mantiene intencionalmente sin configurar hasta definir el dataset
-# de calibración, las evaluaciones del judge y los anotadores reales.
+# Las configuraciones activas corresponden exclusivamente a reportes del smoke.
+# El reporte de calibración final todavía no está definido.
 #
 # Una configuración podrá seleccionar una o varias secciones:
 #
