@@ -58,17 +58,21 @@ from eval.llm_judge.rubric import (
     RUBRIC_VERSION,
 )
 from eval.llm_judge.configs.dataset_configs import (
+    M3_QUALITATIVE_FINAL_DATASET_CONFIG,
     M3_QUALITATIVE_PILOT_DATASET_CONFIG,
 )
 from eval.llm_judge.prepare_dataset import (
     prepare_qualitative_dataset,
 )
 from eval.llm_judge.sampling import (
+    BALANCED_HOLDOUT_THEN_DIAGNOSTIC_DEV_METHOD,
     RANDOM_STRATIFIED_BY_SCENARIO_METHOD,
     SampledTrial,
     TrialCandidate,
     collect_trial_candidates,
+    sample_holdout_then_dev,
     sample_trials_by_scenario,
+    select_balanced_holdout_candidates,
 )
 from eval.llm_judge.annotations import (
     HUMAN_ANNOTATION_SCHEMA_VERSION,
@@ -1786,6 +1790,176 @@ def test_sample_trials_by_scenario_is_reproducible() -> None:
     ]
 
 
+def test_select_balanced_holdout_candidates_is_reproducible() -> None:
+    run = _sampling_run()
+
+    for result in run["results"]:
+        if result["llm_config"] != "nova-lite":
+            continue
+
+        for trial in result["trials"]:
+            trial["attempts"] = [
+                _attempt(
+                    user_message="Resolvé el desafío.",
+                    trace=[
+                        _agent_call(
+                            content=(
+                                "paso " * trial["trial_index"]
+                            ).strip(),
+                        ),
+                    ],
+                    answer="Respuesta final.",
+                ),
+            ]
+
+    candidates = collect_trial_candidates(
+        {
+            "test-run": run,
+        },
+        llm_configs={"nova-lite"},
+    )
+
+    first = select_balanced_holdout_candidates(
+        candidates,
+        seed=1234,
+        shortest_per_cell=2,
+        cases_per_system=1,
+        successes=1,
+    )
+    second = select_balanced_holdout_candidates(
+        list(reversed(candidates)),
+        seed=1234,
+        shortest_per_cell=2,
+        cases_per_system=1,
+        successes=1,
+    )
+
+    assert [
+        candidate.identity
+        for candidate in first
+    ] == [
+        candidate.identity
+        for candidate in second
+    ]
+
+    assert len(first) == 2
+    assert len({
+        candidate.scenario
+        for candidate in first
+    }) == 2
+    assert len({
+        _candidate.agent_config
+        for _candidate in first
+    }) == 2
+    assert sum(
+        bool(candidate.trial["goal_achieved"])
+        for candidate in first
+    ) == 1
+    assert all(
+        candidate.trial_index in {1, 2}
+        for candidate in first
+    )
+
+
+def test_sample_holdout_then_dev_selects_splits_in_order() -> None:
+    run = _sampling_run()
+
+    for result in run["results"]:
+        if result["llm_config"] != "nova-lite":
+            continue
+
+        for trial in result["trials"]:
+            trial["attempts"] = [
+                _attempt(
+                    user_message="Resolvé el desafío.",
+                    trace=[
+                        _agent_call(
+                            content=(
+                                "paso " * trial["trial_index"]
+                            ).strip(),
+                        ),
+                    ],
+                    answer="Respuesta final.",
+                ),
+            ]
+
+    candidates = collect_trial_candidates(
+        {
+            "test-run": run,
+        },
+        llm_configs={"nova-lite"},
+    )
+
+    sampled = sample_holdout_then_dev(
+        candidates,
+        seed=1234,
+        holdout_shortest_per_cell=2,
+        holdout_cases_per_system=1,
+        holdout_successes=1,
+        dev_successes=1,
+        dev_require_plan_for_agent_configs=set(),
+        dev_require_summary_for_agent_configs=set(),
+        dev_require_multi_attempt=False,
+    )
+
+    assert len(sampled) == 4
+    assert [
+        sample.split
+        for sample in sampled
+    ] == [
+        "holdout",
+        "holdout",
+        "dev",
+        "dev",
+    ]
+    assert [
+        sample.case_id
+        for sample in sampled
+    ] == [
+        "qc-001",
+        "qc-002",
+        "qc-003",
+        "qc-004",
+    ]
+    assert len({
+        sample.candidate.identity
+        for sample in sampled
+    }) == 4
+
+    holdout = [
+        sample
+        for sample in sampled
+        if sample.split == "holdout"
+    ]
+    dev = [
+        sample
+        for sample in sampled
+        if sample.split == "dev"
+    ]
+
+    assert len({
+        sample.candidate.scenario
+        for sample in holdout
+    }) == 2
+    assert len({
+        sample.candidate.agent_config
+        for sample in holdout
+    }) == 2
+    assert sum(
+        bool(sample.candidate.trial["goal_achieved"])
+        for sample in holdout
+    ) == 1
+
+    assert len({
+        sample.candidate.agent_config
+        for sample in dev
+    }) == 2
+    assert sum(
+        bool(sample.candidate.trial["goal_achieved"])
+        for sample in dev
+    ) == 1
+
+
 def test_sample_trials_by_scenario_rejects_insufficient_population() -> None:
     candidates = collect_trial_candidates(
         {
@@ -1982,6 +2156,46 @@ def test_pilot_dataset_config_defines_shared_population_and_sampling() -> None:
         "seed": 20260821,
         "cases_per_scenario": 3,
         "dev_per_scenario": 2,
+    }
+
+
+def test_final_dataset_config_defines_holdout_then_dev_sampling() -> None:
+    config = M3_QUALITATIVE_FINAL_DATASET_CONFIG
+
+    assert config["dataset_id"] == "m3-qualitative-final-v1"
+    assert config["run_ids"] == [
+        "m3-final-run-001",
+    ]
+    assert config["population"]["agent_configs"] == [
+        "baseline",
+        "planner",
+        "summary",
+        "planner_summary",
+    ]
+    assert config["population"]["llm_configs"] == [
+        "nova-lite",
+    ]
+    assert config["population"]["trial_configs"] == [
+        "multi_attempt",
+    ]
+    assert len(config["population"]["scenarios"]) == 8
+
+    assert config["sampling"] == {
+        "method": BALANCED_HOLDOUT_THEN_DIAGNOSTIC_DEV_METHOD,
+        "seed": 20260824,
+        "holdout_shortest_per_cell": 5,
+        "holdout_cases_per_system": 2,
+        "holdout_successes": 4,
+        "dev_successes": 2,
+        "dev_require_plan_for_agent_configs": [
+            "planner",
+            "planner_summary",
+        ],
+        "dev_require_summary_for_agent_configs": [
+            "summary",
+            "planner_summary",
+        ],
+        "dev_require_multi_attempt": True,
     }
 
 

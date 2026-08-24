@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "dataset_id": "m3-qualitative-final-v1",
+  "created_at": "2026-08-24T18:46:31+00:00",
+  "rubric_version": "planning-quality-v4",
+  "case_schema_version": 5,
+  "case_view_version": "trajectory-planning-v5",
+  "dataset": {
+    "run_ids": [
+      "m3-final-run-001"
+    ],
+    "population": {
+      "agent_configs": [
+        "baseline",
+        "planner",
+        "summary",
+        "planner_summary"
+      ],
+      "llm_configs": [
+        "nova-lite"
+      ],
+      "trial_configs": [
+        "multi_attempt"
+      ],
+      "scenarios": [
+        "study-with-key",
+        "color-locks",
+        "apartment-keys",
+        "library-search",
+        "office-sequence",
+        "extreme-archive",
+        "vault-combination",
+        "backtracking-vault"
+      ]
+    },
+    "sampling": {
+      "method": "balanced_holdout_then_diagnostic_dev",
+      "seed": 20260824,
+      "holdout_shortest_per_cell": 5,
+      "holdout_cases_per_system": 2,
+      "holdout_successes": 4,
+      "dev_successes": 2,
+      "dev_require_plan_for_agent_configs": [
+        "planner",
+        "planner_summary"
+      ],
+      "dev_require_summary_for_agent_configs": [
+        "summary",
+        "planner_summary"
+      ],
+      "dev_require_multi_attempt": true
+    }
+  },
+  "counts": {
+    "total": 12,
+    "dev": 4,
+    "holdout": 8
+  },
+  "splits": {
+    "dev": [
+      "qc-009",
+      "qc-010",
+      "qc-011",
+      "qc-012"
+    ],
+    "holdout": [
+      "qc-001",
+      "qc-002",
+      "qc-003",
+      "qc-004",
+      "qc-005",
+      "qc-006",
+      "qc-007",
+      "qc-008"
+    ]
+  }
+}
