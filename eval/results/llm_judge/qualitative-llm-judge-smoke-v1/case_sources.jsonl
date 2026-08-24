@@ -1,0 +1,2 @@
+{"case_id": "qc-001", "run_id": "m3-llm-judge-smoke-summary-run-001", "agent_config": "minimal_summary", "llm_config": "nova-lite", "trial_config": "multi_attempt", "scenario": "office-sequence", "trial_index": 2, "split": "dev"}
+{"case_id": "qc-002", "run_id": "m3-llm-judge-smoke-summary-run-001", "agent_config": "minimal_summary", "llm_config": "nova-lite", "trial_config": "multi_attempt", "scenario": "office-sequence", "trial_index": 1, "split": "holdout"}

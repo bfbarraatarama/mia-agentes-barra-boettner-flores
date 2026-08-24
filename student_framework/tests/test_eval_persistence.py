@@ -2,7 +2,7 @@ import json
 import pytest
 import subprocess
 
-from eval import evaluation, persistence, run_execution
+from eval import evaluation, persistence, report, run_execution
 from eval.configs.agent_configs import AGENT_CONFIGS
 from eval.configs.run_configs import (
     M3_PLANNER_RUN_CONFIG,
@@ -1465,3 +1465,50 @@ def test_evaluation_paths_use_eval_id_directory(
     assert results_path == (
         tmp_path / "test-eval" / "results.json"
     )
+
+
+def test_plot_success_rate_accepts_sparse_evaluation(
+    tmp_path,
+) -> None:
+    """El gráfico admite evaluaciones sin producto cartesiano completo."""
+
+    evaluation_result = {
+        "results": [
+            {
+                "agent_config": "planner",
+                "llm_config": "nova-lite",
+                "trial_config": "multi_attempt",
+                "scenario": "study-with-key",
+                "metrics": {
+                    "success_rate": 1.0,
+                },
+            },
+            {
+                "agent_config": "minimal_compaction",
+                "llm_config": "nova-lite",
+                "trial_config": "multi_attempt",
+                "scenario": "library-search",
+                "metrics": {
+                    "success_rate": 1 / 3,
+                },
+            },
+            {
+                "agent_config": "minimal_summary",
+                "llm_config": "nova-lite",
+                "trial_config": "multi_attempt",
+                "scenario": "office-sequence",
+                "metrics": {
+                    "success_rate": 2 / 3,
+                },
+            },
+        ],
+    }
+    output_path = tmp_path / "success_rate.png"
+
+    report.plot_success_rate(
+        evaluation_result,
+        output_path,
+    )
+
+    assert output_path.is_file()
+    assert output_path.stat().st_size > 0

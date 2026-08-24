@@ -9,7 +9,7 @@ from typing import Literal
 CriterionId = Literal["Q1.1", "Q1.2", "Q1.3", "Q1.4"]
 CriterionApplicability = Literal["always", "conditional"]
 
-RUBRIC_VERSION = "planning-quality-v1"
+RUBRIC_VERSION = "planning-quality-v4"
 DIMENSION_ID = "Q1"
 DIMENSION_NAME = "Calidad de la planificación durante la trayectoria"
 DIMENSION_DESCRIPTION = (
@@ -35,9 +35,18 @@ EVIDENCE_RULES = (
         "constituyen la evidencia primaria sobre lo que ocurrió."
     ),
     (
-        "El contenido textual del agente puede aportar evidencia sobre una "
-        "estrategia, subobjetivo o intención expresados, pero no prevalece "
-        "sobre las acciones ni sobre las observaciones del mundo."
+        "El plan representa una estrategia explícita disponible antes de "
+        "actuar. El contexto reducido representa una versión condensada de "
+        "parte de la trayectoria anterior disponible para decisiones "
+        "posteriores. Ambos pueden aportar evidencia sobre la estrategia, los "
+        "subobjetivos y la información disponible, pero no constituyen hechos "
+        "sobre el mundo; para establecer qué ocurrió prevalecen las acciones "
+        "ejecutadas y las observaciones originales."
+    ),
+    (
+        "Una omisión, distorsión o contradicción en una representación "
+        "interna no constituye por sí sola un fallo; es relevante cuando "
+        "afecta materialmente la estrategia o las decisiones posteriores."
     ),
     (
         "No expresar explícitamente un plan no constituye por sí mismo un "
@@ -84,8 +93,9 @@ Q1_4_ERROR_TRIGGER = (
 )
 
 Q1_4_REPETITION_TRIGGER = (
-    "Una acción efectiva se repite en una iteración posterior con la misma "
-    "herramienta, los mismos argumentos y el mismo resultado observable."
+    "Una acción efectiva es seguida, sin otra acción efectiva intermedia, "
+    "por la misma acción en una decisión posterior, con la misma herramienta, "
+    "los mismos argumentos y el mismo resultado observable."
 )
 
 Q1_4_APPLICABILITY_TRIGGERS = (
@@ -125,6 +135,11 @@ Q1_4_APPLICABILITY_NOTES = (
         "Para comparar repeticiones, los argumentos que pueden interpretarse "
         "como un objeto JSON se comparan estructuralmente; en caso contrario "
         "se compara su representación raw."
+    ),
+    (
+        "El trigger de repetición sólo considera acciones efectivas "
+        "consecutivas en la secuencia ejecutada; cualquier otra acción "
+        "efectiva intermedia corta la repetición."
     ),
     (
         "Una repetición de acciones dentro de una misma iteración no activa "

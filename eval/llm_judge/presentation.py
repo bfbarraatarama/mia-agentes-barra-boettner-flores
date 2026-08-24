@@ -13,7 +13,7 @@ from eval.llm_judge.models import (
 from eval.llm_judge.rubric import EVIDENCE_RULES
 
 
-PRESENTATION_VERSION = "planning-evidence-v1"
+PRESENTATION_VERSION = "planning-evidence-v5"
 
 
 @dataclass(frozen=True)
@@ -58,7 +58,28 @@ def build_case_presentation(
             iteration_ref = (
                 f"{attempt_ref}.i{iteration.iteration_index}"
             )
+
+            context_before_decision = []
+
+            for context in iteration.context_before_decision:
+                evidence_refs.append(context.context_id)
+                context_before_decision.append({
+                    "ref": context.context_id,
+                    "kind": context.kind,
+                    "content": context.content,
+                })
+
             evidence_refs.append(iteration_ref)
+
+            context_after_decision = []
+
+            for context in iteration.context_after_decision:
+                evidence_refs.append(context.context_id)
+                context_after_decision.append({
+                    "ref": context.context_id,
+                    "kind": context.kind,
+                    "content": context.content,
+                })
 
             actions = []
 
@@ -98,7 +119,9 @@ def build_case_presentation(
 
             iterations.append({
                 "ref": iteration_ref,
+                "context_before_decision": context_before_decision,
                 "assistant_content": iteration.assistant_content,
+                "context_after_decision": context_after_decision,
                 "actions": actions,
             })
 
@@ -118,10 +141,53 @@ def build_case_presentation(
             },
         })
 
+    q1_4 = case.criteria_applicability["Q1.4"]
+    evidence_ref_set = set(evidence_refs)
+    q1_4_triggers = []
+
+    for trigger in q1_4.triggers:
+        referenced_evidence = [
+            trigger.target_ref,
+            *[
+                evidence_ref
+                for component in trigger.components
+                for evidence_ref in component.evidence_refs
+            ],
+        ]
+        unknown_refs = [
+            evidence_ref
+            for evidence_ref in referenced_evidence
+            if evidence_ref not in evidence_ref_set
+        ]
+
+        if unknown_refs:
+            raise ValueError(
+                "Un trigger de Q1.4 referencia evidencia inexistente: "
+                f"{unknown_refs!r}."
+            )
+
+        q1_4_triggers.append({
+            "target_ref": trigger.target_ref,
+            "components": [
+                {
+                    "kind": component.kind,
+                    "evidence_refs": list(
+                        component.evidence_refs
+                    ),
+                }
+                for component in trigger.components
+            ],
+        })
+
     presentation_data = {
         "evidence_rules": list(EVIDENCE_RULES),
         "case_id": case.case_id,
         "task": case.task,
+        "q1_4_applicability": {
+            "applicable": q1_4.applicable,
+            "reason": q1_4.reason,
+            "triggers": q1_4_triggers,
+        },
         "attempts": attempts,
     }
 

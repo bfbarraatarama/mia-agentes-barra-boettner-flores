@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "judge_eval_id": "m3-llm-judge-smoke-holdout-001",
+  "dataset_id": "qualitative-llm-judge-smoke-v1",
+  "created_at": "2026-08-23T23:27:58+00:00",
+  "git": {
+    "commit": "cefcad002940c043936cbf3193ab57ca97525489",
+    "branch": "main",
+    "dirty": true
+  },
+  "split": "holdout",
+  "case_ids": [
+    "qc-002"
+  ],
+  "judge": {
+    "llm_config": "nova-pro",
+    "effective_llm_config": {
+      "provider": "bedrock",
+      "model": "us.amazon.nova-pro-v1:0",
+      "region": "us-west-2",
+      "temperature": 0.2,
+      "max_tokens": 4096
+    },
+    "system_prompt": "Actuás exclusivamente como evaluador cualitativo ciego. Debés aplicar la rúbrica y la evidencia proporcionadas sin incorporar conocimiento externo ni inferir metadata experimental.",
+    "prompt_fingerprint_sha256": "441bcf6ce8b99db0a7b901bda5f3b7aab075ed8629c948a69a1a6d22ae1fe160",
+    "max_repair_attempts": 2
+  },
+  "versions": {
+    "prediction_schema_version": 1,
+    "case_schema_version": 5,
+    "case_view_version": "trajectory-planning-v5",
+    "presentation_version": "planning-evidence-v5",
+    "rubric_version": "planning-quality-v4",
+    "judge_prompt_version": "planning-criterion-judge-v1"
+  }
+}
