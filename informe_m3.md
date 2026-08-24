@@ -19,7 +19,7 @@ El agente base es `MyAgent`, implementado en `student_framework/agent.py`. El ba
 Los parámetros heredados relevantes son:
 
 - **`max_iterations`**: tope de iteraciones del loop. Si el agente no llega a una respuesta final antes de agotarlo, el run termina con error.
-- **`max_history_messages`**: introducido en M2, limita la cantidad de mensajes que se envían al LLM en cada llamada. Cuando el historial supera ese límite, los mensajes más antiguos se descartan (política de eliminación plana de M2) o se compactan (estrategia de M3, ver §1.3).
+- **`max_history_messages`**: introducido en M2, limita la cantidad de mensajes que se envían al LLM en cada llamada. Cuando el historial supera ese límite, los mensajes más antiguos se descartan (política de eliminación plana de M2) o se compactan (estrategia de M3, ver §1.5).
 - **`register_tool(tool, schema)`**: registra una herramienta callable junto a su esquema. Las herramientas del mundo se inyectan de esta forma antes de cada run.
 - **`_structured_call_with_repair()`**: mecanismo heredado para realizar llamadas estructuradas al LLM, validar la respuesta contra un schema y realizar intentos de reparación cuando la salida no es válida. En M3 se reutiliza esta infraestructura para nuevas funcionalidades, como la generación estructurada del plan y la compactación del historial mediante LLM.
 
@@ -86,36 +86,108 @@ La planificación es, por diseño, estática: el plan se genera al comienzo y no
 
 A nivel de implementación, el flag `_initial_plan_generated` garantiza que la planificación ocurre solo en el primer turno. En intentos subsiguientes del mismo trial, el agente reutiliza el plan ya inyectado en el historial y entra directamente al loop ReAct. Los tokens consumidos durante la planificación se acumulan en el `AgentResult` final vía un `response_callback`.
 
-### 1.5 Gestión de contexto
+### 1.5 Gestión de contexto y estrategia de summarization
 
-En M2, `max_history_messages` limitaba el historial enviado al modelo mediante eliminación de mensajes pertenecientes a turnos anteriores. En escenarios M3 de horizonte largo apareció un caso no cubierto: un único turno podía acumular numerosas rondas ReAct hasta superar el presupuesto, sin existir todavía un turno cerrado que pudiera eliminarse de forma segura. Para tratar esta presión de contexto intra-turno se incorporó un mecanismo opcional de compactación.
+#### 1.5.1 El problema que M2 no cubría
 
-Para experimentos de horizonte largo, `MyAgent` acepta un `history_compactor`: un callable que recibe los mensajes que serían descartados por `max_history_messages` y devuelve un resumen en texto que los reemplaza. Cuando no se configura compactor, se aplica la política M2 de eliminación plana.
+En M2, `max_history_messages` limitaba el historial enviado al modelo eliminando mensajes pertenecientes a **turnos ya cerrados**: dado un presupuesto de mensajes, la política descartaba trazas intermedias completas de turnos anteriores y, si no alcanzaba, mensajes `user` y respuestas finales viejas. Esa política asume que el exceso de contexto proviene de la acumulación de turnos.
 
-La compactación ocurre intra-turno: cuando el historial supera el límite, se compactan las rondas más antiguas preservando las últimas `compaction_keep_recent_rounds` rondas completas en crudo. Las rondas se preservan completas (assistant + tool results) para no dejar mensajes de tool huérfanos.
+En los escenarios de horizonte largo de M3 apareció un caso que esa asunción no contempla: **un único turno puede agotar el presupuesto por sí solo**. Un trial de `vault-combination` o `backtracking-vault` ejecuta decenas de rondas ReAct dentro del mismo turno, y cada ronda agrega al historial un mensaje `assistant` más un mensaje `tool` por cada tool call. Cuando todo el historial pertenece al turno activo, no hay ningún turno cerrado que se pueda descartar de forma segura, y el run muere por presupuesto de contexto sin haber cometido ningún error de razonamiento.
 
-Se implementaron dos estrategias en `student_framework/context/summarizer.py`:
+La evidencia confirma que el problema es real y no hipotético, y que aparece incluso sin forzarlo. En la comparación histórica de tres modelos (`m3-three-model-repair-comparison-eval-003`) `context_overflow` explica **27 de 311 trials fallidos (9%)** con la ventana por defecto de 100 mensajes. En el run final, las variantes que corren a ventana 100 igualmente registran terminaciones por presupuesto tras 19 a 31 iteraciones ReAct. Y en todos los casos la terminación ocurre en el `attempt_index` 1: es presión **intra-turno**, no acumulación de turnos. (El 48% de `context_overflow` del run final no sirve como motivación, porque proviene sobre todo de las variantes cuya ventana se redujo deliberadamente para activar el mecanismo; ver §1.5.5.)
 
-**Compactación determinística (`deterministic_history_compactor`)**
+Para tratar esta presión **intra-turno** se incorporó un mecanismo opcional de compactación: `MyAgent` acepta un `history_compactor`, un callable que recibe los mensajes que serían descartados y devuelve un texto que los reemplaza. Cuando no se configura compactor, el agente mantiene exactamente la política de eliminación plana de M2, de modo que el baseline de M3 sigue siendo comparable con M2.
 
-Esta estrategia construye una representación compacta de las rondas seleccionadas sin realizar llamadas adicionales al LLM. Las acciones y sus observaciones se representan de forma reducida, siguiendo una estructura del tipo `acción → resultado`, y las observaciones extensas se truncan para controlar el tamaño final.
+#### 1.5.2 Decisiones de diseño transversales a ambas estrategias
 
-La deduplicación se determina utilizando las observaciones completas y no sus versiones truncadas. Esto evita que dos resultados diferentes sean tratados como una misma observación únicamente porque comparten el mismo prefijo. Si dos observaciones distintas producen la misma representación después del truncamiento, se conservan completas para preservar la diferencia entre ambas.
+Las siguientes decisiones son independientes de cómo se genere el resumen y se implementan en `student_framework/agent.py`.
 
-Además de las acciones solicitadas, se conserva el contenido textual relevante de los mensajes del  `assistant` cuando estos contienen simultáneamente texto y `tool_calls`, evitando perder información únicamente por la estructura de la respuesta del modelo.
+**La unidad de compactación es la ronda de herramientas completa, no el mensaje.** `_closed_tool_rounds()` identifica rangos `[assistant con tool_calls, sus mensajes tool)` y la compactación reemplaza siempre rondas enteras. La alternativa —cortar por cantidad de mensajes— era más simple pero producía historiales inválidos: un mensaje `tool` sin su `assistant` correspondiente queda huérfano y las APIs de tool calling lo rechazan, y una respuesta con varios tool calls partida a la mitad deja llamadas sin resultado. Preferimos perder un poco de granularidad antes que emitir historiales que el proveedor pueda rechazar.
 
-La estrategia es deliberadamente lossy: no busca preservar toda la trayectoria, sino reducir su tamaño mediante reglas determinísticas, sin costo adicional de inferencia y sin introducir un segundo proceso de interpretación mediante LLM.
+**Se conservan en crudo las últimas `compaction_keep_recent_rounds` rondas.** El resumen es, por definición, una pérdida de información; las observaciones más recientes son las que el agente necesita con más detalle para decidir la próxima acción. Fijamos el valor en 2 para todas las configuraciones evaluadas: suficiente para que el modelo vea el resultado de su última acción y el de la anterior, sin volver el mecanismo inútil por conservar demasiado.
 
-**Compactación por LLM (`make_llm_history_compactor()`)**
-La segunda estrategia utiliza el propio LLM del agente para producir una representación semántica de la trayectoria compactada. A diferencia de la estrategia determinística, el objetivo no es reducir mecánicamente cada observación, sino identificar y estructurar la información que puede resultar relevante para continuar resolviendo el escenario.
+**Si conservar esas rondas no alcanza, una segunda pasada compacta todas.** `_compact_active_turn()` itera sobre `(compaction_keep_recent_rounds, 0)`. La alternativa era fallar directamente cuando el presupuesto no se satisface conservando las rondas recientes, pero eso convertía el parámetro en una causa de muerte del run. Degradar la calidad del contexto es preferible a terminar la ejecución.
 
-El resumen sigue el esquema `TrajectorySummary`, que organiza la información en cuatro categorías: hechos descubiertos (`discovered_facts`), acciones ya intentadas (`attempted_actions`), subobjetivos pendientes (`open_subgoals`) y callejones sin salida (`dead_ends`). El prompt solicita además preservar de forma textual información especialmente sensible a pérdidas durante el resumen, como códigos, combinaciones, identificadores y mensajes de error.
+**El resumen se inyecta como mensaje con rol `user`, no `assistant`.** Un `assistant` sin `tool_calls` es, para la política de trimming heredada, la "respuesta final" de un turno, y es justamente lo que la segunda pasada elimina primero: el resumen sería el primer candidato a ser borrado. Con rol `user` el resumen sobrevive al mismo mecanismo que lo creó. Los resúmenes se prefijan (`[Resumen de contexto previo]` y `[Resumen de progreso del intento actual]`) para que el modelo distinga contexto reconstruido de observación directa del mundo, y `_merge_adjacent_user_messages()` fusiona mensajes `user` contiguos antes de la llamada, evitando que la inyección produzca secuencias de `user` consecutivos que algunos proveedores rechazan.
 
-La generación del resumen utiliza una llamada estructurada con`purpose="history_compaction"` y admite reparación cuando la salida no satisface el esquema esperado. Las llamadas y tokens utilizados por este proceso se contabilizan en el `AgentResult`, de forma que el costo adicional introducido por la estrategia pueda distinguirse del consumo correspondiente al loop principal del agente.
+**Los resúmenes se fusionan en lugar de acumularse.** Cuando vuelve a aparecer presión de contexto, el rango a compactar arranca en el primer mensaje posterior al `user` del turno, de modo que el resumen anterior queda **incluido** en el nuevo rango y es reemplazado por uno solo. La alternativa —resumir sólo lo nuevo y dejar el resumen viejo intacto— hacía que los propios resúmenes se acumularan como mensajes independientes y volvieran a generar la presión que venían a resolver.
 
-Cuando la presión de contexto vuelve a aparecer, el resumen generado previamente se incorpora al nuevo rango de compactación junto con la trayectoria posterior. De esta forma, los resúmenes se fusionan progresivamente en lugar de acumularse como mensajes independientes, evitando que los propios resúmenes terminen generando nuevamente presión sobre el historial.
+**El fallo del compactor no aborta el run por excepción.** `_compact_messages()` captura cualquier error, lo registra en la traza como evento `history_compaction` con su error y devuelve `None`; quien llama decide el fallback. En la eviction de historial cerrado el fallback es la eliminación plana de M2, que siempre está disponible. En la compactación intra-turno **no hay fallback seguro**: eliminar mensajes arbitrariamente fragmentaría rondas, así que el turno termina de forma controlada y el trial queda clasificado como `context_overflow`. La decisión fue preferir una terminación explícita y clasificable a un historial silenciosamente corrupto. Esto importa para leer los resultados: en el run final se registraron **518 eventos de compactación y 88 fallas**, y esas fallas son parte de por qué las variantes con resumen terminan por presupuesto.
 
-El mecanismo contempla además fallos durante la compactación. Cuando es posible, se mantiene la política previa de eliminación sobre historial cerrado. Sin embargo, durante la compactación del turno activo no se eliminan arbitrariamente mensajes si esto implica fragmentar una ronda de herramientas. Si no puede obtenerse una representación que satisfaga el presupuesto manteniendo estas garantías, la ejecución termina de forma controlada.
+**El compactor recibe una copia de los mensajes.** `_compact_messages()` pasa un `deepcopy` del rango. Un compactor que mutara los mensajes que recibe —o, en la variante por LLM, un error en medio de la construcción del transcript— no puede dejar el historial del agente en un estado intermedio.
+
+**Guarda de terminación.** La compactación sólo se aplica cuando el rango tiene al menos 2 mensajes (`end - start >= 2`). Reemplazar un único mensaje por un resumen no reduce la longitud del historial, y el bucle de trimming no terminaría nunca.
+
+**La estrategia se declara con un string, no con un callable.** `build_agent` acepta `history_compaction: "deterministic" | "llm"` (además de un callable, que usan los tests). El motivo es de infraestructura de evaluación: las `agent_config` de `eval/` se persisten tal cual en el manifest del run, y un callable no es serializable. Con un string, el manifest documenta con precisión qué estrategia produjo cada resultado.
+
+**El compactor por LLM se inyecta después de construir el agente.** `make_llm_history_compactor(agent)` necesita el agente para reusar su cliente LLM, y el agente necesita el compactor: la dependencia es circular. `set_history_compactor()` resuelve el ciclo en dos pasos en lugar de mover la construcción del cliente afuera del agente.
+
+#### 1.5.3 Estrategia A — compactación determinística
+
+`deterministic_history_compactor` (`student_framework/context/summarizer.py`) construye una representación compacta de las rondas seleccionadas **sin realizar llamadas adicionales al LLM**. Cada acción se plega en una línea `acción → resultado`, y las observaciones extensas se truncan a 200 caracteres.
+
+Existe deliberadamente como **control experimental**: aísla cuánto del efecto de la gestión de contexto se explica por *comprimir* la trayectoria y cuánto requiere *resumirla con abstracción*. Su costo de inferencia es cero y no introduce modos de falla nuevos (no puede alucinar, no puede fallar el schema, no puede agotar el rate limit). Si esta estrategia bastara, la compactación por LLM no se justificaría.
+
+Dos decisiones específicas:
+
+**La deduplicación usa las observaciones completas, no las truncadas.** Las líneas se generan dos veces —una completa y una truncada— y se deduplica por la versión completa. Si se deduplicara por la truncada, dos observaciones distintas que comparten los primeros 200 caracteres (algo habitual en `extreme-archive`, donde veinte expedientes arrancan con la misma prosa burocrática) se fusionarían en una sola y el agente perdería justamente la diferencia que estaba buscando.
+
+**Cuando dos observaciones distintas colisionan al truncarse, ambas se conservan completas.** La representación truncada sólo se usa si es inequívoca; si varias líneas completas distintas caen en la misma línea truncada, se emiten completas. El resumen crece, pero no miente. Las repeticiones exactas se colapsan con un sufijo `(xN)`, que además le informa al modelo que estuvo repitiendo la misma acción.
+
+La estrategia es explícitamente *lossy*: no busca preservar la trayectoria, sino reducir su tamaño con reglas determinísticas y sin introducir un segundo proceso de interpretación.
+
+#### 1.5.4 Estrategia B — summarization por LLM
+
+`make_llm_history_compactor()` usa el propio LLM del agente para producir una representación semántica de la trayectoria compactada. El objetivo no es comprimir mecánicamente cada observación, sino **identificar qué información sigue siendo relevante para continuar resolviendo el escenario**.
+
+**El resumen es estructurado, no prosa libre.** Se pide un `TrajectorySummary` con cuatro campos:
+
+| Campo | Contenido |
+|---|---|
+| `discovered_facts` | Hechos del mundo: objetos, ubicaciones, relaciones, códigos y combinaciones |
+| `attempted_actions` | Acciones ya intentadas y su resultado, incluidas las fallidas |
+| `open_subgoals` | Subobjetivos pendientes o plan parcial |
+| `dead_ends` | Caminos que ya se sabe que no funcionan, y por qué |
+
+La elección de estos cuatro campos responde a los modos de falla que observamos en el baseline. `discovered_facts` y `open_subgoals` sostienen la continuidad del plan. `attempted_actions` y `dead_ends` atacan un problema medido: el **32% de las acciones ejecutadas son repeticiones intra-trial** de una acción con la misma herramienta, los mismos argumentos y el mismo resultado. Un resumen que sólo preservara el estado del mundo, sin registrar qué ya se intentó y qué ya se descartó, invitaría al agente a re-explorar lo mismo con el contexto recién liberado. Un esquema cerrado además obliga al modelo a poblar las cuatro categorías en lugar de escribir un párrafo narrativo del que después hay que inferir el estado.
+
+**Se piden literales textuales.** El prompt exige copiar textualmente códigos, claves, combinaciones y mensajes de error, y prohíbe inventar información ausente del fragmento. El modo de falla propio de un resumidor no es escribir de más: es **omitir o parafrasear el dato que después resulta clave**. En estos escenarios una llave de color, una combinación de tres núcleos o el texto exacto de un error de cerradura son irrecuperables si el resumen los abstrae a "encontré una pista".
+
+**El transcript que ve el resumidor se trunca más largo que en la estrategia determinística**: 1.000 caracteres por observación, contra 200. La asimetría es intencional. En la estrategia determinística el truncado *es* el resultado final y va directo al historial, así que hay que ser agresivo; acá es sólo la entrada del resumidor, y darle más material mejora lo que puede extraer sin costo en el historial resultante, porque la salida está acotada por el esquema.
+
+**Reusa `_structured_call_with_repair()` con `purpose="history_compaction"`.** Esto trae tres cosas sin código nuevo: validación de la salida contra el esquema con reparación cuando no valida (`history_compaction_repair_max_attempts`), y —crítico— esa maquinaria **arma su propio contexto y no toca `agent._history`**, por lo que es seguro invocarla desde adentro del propio trimming del historial. Un resumidor que construyera su llamada sobre el historial del agente sería reentrante sobre la estructura que está modificando.
+
+**Los tokens del resumidor se contabilizan en el `AgentResult`.** El compactor corre dentro del trimming, donde no puede recibir por parámetro la clausura de acumulación de tokens del run; se expone como `agent._run_response_callback` para que su consumo no quede fuera de la medición. Sin esto, la estrategia más costosa aparecería como la más barata. Con `purpose` se separa el consumo del loop principal del introducido por el resumen: en el run final, `summary` gasta **48.691 tokens/trial en `agent` y 7.618 en `history_compaction`** (3,4 llamadas de compactación por trial), es decir, el resumen agrega ~16% sobre el consumo del loop.
+
+#### 1.5.5 Consecuencias observadas
+
+Ambas estrategias se evaluaron contra un control barato —subir el presupuesto de mensajes sin compactar nada— para separar "el mecanismo aporta" de "el problema era simplemente falta de ventana". La evidencia disponible viene de dos contrastes, y ninguno de los dos permite atribuir el efecto de forma limpia. Conviene explicitar por qué.
+
+**Contraste a ventana 100** (`eval/results/historic/evaluations/m3-context-comparison-eval-008`, nova-lite, `multi_attempt`, 80 trials por sistema):
+
+| Sistema | Ventana | Compactación | Éxito | Compactaciones (eventos / fallas) |
+|---|---:|---|---:|---:|
+| `minimal` | 100 | — | 69% | 0 / 0 |
+| `minimal_history_200` | 200 | — | **75%** | 0 / 0 |
+| `minimal_compaction` | 100 | determinística | 68% | 8 / 0 |
+| `minimal_summary` | 100 | por LLM | 62% | 13 / 4 |
+
+El problema de este contraste es visible en la última columna: **con ventana 100 el mecanismo casi no se dispara** (8 y 13 activaciones en 80 trials). Las diferencias de éxito no son atribuibles a una compactación que apenas ocurrió. Lo único que este contraste sí muestra con claridad es que el control barato gana: **subir el presupuesto a 200 mensajes (75%) supera a las tres variantes**, incluido el baseline.
+
+**Contraste a ventana 20** (`m3-final-eval-001`, nova-lite, `multi_attempt`, 80 trials por sistema). La reducción de la ventana fue una decisión deliberada, precisamente para forzar que el mecanismo se active de manera observable:
+
+| Sistema | Ventana | Compactación | Éxito | Compactaciones | `context_overflow` |
+|---|---:|---|---:|---:|---:|
+| `baseline` | 100 | — | **74%** | 0 | 0 |
+| `planner` | 100 | — | 72% | 0 | 2 |
+| `summary` | 20 | por LLM | 34% | 253 / 41 fallas | 33 |
+| `planner_summary` | 20 | por LLM | 36% | 265 / 47 fallas | 35 |
+
+Acá el mecanismo sí opera (518 eventos de compactación en total, con 88 fallas), pero la comparación mezcla dos cambios: el resumen y un presupuesto cinco veces menor. Lo que se puede afirmar es que **el resumen no compensa la reducción de ventana**: `context_overflow` sigue siendo el modo de falla dominante en las variantes con resumen (33 y 35 trials, contra 0 y 2 en las de ventana 100), y una de cada seis compactaciones falla, lo que por diseño termina el turno de forma controlada.
+
+**El brazo que falta.** Para atribuir el efecto al mecanismo haría falta un control a **ventana 20 sin compactación**. Ese brazo no existe en ninguno de los dos runs, y no es una omisión menor: sin él, la caída de 74% a 34% no se puede repartir entre "la ventana chica lastima" y "el resumen pierde información necesaria". La hipótesis que la evidencia sugiere —pero no prueba— es que domina lo primero, ya que a ventana 20 el baseline tampoco tendría de dónde recortar.
+
+**Balance.** Sobre este dataset no encontramos una configuración en la que la summarization por LLM se pague: donde el mecanismo no hace falta no cambia nada, y donde hace falta no alcanza. El costo adicional está acotado y es medible (~16% de tokens sobre el loop principal, ~3,4 llamadas por trial), así que el problema no es el precio sino el beneficio. Para este dominio, el resultado práctico es que **conviene gastar el presupuesto en ventana antes que en resumir**; la summarization recién se justificaría en un régimen donde ampliar la ventana no sea una opción.
 
 ---
 
