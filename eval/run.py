@@ -18,7 +18,7 @@ from eval.evaluation import start_evaluation
 from eval.persistence import RUNS_DIR, evaluation_dir
 from eval.configs.evaluation_configs import M3_EVALUATION_CONFIG
 from eval.configs.run_configs import (
-    M3_LLM_JUDGE_SMOKE_SUMMARY_RUN_CONFIG,
+    M3_FINAL_RUN_CONFIG,
 )
 from eval.run_execution import resume_run, start_run
 from eval.report import (
@@ -38,8 +38,8 @@ from eval.analyses.context_analysis import (
 
 RUNS = [
     (
-        "m3-llm-judge-smoke-summary-run-001",
-        M3_LLM_JUDGE_SMOKE_SUMMARY_RUN_CONFIG,
+        "m3-final-run-001",
+        M3_FINAL_RUN_CONFIG,
     ),
 ]
 
@@ -47,7 +47,7 @@ EVALUATION_RUN_IDS = [
     run_id
     for run_id, _ in RUNS
 ]
-EVAL_ID = "m3-llm-judge-smoke-summary-eval-001"
+EVAL_ID = "m3-final-eval-001"
 
 EVALUATION_CONFIG = M3_EVALUATION_CONFIG
 
