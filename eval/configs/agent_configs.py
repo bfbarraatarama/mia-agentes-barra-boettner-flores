@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from student_framework.escape_room import ESCAPE_ROOM_MINIMAL_SYSTEM_PROMPT
+from student_framework.escape_room import (
+    ESCAPE_ROOM_INCREMENTAL_SYSTEM_PROMPT,
+    ESCAPE_ROOM_MINIMAL_SYSTEM_PROMPT,
+)
 from student_framework.planner_agent import (
     DEFAULT_PLAN_GUIDANCE,
     DEFAULT_PLANNING_PROMPT,
@@ -61,6 +64,30 @@ PLANNER_SUMMARY_AGENT_CONFIG: dict[str, Any] = {
 }
 
 
+BASELINE_INCREMENTAL_AGENT_CONFIG: dict[str, Any] = {
+    **BASELINE_AGENT_CONFIG,
+    "system_prompt": ESCAPE_ROOM_INCREMENTAL_SYSTEM_PROMPT,
+}
+
+
+PLANNER_INCREMENTAL_AGENT_CONFIG: dict[str, Any] = {
+    **PLANNER_AGENT_CONFIG,
+    "system_prompt": ESCAPE_ROOM_INCREMENTAL_SYSTEM_PROMPT,
+}
+
+
+SUMMARY_INCREMENTAL_AGENT_CONFIG: dict[str, Any] = {
+    **SUMMARY_AGENT_CONFIG,
+    "system_prompt": ESCAPE_ROOM_INCREMENTAL_SYSTEM_PROMPT,
+}
+
+
+PLANNER_SUMMARY_INCREMENTAL_AGENT_CONFIG: dict[str, Any] = {
+    **PLANNER_SUMMARY_AGENT_CONFIG,
+    "system_prompt": ESCAPE_ROOM_INCREMENTAL_SYSTEM_PROMPT,
+}
+
+
 MINIMAL_AGENT_CONFIG: dict[str, Any] = {
     "system_prompt": ESCAPE_ROOM_MINIMAL_SYSTEM_PROMPT,
     "register_default_tools": False,
@@ -113,6 +140,10 @@ AGENT_CONFIGS: dict[str, dict[str, Any]] = {
     "planner": PLANNER_AGENT_CONFIG,
     "summary": SUMMARY_AGENT_CONFIG,
     "planner_summary": PLANNER_SUMMARY_AGENT_CONFIG,
+    "baseline_incremental": BASELINE_INCREMENTAL_AGENT_CONFIG,
+    "planner_incremental": PLANNER_INCREMENTAL_AGENT_CONFIG,
+    "summary_incremental": SUMMARY_INCREMENTAL_AGENT_CONFIG,
+    "planner_summary_incremental": PLANNER_SUMMARY_INCREMENTAL_AGENT_CONFIG,
     "minimal": MINIMAL_AGENT_CONFIG,
     "minimal_tool_repair": MINIMAL_TOOL_REPAIR_AGENT_CONFIG,
     "minimal_history_200": MINIMAL_HISTORY_200_AGENT_CONFIG,

@@ -310,3 +310,26 @@ M3_FINAL_RECOVERY_RUN_CONFIG: dict[str, Any] = {
         "multi_attempt_recovery",
     ],
 }
+
+
+M3_FINAL_INCREMENTAL_RUN_CONFIG: dict[str, Any] = {
+    **M3_FINAL_RECOVERY_RUN_CONFIG,
+    "systems": [
+        {
+            "agent_config": "baseline_incremental",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "planner_incremental",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "summary_incremental",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "planner_summary_incremental",
+            "llm_config": "nova-lite",
+        },
+    ],
+}
