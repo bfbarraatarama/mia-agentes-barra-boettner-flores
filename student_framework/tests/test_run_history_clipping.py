@@ -175,6 +175,47 @@ def test_run_removes_oldest_user_before_oldest_final_response() -> None:
     )
 
 
+def test_run_drops_leading_non_user_only_from_llm_context() -> None:
+    """Un prefijo histórico inválido no se envía al proveedor."""
+
+    mock = MockLLMClient(
+        [
+            LLMResponse(content="respuesta del primer turno"),
+            LLMResponse(content="respuesta del segundo turno"),
+        ]
+    )
+
+    agent = build_agent({
+        "llm_client": mock,
+        "max_history_messages": 2,
+    })
+
+    agent.run("mensaje del primer turno")
+
+    assert agent._history == [
+        {
+            "role": "assistant",
+            "content": "respuesta del primer turno",
+        },
+    ]
+
+    agent.run("mensaje del segundo turno")
+
+    assert mock.calls[1]["messages"] == [
+        {
+            "role": "user",
+            "content": "mensaje del segundo turno",
+        },
+    ]
+
+    assert agent._history == [
+        {
+            "role": "assistant",
+            "content": "respuesta del segundo turno",
+        },
+    ]
+
+
 def test_run_discards_oldest_complete_tool_trace_before_user_messages() -> None:
     """La traza más antigua se elimina antes que los mensajes conversacionales."""
 

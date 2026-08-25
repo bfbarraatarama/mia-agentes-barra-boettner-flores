@@ -209,12 +209,18 @@ class MyAgent:
     def _merge_adjacent_user_messages(
         messages: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
-        """Fusiona mensajes user consecutivos para la llamada al LLM."""
+        """Normaliza el historial para la llamada al LLM."""
 
         merged: list[dict[str, Any]] = []
 
         for message in messages:
             current = deepcopy(message)
+
+            if (
+                not merged
+                and current.get("role") != "user"
+            ):
+                continue
 
             if (
                 current.get("role") == "user"
