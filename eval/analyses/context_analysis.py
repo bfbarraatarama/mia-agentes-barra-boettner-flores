@@ -403,7 +403,7 @@ def _stats_table_lines(values: dict[str, Any]) -> list[str]:
         f"| Trials | {values['trials']} |",
         f"| Attempts | {values['attempts']} |",
         (
-            "| Trials terminados por presupuesto | "
+            "| Trials con terminación por presupuesto | "
             f"{values['budget_terminated_trials']} |"
         ),
         (

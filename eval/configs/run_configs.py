@@ -302,3 +302,11 @@ M3_FINAL_RUN_CONFIG: dict[str, Any] = {
     ],
     "trials_per_case": 10,
 }
+
+
+M3_FINAL_RECOVERY_RUN_CONFIG: dict[str, Any] = {
+    **M3_FINAL_RUN_CONFIG,
+    "trial_configs": [
+        "multi_attempt_recovery",
+    ],
+}

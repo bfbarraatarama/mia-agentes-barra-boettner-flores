@@ -12,6 +12,7 @@ Los tests de conformidad en `tests/conformance/test_m1.py` y
 from __future__ import annotations
 
 from copy import deepcopy
+from enum import Enum
 from typing import Any, Callable
 
 from mia_agents.protocols import LLMClient
@@ -20,6 +21,14 @@ import json
 from mia_agents.tool_schema import final_result_tool_schema
 from pydantic import ValidationError
 import inspect
+
+
+class RunTerminationReason(str, Enum):
+    """Causas estructuradas de terminación controlada de run()."""
+
+    CONTEXT_OVERFLOW = "context_overflow"
+    MAX_ITERATIONS = "max_iterations"
+
 
 class MyAgent:
     def __init__(
@@ -841,6 +850,15 @@ class MyAgent:
                     f"{self._max_history_messages}."
                 )
 
+                if self._trace_callback is not None:
+                    self._trace_callback({
+                        "type": "run_termination",
+                        "reason": RunTerminationReason.CONTEXT_OVERFLOW.value,
+                        "requested_tool_calls": len(effective_tool_calls),
+                        "round_messages_to_add": 1 + len(effective_tool_calls),
+                        "max_history_messages": self._max_history_messages,
+                    })
+
                 self._history.append({
                     "role": "assistant",
                     "content": error_message,
@@ -916,6 +934,13 @@ class MyAgent:
         message = (
             f"Se alcanzó el límite de {self._max_iterations} iteraciones sin obtener una respuesta final."
         )
+
+        if self._trace_callback is not None:
+            self._trace_callback({
+                "type": "run_termination",
+                "reason": RunTerminationReason.MAX_ITERATIONS.value,
+                "max_iterations": self._max_iterations,
+            })
 
         self._history.append({
             "role": "assistant",

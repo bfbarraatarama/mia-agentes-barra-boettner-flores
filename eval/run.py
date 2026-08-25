@@ -18,6 +18,7 @@ from eval.evaluation import start_evaluation
 from eval.persistence import RUNS_DIR, evaluation_dir
 from eval.configs.evaluation_configs import M3_EVALUATION_CONFIG
 from eval.configs.run_configs import (
+    M3_FINAL_RECOVERY_RUN_CONFIG,
     M3_FINAL_RUN_CONFIG,
 )
 from eval.run_execution import resume_run, start_run
@@ -28,6 +29,9 @@ from eval.report import (
 )
 from eval.analyses.tool_call_repair_analysis import (
     render_markdown as render_tool_call_repair_markdown,
+)
+from eval.analyses.attempt_recovery_analysis import (
+    render_markdown as render_attempt_recovery_markdown,
 )
 from eval.analyses.efficiency_analysis import (
     render_markdown as render_efficiency_markdown,
@@ -41,13 +45,17 @@ RUNS = [
         "m3-final-run-001",
         M3_FINAL_RUN_CONFIG,
     ),
+    (
+        "m3-final-run-002",
+        M3_FINAL_RECOVERY_RUN_CONFIG,
+    ),
 ]
 
 EVALUATION_RUN_IDS = [
     run_id
     for run_id, _ in RUNS
 ]
-EVAL_ID = "m3-final-eval-001"
+EVAL_ID = "m3-final-eval-002"
 
 EVALUATION_CONFIG = M3_EVALUATION_CONFIG
 
@@ -114,6 +122,11 @@ def main() -> int:
         evaluation_output_dir / "error_analysis.md"
     )
 
+    attempt_recovery_analysis_path = (
+        evaluation_output_dir
+        / "attempt_recovery_analysis.md"
+    )
+
     tool_call_repair_analysis_path = (
         evaluation_output_dir
         / "tool_call_repair_analysis.md"
@@ -139,6 +152,19 @@ def main() -> int:
     write_error_analysis_report(
         evaluation_result,
         error_analysis_path,
+    )
+
+    attempt_recovery_analysis = (
+        evaluation_result["analyses"][
+            "attempt_recovery_analysis"
+        ]
+    )
+
+    attempt_recovery_analysis_path.write_text(
+        render_attempt_recovery_markdown(
+            attempt_recovery_analysis
+        ),
+        encoding="utf-8",
     )
 
     tool_call_repair_analysis = (
@@ -194,6 +220,10 @@ def main() -> int:
     )
     print(
         f"Análisis de errores: {error_analysis_path}"
+    )
+    print(
+        "Análisis de recuperación entre attempts: "
+        f"{attempt_recovery_analysis_path}"
     )
     print(
         "Análisis de reparación de tool calls: "
