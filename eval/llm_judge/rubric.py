@@ -9,7 +9,7 @@ from typing import Literal
 CriterionId = Literal["Q1.1", "Q1.2", "Q1.3", "Q1.4"]
 CriterionApplicability = Literal["always", "conditional"]
 
-RUBRIC_VERSION = "planning-quality-v4"
+RUBRIC_VERSION = "planning-quality-v5"
 DIMENSION_ID = "Q1"
 DIMENSION_NAME = "Calidad de la planificación durante la trayectoria"
 DIMENSION_DESCRIPTION = (
@@ -37,11 +37,13 @@ EVIDENCE_RULES = (
     (
         "El plan representa una estrategia explícita disponible antes de "
         "actuar. El contexto reducido representa una versión condensada de "
-        "parte de la trayectoria anterior disponible para decisiones "
-        "posteriores. Ambos pueden aportar evidencia sobre la estrategia, los "
-        "subobjetivos y la información disponible, pero no constituyen hechos "
-        "sobre el mundo; para establecer qué ocurrió prevalecen las acciones "
-        "ejecutadas y las observaciones originales."
+        "parte de la trayectoria anterior y, cuando corresponde, identifica "
+        "las rondas recientes que permanecieron disponibles en crudo junto "
+        "al resumen para decisiones posteriores. Ambos pueden aportar "
+        "evidencia sobre la estrategia, los subobjetivos y la información "
+        "disponible, pero no constituyen hechos sobre el mundo; para establecer "
+        "qué ocurrió prevalecen las acciones ejecutadas y las observaciones "
+        "originales."
     ),
     (
         "Una omisión, distorsión o contradicción en una representación "

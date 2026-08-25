@@ -63,6 +63,7 @@ class QualitativeInternalContext(_StrictModel):
     context_id: str = Field(min_length=1)
     kind: InternalContextKind
     content: str
+    preserved_raw_round_refs: list[str] = Field(default_factory=list)
 
 
 class QualitativeIteration(_StrictModel):

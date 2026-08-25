@@ -825,6 +825,12 @@ def _evidence_cards_html(
     data = json.loads(
         review_case.presentation.text
     )
+    iterations_by_ref = {
+        str(iteration["ref"]): iteration
+        for attempt in data.get("attempts", [])
+        for iteration in attempt.get("iterations", [])
+        if iteration.get("ref")
+    }
     applicable = tuple(
         criterion_id
         for criterion_id in CRITERION_IDS
@@ -974,6 +980,128 @@ def _evidence_cards_html(
             f"{raw_html}</div>"
         )
 
+    def _action_body_html(
+        action: dict,
+    ) -> str:
+        body = tool_line(
+            "Propuesta",
+            action.get("proposed_action"),
+        )
+        execution = action.get("execution")
+
+        if execution is None:
+            return (
+                body
+                + '<div class="muted">'
+                "La acción no llegó a ejecutarse."
+                "</div>"
+            )
+
+        if execution.get("differs_from_proposal"):
+            body += (
+                '<span class="repair-badge">'
+                "MODIFICADA"
+                "</span>"
+            )
+
+        body += tool_line(
+            "Ejecución",
+            execution.get("action"),
+        )
+        observation = (
+            execution.get("observation")
+            or {}
+        )
+        observation_class = (
+            "observation observation-error"
+            if observation.get("is_error")
+            else "observation"
+        )
+        body += (
+            f'<div class="{observation_class}">'
+            "<strong>Observación:</strong> "
+            '<span class="evidence-text">'
+            + html.escape(str(
+                observation.get("content", "")
+            ))
+            + "</span></div>"
+        )
+
+        if observation.get("error"):
+            body += (
+                '<div class="error-text">'
+                + html.escape(str(
+                    observation["error"]
+                ))
+                + "</div>"
+            )
+
+        return body
+
+    def preserved_round_html(
+        round_ref: str,
+        position: int,
+    ) -> str:
+        iteration = iterations_by_ref.get(round_ref)
+
+        if iteration is None:
+            raise ValueError(
+                "Un summary referencia una ronda preservada "
+                f"inexistente: {round_ref!r}."
+            )
+
+        assistant_content = iteration.get(
+            "assistant_content"
+        )
+        assistant_html = (
+            '<div class="evidence-text">'
+            + html.escape(str(assistant_content))
+            + "</div>"
+            if assistant_content is not None
+            else (
+                '<div class="muted">'
+                "Sin contenido textual del assistant."
+                "</div>"
+            )
+        )
+        action_blocks = "".join(
+            (
+                '<div class="preserved-round-action">'
+                f"<strong>Acción {action_index}</strong>"
+                + _action_body_html(action)
+                + "</div>"
+            )
+            for action_index, action in enumerate(
+                iteration.get("actions", []),
+                start=1,
+            )
+        )
+
+        if not action_blocks:
+            action_blocks = (
+                '<div class="muted">'
+                "Sin acciones en esta ronda."
+                "</div>"
+            )
+
+        return f"""
+        <section class="preserved-round">
+          <header class="preserved-round-header">
+            <strong>Ronda preservada {position}</strong>
+            <span class="evidence-ref">
+              {html.escape(round_ref)}
+            </span>
+          </header>
+
+          <div class="preserved-round-assistant">
+            <strong>Assistant</strong>
+            {assistant_html}
+          </div>
+
+          {action_blocks}
+        </section>
+        """
+
     rules = "".join(
         f"<li>{html.escape(str(rule))}</li>"
         for rule in data.get(
@@ -1026,27 +1154,70 @@ def _evidence_cards_html(
         rendered_refs.append(
             context_ref
         )
+        if kind == "plan":
+            body = (
+                '<div class="internal-context-note">'
+                "Estrategia previa del agente; "
+                "no es una observación del mundo."
+                "</div>"
+                '<div class="evidence-text">'
+                + html.escape(str(content))
+                + "</div>"
+            )
+        else:
+            preserved_refs = context.get(
+                "preserved_raw_round_refs",
+                [],
+            )
+
+            if not isinstance(preserved_refs, list):
+                raise ValueError(
+                    "Las rondas preservadas de un summary deben "
+                    "estar representadas como una lista de refs."
+                )
+
+            preserved_html = "".join(
+                preserved_round_html(
+                    str(round_ref),
+                    position,
+                )
+                for position, round_ref in enumerate(
+                    preserved_refs,
+                    start=1,
+                )
+            )
+
+            if not preserved_html:
+                preserved_html = (
+                    '<div class="muted">'
+                    "No quedaron rondas recientes preservadas en crudo."
+                    "</div>"
+                )
+
+            body = (
+                '<div class="internal-context-note">'
+                "Contexto realmente disponible para decisiones posteriores: "
+                "resumen sintetizado más las rondas recientes indicadas "
+                "como preservadas en crudo. No es una observación del mundo."
+                "</div>"
+                '<div class="internal-context-section-title">'
+                "Resumen sintetizado"
+                "</div>"
+                '<div class="evidence-text">'
+                + html.escape(str(content))
+                + "</div>"
+                '<div class="internal-context-section-title">'
+                "Rondas preservadas en crudo"
+                "</div>"
+                + preserved_html
+            )
+
         parts.append(card(
             context_ref,
             "internal-context",
             label,
             title,
-            (
-                '<div class="internal-context-note">'
-                + (
-                    "Estrategia previa del agente; "
-                    "no es una observación del mundo."
-                    if kind == "plan"
-                    else (
-                        "Representación reducida de la trayectoria anterior; "
-                        "no es una observación del mundo."
-                    )
-                )
-                + "</div>"
-                '<div class="evidence-text">'
-                + html.escape(str(content))
-                + "</div>"
-            ),
+            body,
         ))
 
     for attempt in data.get(
@@ -1175,79 +1346,9 @@ def _evidence_cards_html(
                     action_ref
                 )
 
-                execution = action.get(
-                    "execution"
+                action_body = _action_body_html(
+                    action
                 )
-                action_body = tool_line(
-                    "Propuesta",
-                    action.get(
-                        "proposed_action"
-                    ),
-                )
-
-                if execution is None:
-                    action_body += (
-                        '<div class="muted">'
-                        "La acción no llegó a ejecutarse."
-                        "</div>"
-                    )
-                else:
-                    if execution.get(
-                        "differs_from_proposal"
-                    ):
-                        action_body += (
-                            '<span class="repair-badge">'
-                            "MODIFICADA"
-                            "</span>"
-                        )
-
-                    action_body += tool_line(
-                        "Ejecución",
-                        execution.get(
-                            "action"
-                        ),
-                    )
-
-                    observation = (
-                        execution.get(
-                            "observation"
-                        )
-                        or {}
-                    )
-                    observation_class = (
-                        "observation "
-                        "observation-error"
-                        if observation.get(
-                            "is_error"
-                        )
-                        else "observation"
-                    )
-
-                    action_body += (
-                        f'<div class="{observation_class}">'
-                        "<strong>Observación:</strong> "
-                        '<span class="evidence-text">'
-                        + html.escape(str(
-                            observation.get(
-                                "content",
-                                "",
-                            )
-                        ))
-                        + "</span></div>"
-                    )
-
-                    if observation.get(
-                        "error"
-                    ):
-                        action_body += (
-                            '<div class="error-text">'
-                            + html.escape(str(
-                                observation[
-                                    "error"
-                                ]
-                            ))
-                            + "</div>"
-                        )
 
                 parts.append(card(
                     action_ref,
@@ -1976,6 +2077,39 @@ header h1 {{
   color: #666;
   font-size: .8rem;
   font-style: italic;
+}}
+
+.internal-context-section-title {{
+  margin-top: .75rem;
+  margin-bottom: .35rem;
+  font-size: .78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}}
+
+.preserved-round {{
+  margin-top: .5rem;
+  padding: .55rem .65rem;
+  border: 1px solid #ccc;
+  border-radius: .35rem;
+  background: rgba(255, 255, 255, .7);
+}}
+
+.preserved-round-header {{
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-bottom: .5rem;
+}}
+
+.preserved-round-assistant {{
+  margin-bottom: .5rem;
+}}
+
+.preserved-round-action {{
+  margin-top: .5rem;
+  padding-top: .5rem;
+  border-top: 1px solid #ddd;
 }}
 
 .evidence-body > div {{

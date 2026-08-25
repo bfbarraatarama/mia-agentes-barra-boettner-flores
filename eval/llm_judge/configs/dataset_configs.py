@@ -72,7 +72,7 @@ M3_LLM_JUDGE_SMOKE_DATASET_CONFIG: dict[str, Any] = {
 
 
 M3_QUALITATIVE_FINAL_DATASET_CONFIG: dict[str, Any] = {
-    "dataset_id": "m3-qualitative-final-v1",
+    "dataset_id": "m3-qualitative-final-v2",
     "run_ids": [
         "m3-final-run-001",
     ],

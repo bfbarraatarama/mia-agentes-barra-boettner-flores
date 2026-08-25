@@ -146,8 +146,8 @@ from eval.llm_judge.annotate import (
 
 def _qualitative_case() -> QualitativeCase:
     return QualitativeCase(
-        schema_version=5,
-        case_view_version="trajectory-planning-v5",
+        schema_version=6,
+        case_view_version="trajectory-planning-v6",
         case_id="qc-001",
         task="Abrí la puerta principal.",
         criteria_applicability={
@@ -211,8 +211,8 @@ def _human_annotation() -> HumanAnnotation:
 
     return HumanAnnotation(
         schema_version=HUMAN_ANNOTATION_SCHEMA_VERSION,
-        case_schema_version=5,
-        case_view_version="trajectory-planning-v5",
+        case_schema_version=6,
+        case_view_version="trajectory-planning-v6",
         presentation_version=PRESENTATION_VERSION,
         rubric_version=RUBRIC_VERSION,
         case_id="qc-001",
@@ -254,12 +254,13 @@ def _agent_call(
     *,
     content: str | None,
     tool_calls: list[dict] | None = None,
+    messages: list[dict] | None = None,
 ) -> dict:
     return {
         "type": "llm_call",
         "purpose": "agent",
         "retry_index": 0,
-        "messages": [],
+        "messages": messages or [],
         "response": {
             "content": content,
             "tool_calls": tool_calls or [],
@@ -432,7 +433,7 @@ def _judge_response(
 
 
 def test_llm_judge_rubric_defines_planning_quality_criteria() -> None:
-    assert RUBRIC_VERSION == "planning-quality-v4"
+    assert RUBRIC_VERSION == "planning-quality-v5"
     assert DIMENSION_ID == "Q1"
     assert CRITERION_IDS == (
         "Q1.1",
@@ -685,6 +686,37 @@ def test_build_qualitative_case_preserves_internal_context_temporally() -> None:
         },
         _agent_call(
             content="Todavía no terminé.",
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        "[Resumen de progreso del intento actual]\n"
+                        f"{first_summary}"
+                    ),
+                },
+                {
+                    "role": "assistant",
+                    "content": "Primero examino la puerta.",
+                    "tool_calls": [
+                        {
+                            "id": "examine-1",
+                            "type": "function",
+                            "function": {
+                                "name": "examine",
+                                "arguments": json.dumps({
+                                    "target": "puerta",
+                                }),
+                            },
+                        },
+                    ],
+                },
+                {
+                    "role": "tool",
+                    "tool_call_id": "examine-1",
+                    "name": "examine",
+                    "content": "La puerta está cerrada.",
+                },
+            ],
         ),
         {
             "type": "history_compaction",
@@ -704,6 +736,16 @@ def test_build_qualitative_case_preserves_internal_context_temporally() -> None:
     second_attempt_trace = [
         _agent_call(
             content="Continúo buscando la llave.",
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        "[Resumen de progreso del intento actual]\n"
+                        f"{continuation_summary}\n\n"
+                        "El desafío todavía no está completado. Continuá."
+                    ),
+                },
+            ],
         ),
         {
             "type": "history_compaction",
@@ -754,6 +796,7 @@ def test_build_qualitative_case_preserves_internal_context_temporally() -> None:
                 "1. Examinar la puerta\n"
                 "2. Encontrar la llave"
             ),
+            "preserved_raw_round_refs": [],
         },
     ]
     assert [
@@ -764,6 +807,7 @@ def test_build_qualitative_case_preserves_internal_context_temporally() -> None:
             "context_id": "a1.i1.summary1",
             "kind": "summary",
             "content": first_summary,
+            "preserved_raw_round_refs": [],
         },
     ]
     assert [
@@ -776,10 +820,203 @@ def test_build_qualitative_case_preserves_internal_context_temporally() -> None:
             "context_id": "a1.i2.summary1",
             "kind": "summary",
             "content": continuation_summary,
+            "preserved_raw_round_refs": [],
         },
     ]
     assert second_attempt_iteration.context_before_decision == []
     assert second_attempt_iteration.context_after_decision == []
+
+
+def test_build_qualitative_case_records_raw_rounds_preserved_with_summary() -> None:
+    summary = (
+        "Hechos descubiertos:\n"
+        "- Hay una llave en la habitación."
+    )
+    look_arguments = "{}"
+    go_arguments = json.dumps({"direction": "norte"})
+    examine_arguments = json.dumps({"target": "puerta"})
+
+    trace = [
+        _agent_call(
+            content="Primero miro.",
+            tool_calls=[
+                {
+                    "id": "look-1",
+                    "name": "look",
+                    "arguments": look_arguments,
+                },
+            ],
+        ),
+        {
+            "type": "tool_execution",
+            "retry_index": 0,
+            "tool_name": "look",
+            "arguments": {},
+            "output": "Ves un pasillo.",
+        },
+        _agent_call(
+            content="Avanzo al norte.",
+            tool_calls=[
+                {
+                    "id": "go-1",
+                    "name": "go",
+                    "arguments": go_arguments,
+                },
+            ],
+        ),
+        {
+            "type": "tool_execution",
+            "retry_index": 0,
+            "tool_name": "go",
+            "arguments": {"direction": "norte"},
+            "output": "Llegas al pasillo.",
+        },
+        _agent_call(
+            content="Examino la puerta.",
+            tool_calls=[
+                {
+                    "id": "examine-1",
+                    "name": "examine",
+                    "arguments": examine_arguments,
+                },
+            ],
+        ),
+        {
+            "type": "history_compaction",
+            "evicted_messages": 6,
+            "summary": summary,
+            "summary_chars": len(summary),
+        },
+        {
+            "type": "tool_execution",
+            "retry_index": 0,
+            "tool_name": "examine",
+            "arguments": {"target": "puerta"},
+            "output": "La puerta está cerrada.",
+        },
+        _agent_call(
+            content="Sigo buscando.",
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        "[Resumen de progreso del intento actual]\n"
+                        f"{summary}"
+                    ),
+                },
+                {
+                    "role": "assistant",
+                    "content": "Primero miro.",
+                    "tool_calls": [
+                        {
+                            "id": "look-1",
+                            "type": "function",
+                            "function": {
+                                "name": "look",
+                                "arguments": look_arguments,
+                            },
+                        },
+                    ],
+                },
+                {
+                    "role": "tool",
+                    "tool_call_id": "look-1",
+                    "name": "look",
+                    "content": "Ves un pasillo.",
+                },
+                {
+                    "role": "assistant",
+                    "content": "Avanzo al norte.",
+                    "tool_calls": [
+                        {
+                            "id": "go-1",
+                            "type": "function",
+                            "function": {
+                                "name": "go",
+                                "arguments": go_arguments,
+                            },
+                        },
+                    ],
+                },
+                {
+                    "role": "tool",
+                    "tool_call_id": "go-1",
+                    "name": "go",
+                    "content": "Llegas al pasillo.",
+                },
+                {
+                    "role": "assistant",
+                    "content": "Examino la puerta.",
+                    "tool_calls": [
+                        {
+                            "id": "examine-1",
+                            "type": "function",
+                            "function": {
+                                "name": "examine",
+                                "arguments": examine_arguments,
+                            },
+                        },
+                    ],
+                },
+                {
+                    "role": "tool",
+                    "tool_call_id": "examine-1",
+                    "name": "examine",
+                    "content": "La puerta está cerrada.",
+                },
+            ],
+        ),
+    ]
+    steps = [
+        {
+            "tool_name": "look",
+            "tool_input": look_arguments,
+            "tool_output": "Ves un pasillo.",
+            "error": None,
+        },
+        {
+            "tool_name": "go",
+            "tool_input": go_arguments,
+            "tool_output": "Llegas al pasillo.",
+            "error": None,
+        },
+        {
+            "tool_name": "examine",
+            "tool_input": examine_arguments,
+            "tool_output": "La puerta está cerrada.",
+            "error": None,
+        },
+    ]
+    trial = {
+        "trial_index": 1,
+        "goal_achieved": False,
+        "goal_reason": "pendiente",
+        "attempts": [
+            _attempt(
+                trace=trace,
+                steps=steps,
+                answer="Sigo buscando.",
+            ),
+        ],
+    }
+
+    case = build_qualitative_case(
+        trial,
+        case_id="qc-preserved-rounds",
+    )
+
+    context = (
+        case.attempts[0]
+        .iterations[2]
+        .context_after_decision[0]
+    )
+
+    assert context.kind == "summary"
+    assert context.content == summary
+    assert context.preserved_raw_round_refs == [
+        "a1.i1",
+        "a1.i2",
+    ]
 
 
 def test_build_qualitative_case_distinguishes_repaired_action() -> None:
@@ -2086,8 +2323,8 @@ def test_load_dataset_manifest_preserves_dataset_config(
         "population": dataset_config["population"],
         "sampling": dataset_config["sampling"],
     }
-    assert manifest["rubric_version"] == "planning-quality-v4"
-    assert manifest["case_view_version"] == "trajectory-planning-v5"
+    assert manifest["rubric_version"] == "planning-quality-v5"
+    assert manifest["case_view_version"] == "trajectory-planning-v6"
 
 
 def test_create_qualitative_dataset_rejects_existing_dataset(
@@ -2162,7 +2399,7 @@ def test_pilot_dataset_config_defines_shared_population_and_sampling() -> None:
 def test_final_dataset_config_defines_holdout_then_dev_sampling() -> None:
     config = M3_QUALITATIVE_FINAL_DATASET_CONFIG
 
-    assert config["dataset_id"] == "m3-qualitative-final-v1"
+    assert config["dataset_id"] == "m3-qualitative-final-v2"
     assert config["run_ids"] == [
         "m3-final-run-001",
     ]
@@ -2360,8 +2597,8 @@ def test_create_judge_evaluation_persists_reproducible_manifest(
             "prediction_schema_version": (
                 JUDGE_PREDICTION_SCHEMA_VERSION
             ),
-            "case_schema_version": 5,
-            "case_view_version": "trajectory-planning-v5",
+            "case_schema_version": 6,
+            "case_view_version": "trajectory-planning-v6",
             "presentation_version": PRESENTATION_VERSION,
             "rubric_version": RUBRIC_VERSION,
             "judge_prompt_version": JUDGE_PROMPT_VERSION,
@@ -4815,6 +5052,7 @@ def test_case_presentation_exposes_internal_context_as_evidence() -> None:
                 "Hechos descubiertos:\n"
                 "- La puerta requiere una llave."
             ),
+            "preserved_raw_round_refs": [],
         },
     ]
 
@@ -4841,11 +5079,83 @@ def test_case_presentation_exposes_internal_context_as_evidence() -> None:
         "para decisiones posteriores"
     ) in rendered
     assert (
-        "Representación reducida de la trayectoria anterior; "
-        "no es una observación del mundo."
+        "Contexto realmente disponible para decisiones posteriores: "
+        "resumen sintetizado más las rondas recientes indicadas "
+        "como preservadas en crudo. No es una observación del mundo."
     ) in rendered
     assert "a1.i1.plan1" in rendered
     assert "a1.i1.summary1" in rendered
+
+
+def test_case_presentation_exposes_raw_rounds_preserved_with_summary() -> None:
+    case = _qualitative_case()
+    case.attempts[0].iterations.append(
+        QualitativeIteration(
+            iteration_index=2,
+            assistant_content="Sigo con la búsqueda.",
+            context_after_decision=[
+                QualitativeInternalContext(
+                    context_id="a1.i2.summary1",
+                    kind="summary",
+                    content=(
+                        "Hechos descubiertos:\n"
+                        "- La puerta requiere una llave."
+                    ),
+                    preserved_raw_round_refs=[
+                        "a1.i1",
+                    ],
+                ),
+            ],
+        )
+    )
+    case.attempts[0].iterations.append(
+        QualitativeIteration(
+            iteration_index=3,
+            assistant_content="Continúo.",
+        )
+    )
+
+    presentation = build_case_presentation(
+        case
+    )
+    data = json.loads(
+        presentation.text
+    )
+    summary_context = data["attempts"][0][
+        "iterations"
+    ][1]["context_after_decision"][0]
+
+    assert presentation.version == "planning-evidence-v6"
+    assert summary_context == {
+        "ref": "a1.i2.summary1",
+        "kind": "summary",
+        "content": (
+            "Hechos descubiertos:\n"
+            "- La puerta requiere una llave."
+        ),
+        "preserved_raw_round_refs": [
+            "a1.i1",
+        ],
+    }
+
+    assert (
+        data["attempts"][0]["iterations"][0][
+            "assistant_content"
+        ]
+        == "<thinking>Primero voy a mirar.</thinking>"
+    )
+    assert "preserved_raw_rounds" not in summary_context
+    assert presentation.evidence_refs.count(
+        "a1.i1"
+    ) == 1
+
+    prompt = build_judge_prompt(
+        presentation,
+        "Q1.1",
+    )
+
+    assert '"preserved_raw_round_refs": [' in prompt
+    assert '"a1.i1"' in prompt
 
 
 def test_case_presentation_excludes_evaluation_metadata() -> None:
@@ -6208,6 +6518,66 @@ def test_annotate_evidence_inputs_belong_to_annotation_form(
         'hidden '
         'form="annotation-form"'
     ) in page
+
+
+def test_annotate_evidence_renders_summary_with_preserved_raw_rounds() -> None:
+    case = _qualitative_case()
+
+    case.attempts[0].iterations.append(
+        QualitativeIteration(
+            iteration_index=2,
+            assistant_content="Ahora sigo buscando.",
+            context_after_decision=[
+                QualitativeInternalContext(
+                    context_id="a1.i2.summary1",
+                    kind="summary",
+                    content=(
+                        "Hechos descubiertos:\n"
+                        "- Hay una llave."
+                    ),
+                    preserved_raw_round_refs=[
+                        "a1.i1",
+                    ],
+                ),
+            ],
+        )
+    )
+    case.attempts[0].iterations.append(
+        QualitativeIteration(
+            iteration_index=3,
+            assistant_content="Continúo.",
+        )
+    )
+
+    review_case = ReviewCase(
+        case=case,
+        split="dev",
+        presentation=build_case_presentation(
+            case
+        ),
+        annotation=None,
+    )
+
+    evidence_html = _evidence_cards_html(
+        review_case
+    )
+
+    assert "Resumen sintetizado" in evidence_html
+    assert "Rondas preservadas en crudo" in evidence_html
+    assert "<strong>Ronda preservada 1</strong>" in evidence_html
+    assert 'class="preserved-round"' in evidence_html
+    assert (
+        "&lt;thinking&gt;Primero voy a mirar.&lt;/thinking&gt;"
+        in evidence_html
+    )
+    assert "Ves una llave." in evidence_html
+
+    assert (
+        evidence_html.count(
+            'data-evidence-ref="a1.i1"'
+        )
+        == 1
+    )
 
 
 def test_annotate_page_exposes_q1_4_trigger_navigation(
