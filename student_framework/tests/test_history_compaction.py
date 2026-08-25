@@ -999,8 +999,9 @@ def test_strategic_compaction_profile_reconstructs_current_state() -> None:
     assert "locked: wrong key" in summary
 
     prompt = mock.calls[0]["messages"][0]["content"]
-    assert "observaciones posteriores tienen precedencia" in prompt
-    assert "Reemplazá la estrategia vigente" in prompt
+    assert "no una narración de lo ocurrido" in prompt
+    assert "replanteá el subobjetivo o la estrategia" in prompt
+    assert "evitando repetir acciones" in prompt
 
     properties = mock.calls[0]["tools"][0].parameters["properties"]
     assert set(properties) == {
