@@ -51,6 +51,7 @@ def _build_compaction_agent(
     trace_callback: Any = None,
     max_iterations: int = 10,
     history_compaction_input_token_threshold: int | None = None,
+    history_compaction_message_interval: int | None = None,
 ) -> Any:
     config: dict[str, Any] = {
         "llm_client": mock,
@@ -68,6 +69,11 @@ def _build_compaction_agent(
     if history_compaction_input_token_threshold is not None:
         config["history_compaction_input_token_threshold"] = (
             history_compaction_input_token_threshold
+        )
+
+    if history_compaction_message_interval is not None:
+        config["history_compaction_message_interval"] = (
+            history_compaction_message_interval
         )
 
     agent = build_agent(config)
@@ -540,6 +546,156 @@ def test_llm_compactor_tokens_accumulate_in_agent_result():
     )
 
 
+def test_message_interval_compacts_before_next_agent_call():
+    """La cadencia cuenta mensajes nuevos, no el largo del historial."""
+
+    events: list[dict[str, Any]] = []
+    compactor = RecordingCompactor()
+
+    mock = MockLLMClient([
+        _tool_call_response("c1", "uno"),
+        _tool_call_response("c2", "dos"),
+        _tool_call_response("c3", "tres"),
+        _tool_call_response("c4", "cuatro"),
+        LLMResponse(content="objetivo cumplido"),
+    ])
+    agent = _build_compaction_agent(
+        mock,
+        max_history_messages=100,
+        history_compaction=compactor,
+        trace_callback=events.append,
+        history_compaction_message_interval=7,
+    )
+
+    result = agent.run("tarea larga")
+
+    assert result.error is None
+    assert result.answer == "objetivo cumplido"
+    assert len(compactor.calls) == 1
+
+    # user + tres rondas assistant/tool = siete mensajes nuevos.
+    # La compactación ocurre recién antes de la cuarta llamada.
+    assert [
+        message["role"]
+        for message in compactor.calls[0]
+    ] == ["assistant", "tool"]
+    assert any(
+        "[Resumen de progreso del intento actual]"
+        in (message.get("content") or "")
+        for message in mock.calls[3]["messages"]
+    )
+
+    periodic_triggers = [
+        event
+        for event in events
+        if event.get("type") == "history_compaction_trigger"
+        and event.get("reason") == "message_interval"
+    ]
+
+    assert periodic_triggers == [{
+        "type": "history_compaction_trigger",
+        "reason": "message_interval",
+        "messages_since_last_attempt": 7,
+        "interval": 7,
+    }]
+
+
+def test_message_interval_resets_after_periodic_attempt():
+    """Un intento periódico reinicia la cuenta aunque el run continúe."""
+
+    compactor = RecordingCompactor()
+
+    mock = MockLLMClient([
+        _tool_call_response("c1", "uno"),
+        _tool_call_response("c2", "dos"),
+        _tool_call_response("c3", "tres"),
+        _tool_call_response("c4", "cuatro"),
+        _tool_call_response("c5", "cinco"),
+        _tool_call_response("c6", "seis"),
+        LLMResponse(content="objetivo cumplido"),
+    ])
+    agent = _build_compaction_agent(
+        mock,
+        max_history_messages=100,
+        history_compaction=compactor,
+        history_compaction_message_interval=7,
+    )
+
+    result = agent.run("tarea larga")
+
+    assert result.error is None
+    assert result.answer == "objetivo cumplido"
+    assert len(compactor.calls) == 1
+    assert agent._history_messages_since_periodic_compaction_attempt == 7
+
+
+def test_message_interval_and_token_trigger_share_one_compaction():
+    """Si ambos triggers vencen juntos, se hace un solo intento."""
+
+    events: list[dict[str, Any]] = []
+    compactor = RecordingCompactor()
+
+    mock = MockLLMClient([
+        _tool_call_response("c1", "uno", input_tokens=10),
+        _tool_call_response("c2", "dos", input_tokens=10),
+        _tool_call_response("c3", "tres", input_tokens=101),
+        _tool_call_response("c4", "cuatro", input_tokens=10),
+        LLMResponse(content="objetivo cumplido", input_tokens=10),
+    ])
+    agent = _build_compaction_agent(
+        mock,
+        max_history_messages=100,
+        history_compaction=compactor,
+        trace_callback=events.append,
+        history_compaction_input_token_threshold=100,
+        history_compaction_message_interval=7,
+    )
+
+    result = agent.run("tarea larga")
+
+    assert result.error is None
+    assert len(compactor.calls) == 1
+    assert {
+        event.get("reason")
+        for event in events
+        if event.get("type") == "history_compaction_trigger"
+    } == {"input_tokens", "message_interval"}
+
+
+def test_failing_message_interval_compaction_resets_periodic_counter():
+    """Un fallo periódico no provoca reintentos en cada iteración."""
+
+    calls = 0
+
+    def broken_compactor(messages: list[dict[str, Any]]) -> str:
+        nonlocal calls
+        calls += 1
+        raise RuntimeError("resumidor roto")
+
+    mock = MockLLMClient([
+        _tool_call_response("c1", "uno"),
+        _tool_call_response("c2", "dos"),
+        _tool_call_response("c3", "tres"),
+        _tool_call_response("c4", "cuatro"),
+        _tool_call_response("c5", "cinco"),
+        LLMResponse(content="objetivo cumplido"),
+    ])
+    agent = _build_compaction_agent(
+        mock,
+        max_history_messages=100,
+        history_compaction=broken_compactor,
+        history_compaction_message_interval=7,
+    )
+
+    result = agent.run("tarea larga")
+
+    assert result.error is None
+    assert result.answer == "objetivo cumplido"
+    assert calls == 1
+
+
+
+
 def test_input_token_threshold_compacts_before_next_agent_call():
     """El trigger se consume justo antes de la siguiente llamada."""
 
@@ -752,6 +908,22 @@ def test_non_positive_input_token_threshold_rejected():
         })
 
 
+def test_non_positive_message_interval_rejected():
+    """La cadencia periódica configurada debe ser positiva."""
+
+    with pytest.raises(
+        ValueError,
+        match="history_compaction_message_interval debe ser positivo",
+    ):
+        build_agent({
+            "llm_client": MockLLMClient([]),
+            "register_default_tools": False,
+            "history_compaction_message_interval": 0,
+        })
+
+
+
+
 def test_compactor_disabled_by_default():
     """Sin history_compaction, build_agent conserva la política M2."""
 
@@ -769,6 +941,104 @@ def test_build_agent_rejects_unknown_compaction_strategy():
             "llm_client": MockLLMClient([]),
             "register_default_tools": False,
             "history_compaction": "resumir-magicamente",
+        })
+
+
+def test_strategic_compaction_profile_reconstructs_current_state() -> None:
+    """El profile estratégico usa su schema y prioriza evidencia nueva."""
+
+    strategic_arguments = json.dumps({
+        "current_subgoal": "abrir la puerta norte",
+        "current_strategy": "buscar otra llave",
+        "confirmed_facts": ["la llave roja no abre la puerta norte"],
+        "negative_evidence": [
+            "usar la llave roja devolvió locked: wrong key"
+        ],
+        "attempted_actions": ["use(llave_roja) → locked: wrong key"],
+        "dead_ends": ["no volver a probar la llave roja"],
+        "open_questions": ["qué llave corresponde a la puerta norte"],
+        "progress": ["la habitación sur ya fue inspeccionada"],
+        "additional_context": [],
+    })
+    mock = MockLLMClient([
+        LLMResponse(
+            content=None,
+            tool_calls=[
+                ToolCall("s1", "final_result", strategic_arguments),
+            ],
+        ),
+    ])
+    agent = build_agent({
+        "llm_client": mock,
+        "register_default_tools": False,
+        "history_compaction": "llm",
+        "history_compaction_profile": "strategic_v1",
+    })
+
+    summary = agent._history_compactor([
+        {
+            "role": "user",
+            "content": (
+                "[Resumen de progreso del intento actual]\n"
+                "Estrategia vigente:\n- usar la llave roja"
+            ),
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "c1",
+            "name": "use",
+            "content": "locked: wrong key",
+        },
+    ])
+
+    assert "Subobjetivo vigente:" in summary
+    assert "- abrir la puerta norte" in summary
+    assert "Estrategia vigente:" in summary
+    assert "- buscar otra llave" in summary
+    assert "Evidencia negativa:" in summary
+    assert "locked: wrong key" in summary
+
+    prompt = mock.calls[0]["messages"][0]["content"]
+    assert "observaciones posteriores tienen precedencia" in prompt
+    assert "Reemplazá la estrategia vigente" in prompt
+
+    properties = mock.calls[0]["tools"][0].parameters["properties"]
+    assert set(properties) == {
+        "current_subgoal",
+        "current_strategy",
+        "confirmed_facts",
+        "negative_evidence",
+        "attempted_actions",
+        "dead_ends",
+        "open_questions",
+        "progress",
+        "additional_context",
+    }
+
+
+def test_unknown_history_compaction_profile_rejected() -> None:
+    with pytest.raises(
+        ValueError,
+        match="history_compaction_profile desconocido",
+    ):
+        build_agent({
+            "llm_client": MockLLMClient([]),
+            "register_default_tools": False,
+            "history_compaction": "llm",
+            "history_compaction_profile": "future_v2",
+        })
+
+
+def test_history_compaction_profile_requires_llm_compactor() -> None:
+    with pytest.raises(
+        ValueError,
+        match="history_compaction_profile requiere history_compaction='llm'",
+    ):
+        build_agent({
+            "llm_client": MockLLMClient([]),
+            "register_default_tools": False,
+            "history_compaction": "deterministic",
+            "history_compaction_profile": "strategic_v1",
         })
 
 

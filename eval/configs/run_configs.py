@@ -348,3 +348,18 @@ M3_FINAL_TOKEN_TRIGGER_RUN_CONFIG: dict[str, Any] = {
         },
     ],
 }
+
+
+M3_FINAL_STRATEGIC_SUMMARY_RUN_CONFIG: dict[str, Any] = {
+    **M3_FINAL_TOKEN_TRIGGER_RUN_CONFIG,
+    "systems": [
+        {
+            "agent_config": "summary_incremental_strategic",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "planner_summary_incremental_strategic",
+            "llm_config": "nova-lite",
+        },
+    ],
+}

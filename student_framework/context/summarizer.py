@@ -48,6 +48,63 @@ class TrajectorySummary(BaseModel):
     )
 
 
+class StrategicTrajectorySummary(BaseModel):
+    """Estado estratégico vigente reconstruido durante la compactación."""
+
+    current_subgoal: str | None = Field(
+        description=(
+            "Subobjetivo vigente. Usar null si no hay uno identificable."
+        ),
+    )
+    current_strategy: str | None = Field(
+        description=(
+            "Estrategia actualmente razonable para avanzar hacia el "
+            "subobjetivo. Usar null si la evidencia no sostiene ninguna."
+        ),
+    )
+    confirmed_facts: list[str] = Field(
+        description=(
+            "Hechos confirmados del mundo, incluidos códigos, claves, "
+            "combinaciones y relaciones relevantes copiados textualmente."
+        ),
+    )
+    negative_evidence: list[str] = Field(
+        description=(
+            "Observaciones que contradicen hipótesis, estrategias o "
+            "acciones que parecían viables."
+        ),
+    )
+    attempted_actions: list[str] = Field(
+        description=(
+            "Acciones ya intentadas y su resultado, incluidas las fallidas."
+        ),
+    )
+    dead_ends: list[str] = Field(
+        description=(
+            "Caminos descartados que no deberían repetirse y la evidencia "
+            "que permite descartarlos."
+        ),
+    )
+    open_questions: list[str] = Field(
+        description=(
+            "Incertidumbres, alternativas todavía viables o preguntas que "
+            "deben resolverse para decidir cómo continuar."
+        ),
+    )
+    progress: list[str] = Field(
+        description=(
+            "Progreso ya consolidado hacia el objetivo o subobjetivos "
+            "completados que no deben volver a tratarse como pendientes."
+        ),
+    )
+    additional_context: list[str] = Field(
+        description=(
+            "Información relevante para continuar que no encaja con claridad "
+            "en los campos anteriores."
+        ),
+    )
+
+
 _DETERMINISTIC_OBSERVATION_CHARS = 200
 _TRANSCRIPT_OBSERVATION_CHARS = 1000
 
@@ -182,6 +239,45 @@ def format_trajectory_summary(summary: TrajectorySummary) -> str:
     return "\n".join(lines) or "(sin información relevante)"
 
 
+def format_strategic_trajectory_summary(
+    summary: StrategicTrajectorySummary,
+) -> str:
+    """Renderiza el estado estratégico vigente para el historial."""
+
+    lines: list[str] = []
+
+    if summary.current_subgoal:
+        lines.extend([
+            "Subobjetivo vigente:",
+            f"- {summary.current_subgoal}",
+        ])
+
+    if summary.current_strategy:
+        lines.extend([
+            "Estrategia vigente:",
+            f"- {summary.current_strategy}",
+        ])
+
+    sections = (
+        ("Hechos confirmados", summary.confirmed_facts),
+        ("Evidencia negativa", summary.negative_evidence),
+        ("Acciones ya intentadas", summary.attempted_actions),
+        ("Callejones sin salida", summary.dead_ends),
+        ("Preguntas abiertas", summary.open_questions),
+        ("Progreso consolidado", summary.progress),
+        ("Contexto adicional", summary.additional_context),
+    )
+
+    for title, items in sections:
+        if not items:
+            continue
+
+        lines.append(f"{title}:")
+        lines.extend(f"- {item}" for item in items)
+
+    return "\n".join(lines) or "(sin información relevante)"
+
+
 _COMPACTION_PROMPT = (
     "Estás comprimiendo el historial de un agente que resuelve una tarea "
     "con herramientas, para liberar espacio de contexto. Este es el "
@@ -194,10 +290,30 @@ _COMPACTION_PROMPT = (
 )
 
 
+_STRATEGIC_COMPACTION_PROMPT = (
+    "Estás reconstruyendo el estado estratégico vigente de un agente que "
+    "resuelve una tarea con herramientas. Este es el fragmento de historial "
+    "que será descartado:\n\n"
+    "{transcript}\n\n"
+    "El fragmento puede contener un resumen previo junto con evidencia "
+    "posterior. El resumen previo representa lo que se creía válido hasta "
+    "ese momento: las observaciones posteriores tienen precedencia. "
+    "Registrá en final_result el estado vigente completo necesario para "
+    "continuar. Corregí o eliminá hechos contradichos por evidencia posterior. "
+    "Reemplazá la estrategia vigente si dejó de ser válida. No mantengas como "
+    "pendientes subobjetivos ya completados ni como alternativas viables "
+    "caminos ya descartados. Registrá la evidencia negativa y las preguntas "
+    "todavía abiertas para evitar repetir hipótesis refutadas. No inventes "
+    "información ausente del fragmento. Copiá textualmente códigos, claves, "
+    "combinaciones y mensajes de error de herramientas."
+)
+
+
 def make_llm_history_compactor(
     agent: Any,
     *,
     max_repair_attempts: int = 1,
+    profile: str | None = None,
 ) -> Callable[[list[dict[str, Any]]], str]:
     """Crea un compactor que resume con el propio LLM del agente.
 
@@ -207,11 +323,25 @@ def make_llm_history_compactor(
     AgentResult del run activo vía `_run_response_callback`.
     """
 
-    final_tool = final_result_tool_schema(TrajectorySummary)
+    if profile is None:
+        summary_model: type[BaseModel] = TrajectorySummary
+        prompt_template = _COMPACTION_PROMPT
+        formatter: Callable[[Any], str] = format_trajectory_summary
+    elif profile == "strategic_v1":
+        summary_model = StrategicTrajectorySummary
+        prompt_template = _STRATEGIC_COMPACTION_PROMPT
+        formatter = format_strategic_trajectory_summary
+    else:
+        raise ValueError(
+            f"history_compaction_profile desconocido: {profile!r}. "
+            "Valores válidos: 'strategic_v1'."
+        )
 
-    def validate_call(final_call: Any) -> TrajectorySummary:
+    final_tool = final_result_tool_schema(summary_model)
+
+    def validate_call(final_call: Any) -> BaseModel:
         args = json.loads(final_call.arguments)
-        return TrajectorySummary.model_validate(args)
+        return summary_model.model_validate(args)
 
     def compact(messages: list[dict[str, Any]]) -> str:
         transcript = "\n".join(
@@ -222,7 +352,7 @@ def make_llm_history_compactor(
         )
 
         summary = agent._structured_call_with_repair(
-            prompt=_COMPACTION_PROMPT.format(transcript=transcript),
+            prompt=prompt_template.format(transcript=transcript),
             tools=[final_tool],
             validate_call=validate_call,
             max_repair_attempts=max_repair_attempts,
@@ -230,6 +360,6 @@ def make_llm_history_compactor(
             purpose="history_compaction",
         )
 
-        return format_trajectory_summary(summary)
+        return formatter(summary)
 
     return compact

@@ -42,6 +42,7 @@ class MyAgent:
         history_compactor: Callable[[list[dict[str, Any]]], str] | None = None,
         compaction_keep_recent_rounds: int = 2,
         history_compaction_input_token_threshold: int | None = None,
+        history_compaction_message_interval: int | None = None,
     ) -> None:
         """Inicializa el agente.
 
@@ -73,6 +74,10 @@ class MyAgent:
             Si está configurado, una llamada del agente cuyo input_tokens
             supere este umbral deja una compactación pendiente, que se
             aplica sólo si existe una llamada posterior del agente.
+        history_compaction_message_interval : int | None
+            Si está configurado, intenta una compactación periódica antes
+            de una nueva llamada cuando se agregaron al menos esta cantidad
+            de mensajes desde el último intento periódico.
         """
         self._llm = llm_client
         self._system = system_prompt
@@ -98,11 +103,23 @@ class MyAgent:
                 "history_compaction_input_token_threshold debe ser positivo."
             )
 
+        if (
+            history_compaction_message_interval is not None
+            and history_compaction_message_interval <= 0
+        ):
+            raise ValueError(
+                "history_compaction_message_interval debe ser positivo."
+            )
+
         self._history_compactor = history_compactor
         self._compaction_keep_recent_rounds = compaction_keep_recent_rounds
         self._history_compaction_input_token_threshold = (
             history_compaction_input_token_threshold
         )
+        self._history_compaction_message_interval = (
+            history_compaction_message_interval
+        )
+        self._history_messages_since_periodic_compaction_attempt = 0
         self._pending_history_compaction_input_tokens: int | None = None
         self._schemas: dict[str, ToolSchema] = {}
         self._tools: dict[str, Callable[..., str]] = {}
@@ -121,6 +138,18 @@ class MyAgent:
         resumidor por LLM) y no puede existir antes que la instancia.
         """
         self._history_compactor = history_compactor
+
+
+    def _append_history_message(
+        self,
+        message: dict[str, Any],
+    ) -> None:
+        """Agrega un mensaje y actualiza la cadencia periódica."""
+
+        self._history.append(message)
+
+        if self._history_compaction_message_interval is not None:
+            self._history_messages_since_periodic_compaction_attempt += 1
 
 
     def register_tool(
@@ -613,6 +642,19 @@ class MyAgent:
         return protected_start - (end - start - 1)
 
 
+    def _periodic_history_compaction_is_due(self) -> bool:
+        """Indica si venció la cadencia periódica de compactación."""
+
+        interval = self._history_compaction_message_interval
+
+        return (
+            interval is not None
+            and self._history_compactor is not None
+            and self._history_messages_since_periodic_compaction_attempt
+            >= interval
+        )
+
+
     def _apply_pending_history_compaction(
         self,
         *,
@@ -620,11 +662,32 @@ class MyAgent:
     ) -> int:
         """Aplica una compactación pendiente antes de la próxima llamada."""
 
-        if self._pending_history_compaction_input_tokens is None:
+        periodic_due = self._periodic_history_compaction_is_due()
+
+        if (
+            self._pending_history_compaction_input_tokens is None
+            and not periodic_due
+        ):
             return active_turn_start
 
-        # El trigger ya fue consumido. Si todavía no hay material
-        # compactable, una llamada posterior podrá volver a activarlo.
+        if periodic_due:
+            messages_since_last_attempt = (
+                self._history_messages_since_periodic_compaction_attempt
+            )
+            self._history_messages_since_periodic_compaction_attempt = 0
+
+            if self._trace_callback is not None:
+                self._trace_callback({
+                    "type": "history_compaction_trigger",
+                    "reason": "message_interval",
+                    "messages_since_last_attempt": (
+                        messages_since_last_attempt
+                    ),
+                    "interval": self._history_compaction_message_interval,
+                })
+
+        # Los triggers ya fueron consumidos. Si todavía no hay material
+        # compactable, una llamada posterior podrá volver a activarlos.
         self._pending_history_compaction_input_tokens = None
 
         updated_turn_start = self._compact_closed_history_once(
@@ -874,7 +937,7 @@ class MyAgent:
                 "max_history_messages debe ser al menos 1 para run()."
             )
 
-        self._history.append({
+        self._append_history_message({
             "role": "user",
             "content": user_message,
         })
@@ -898,8 +961,11 @@ class MyAgent:
 
         steps : list[AgentStep] = []
         for _ in range(self._max_iterations):
-            # Consume el trigger producido por la llamada anterior.
-            if self._pending_history_compaction_input_tokens is not None:
+            # Consume los triggers pendientes antes de una nueva llamada.
+            if (
+                self._pending_history_compaction_input_tokens is not None
+                or self._periodic_history_compaction_is_due()
+            ):
                 active_turn_start = self._apply_pending_history_compaction(
                     active_turn_start=active_turn_start,
                 )
@@ -933,7 +999,7 @@ class MyAgent:
                     })
 
             if not response.tool_calls:
-                self._history.append({
+                self._append_history_message({
                     "role": "assistant",
                     "content": response.content,
                 })
@@ -990,7 +1056,7 @@ class MyAgent:
                         "max_history_messages": self._max_history_messages,
                     })
 
-                self._history.append({
+                self._append_history_message({
                     "role": "assistant",
                     "content": error_message,
                 })
@@ -1008,7 +1074,7 @@ class MyAgent:
             active_turn_start = prepared_turn_start
 
             # Expansión del historial con llamados a herramientas
-            self._history.append({
+            self._append_history_message({
                 'role': 'assistant',
                 'content': response.content,
                 'tool_calls': [
@@ -1054,7 +1120,7 @@ class MyAgent:
 
                 steps.append(step)
 
-                self._history.append({
+                self._append_history_message({
                     "role": "tool",
                     "tool_call_id": tool_call.id,
                     "name": tool_call.name,
@@ -1073,7 +1139,7 @@ class MyAgent:
                 "max_iterations": self._max_iterations,
             })
 
-        self._history.append({
+        self._append_history_message({
             "role": "assistant",
             "content": message,
         })
