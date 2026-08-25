@@ -50,6 +50,7 @@ def _build_compaction_agent(
     history_compaction: Any,
     trace_callback: Any = None,
     max_iterations: int = 10,
+    history_compaction_input_token_threshold: int | None = None,
 ) -> Any:
     config: dict[str, Any] = {
         "llm_client": mock,
@@ -63,6 +64,11 @@ def _build_compaction_agent(
 
     if trace_callback is not None:
         config["trace_callback"] = trace_callback
+
+    if history_compaction_input_token_threshold is not None:
+        config["history_compaction_input_token_threshold"] = (
+            history_compaction_input_token_threshold
+        )
 
     agent = build_agent(config)
     tool, schema = make_recording_tool()
@@ -532,6 +538,218 @@ def test_llm_compactor_tokens_accumulate_in_agent_result():
         "Hechos descubiertos" in (message.get("content") or "")
         for message in agent._history
     )
+
+
+def test_input_token_threshold_compacts_before_next_agent_call():
+    """El trigger se consume justo antes de la siguiente llamada."""
+
+    events: list[dict[str, Any]] = []
+    compactor = RecordingCompactor()
+
+    mock = MockLLMClient([
+        _tool_call_response("c1", "uno", input_tokens=10),
+        _tool_call_response("c2", "dos", input_tokens=10),
+        _tool_call_response("c3", "tres", input_tokens=101),
+        _tool_call_response("c4", "cuatro", input_tokens=10),
+        LLMResponse(content="objetivo cumplido", input_tokens=10),
+    ])
+    agent = _build_compaction_agent(
+        mock,
+        max_history_messages=100,
+        history_compaction=compactor,
+        trace_callback=events.append,
+        history_compaction_input_token_threshold=100,
+    )
+
+    result = agent.run("tarea larga")
+
+    assert result.error is None
+    assert result.answer == "objetivo cumplido"
+    assert len(result.steps) == 4
+    assert len(compactor.calls) == 1
+
+    assert [
+        message["role"]
+        for message in compactor.calls[0]
+    ] == ["assistant", "tool"]
+    assert compactor.calls[0][0]["tool_calls"][0]["id"] == "c1"
+
+    # c3 produce el trigger; c4 es la primera llamada que consume
+    # el historial ya compactado.
+    assert any(
+        "[Resumen de progreso del intento actual]"
+        in (message.get("content") or "")
+        for message in mock.calls[3]["messages"]
+    )
+
+    trigger_events = [
+        event
+        for event in events
+        if event.get("type") == "history_compaction_trigger"
+    ]
+
+    assert trigger_events == [{
+        "type": "history_compaction_trigger",
+        "reason": "input_tokens",
+        "input_tokens": 101,
+        "threshold": 100,
+    }]
+
+
+def test_input_token_threshold_does_not_compact_at_threshold():
+    """Igualar el threshold no activa la compactación."""
+
+    compactor = RecordingCompactor()
+
+    mock = MockLLMClient([
+        _tool_call_response("c1", "uno", input_tokens=100),
+        _tool_call_response("c2", "dos", input_tokens=100),
+        _tool_call_response("c3", "tres", input_tokens=100),
+        _tool_call_response("c4", "cuatro", input_tokens=100),
+        LLMResponse(content="objetivo cumplido", input_tokens=100),
+    ])
+    agent = _build_compaction_agent(
+        mock,
+        max_history_messages=100,
+        history_compaction=compactor,
+        history_compaction_input_token_threshold=100,
+    )
+
+    result = agent.run("tarea larga")
+
+    assert result.error is None
+    assert result.answer == "objetivo cumplido"
+    assert compactor.calls == []
+
+
+def test_input_token_trigger_waits_for_a_later_run():
+    """Una respuesta final sólo se resume si luego existe otra llamada."""
+
+    compactor = RecordingCompactor()
+
+    mock = MockLLMClient([
+        _tool_call_response("c1", "uno", input_tokens=10),
+        _tool_call_response("c2", "dos", input_tokens=10),
+        _tool_call_response("c3", "tres", input_tokens=10),
+        LLMResponse(content="fin del primer run", input_tokens=101),
+        LLMResponse(content="fin del segundo run", input_tokens=10),
+    ])
+    agent = _build_compaction_agent(
+        mock,
+        max_history_messages=100,
+        history_compaction=compactor,
+        history_compaction_input_token_threshold=100,
+    )
+
+    first_result = agent.run("primer turno")
+
+    assert first_result.error is None
+    assert first_result.answer == "fin del primer run"
+    assert compactor.calls == []
+
+    second_result = agent.run("segundo turno")
+
+    assert second_result.error is None
+    assert second_result.answer == "fin del segundo run"
+    assert len(compactor.calls) == 1
+
+    assert [
+        message["role"]
+        for message in compactor.calls[0]
+    ] == [
+        "assistant",
+        "tool",
+        "assistant",
+        "tool",
+        "assistant",
+        "tool",
+    ]
+
+    assert any(
+        "segundo turno" in (message.get("content") or "")
+        for message in mock.calls[-1]["messages"]
+    )
+
+
+def test_failing_token_triggered_compaction_does_not_terminate_run():
+    """Un fallo de la compactación disparada por tokens no mata el run."""
+
+    events: list[dict[str, Any]] = []
+
+    def broken_compactor(messages: list[dict[str, Any]]) -> str:
+        raise RuntimeError("resumidor roto")
+
+    mock = MockLLMClient([
+        _tool_call_response("c1", "uno", input_tokens=10),
+        _tool_call_response("c2", "dos", input_tokens=10),
+        _tool_call_response("c3", "tres", input_tokens=101),
+        _tool_call_response("c4", "cuatro", input_tokens=10),
+        LLMResponse(content="objetivo cumplido", input_tokens=10),
+    ])
+    agent = _build_compaction_agent(
+        mock,
+        max_history_messages=100,
+        history_compaction=broken_compactor,
+        trace_callback=events.append,
+        history_compaction_input_token_threshold=100,
+    )
+
+    result = agent.run("tarea larga")
+
+    assert result.error is None
+    assert result.answer == "objetivo cumplido"
+    assert len(result.steps) == 4
+
+    assert any(
+        event.get("type") == "history_compaction_trigger"
+        and event.get("reason") == "input_tokens"
+        for event in events
+    )
+    assert any(
+        event.get("type") == "history_compaction"
+        and event.get("error") is not None
+        for event in events
+    )
+
+
+def test_input_token_threshold_disabled_by_default():
+    """Sin umbral no aparece la nueva compactación proactiva."""
+
+    compactor = RecordingCompactor()
+
+    mock = MockLLMClient([
+        _tool_call_response("c1", "uno", input_tokens=1000),
+        _tool_call_response("c2", "dos", input_tokens=1000),
+        _tool_call_response("c3", "tres", input_tokens=1000),
+        _tool_call_response("c4", "cuatro", input_tokens=1000),
+        LLMResponse(content="objetivo cumplido", input_tokens=1000),
+    ])
+    agent = _build_compaction_agent(
+        mock,
+        max_history_messages=100,
+        history_compaction=compactor,
+    )
+
+    result = agent.run("tarea larga")
+
+    assert result.error is None
+    assert result.answer == "objetivo cumplido"
+    assert compactor.calls == []
+    assert agent._history_compaction_input_token_threshold is None
+
+
+def test_non_positive_input_token_threshold_rejected():
+    """El trigger configurado debe tener un umbral estrictamente positivo."""
+
+    with pytest.raises(
+        ValueError,
+        match="history_compaction_input_token_threshold debe ser positivo",
+    ):
+        build_agent({
+            "llm_client": MockLLMClient([]),
+            "register_default_tools": False,
+            "history_compaction_input_token_threshold": 0,
+        })
 
 
 def test_compactor_disabled_by_default():

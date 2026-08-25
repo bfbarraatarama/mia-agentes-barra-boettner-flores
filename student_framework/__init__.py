@@ -61,6 +61,11 @@ def build_agent(config: dict[str, Any] | None = None) -> Agent:
             "compaction_keep_recent_rounds"
         ]
 
+    if "history_compaction_input_token_threshold" in config:
+        kwargs["history_compaction_input_token_threshold"] = config[
+            "history_compaction_input_token_threshold"
+        ]
+
     use_planner = bool(config.get("use_planner"))
 
     if use_planner:
