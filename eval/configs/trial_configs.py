@@ -55,6 +55,9 @@ MULTI_ATTEMPT_RECOVERY_CONFIG: dict[str, Any] = {
         "max_iterations": MAX_ITERATIONS_RECOVERY_MESSAGE,
         "context_overflow": CONTEXT_OVERFLOW_RECOVERY_MESSAGE,
     },
+    "attempt_recovery_max_recoveries": {
+        "max_iterations": 1,
+    },
 }
 
 

@@ -181,6 +181,7 @@ def run_trial(
 
     attempts = []
     user_message = scenario.user_message
+    recovery_counts: dict[str, int] = {}
 
     for attempt_index in range(
         1,
@@ -211,8 +212,46 @@ def run_trial(
                 trial_config=trial_config,
             )
 
-            if recovery_user_message is None:
+            if (
+                termination_reason is None
+                or recovery_user_message is None
+            ):
                 break
+
+            recovery_limits = trial_config.get(
+                "attempt_recovery_max_recoveries",
+                {},
+            )
+            max_recoveries = recovery_limits.get(
+                termination_reason
+            )
+
+            if (
+                max_recoveries is not None
+                and (
+                    not isinstance(max_recoveries, int)
+                    or max_recoveries < 0
+                )
+            ):
+                raise ValueError(
+                    "El límite de recuperaciones debe ser "
+                    "un entero no negativo."
+                )
+
+            used_recoveries = recovery_counts.get(
+                termination_reason,
+                0,
+            )
+
+            if (
+                max_recoveries is not None
+                and used_recoveries >= max_recoveries
+            ):
+                break
+
+            recovery_counts[termination_reason] = (
+                used_recoveries + 1
+            )
 
             user_message = recovery_user_message
             continue

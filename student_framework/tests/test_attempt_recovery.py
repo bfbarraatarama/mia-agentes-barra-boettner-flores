@@ -153,6 +153,84 @@ def test_recovery_feedback_configuration_semantics() -> None:
     ) == CONTINUATION_MESSAGE
 
 
+def test_run_trial_preserves_legacy_error_termination(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Una config sin recovery sigue cortando ante errores de run."""
+
+    scenario = Scenario(
+        id="test-legacy-error-termination",
+        description="Escenario controlado para probar compatibilidad.",
+        user_message="Tomá la llave.",
+        initial_world=World(
+            rooms={
+                "sala": Room(
+                    id="sala",
+                    name="Sala",
+                    description="Una sala con una llave.",
+                    items=["llave"],
+                ),
+            },
+            items={
+                "llave": Item(
+                    id="llave",
+                    name="Llave",
+                    description="Una llave.",
+                    takeable=True,
+                ),
+            },
+            current_room="sala",
+        ),
+        goal={
+            "type": "item_in_inventory",
+            "item": "llave",
+        },
+        difficulty="test",
+    )
+
+    mock = MockLLMClient([
+        LLMResponse(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id="call-1",
+                    name="look",
+                    arguments=json.dumps({}),
+                ),
+            ],
+        ),
+    ])
+
+    agent_config = dict(experiment.AGENT_CONFIGS["minimal"])
+    agent_config["max_iterations"] = 1
+
+    monkeypatch.setattr(
+        experiment,
+        "_resolve_scenario",
+        lambda spec: scenario,
+    )
+    monkeypatch.setattr(
+        experiment,
+        "build_llm_client",
+        lambda config: mock,
+    )
+
+    trial = experiment.run_trial(
+        scenario_spec="test-legacy-error-termination",
+        agent_config=agent_config,
+        llm_config=experiment.LLM_CONFIGS["llama3.1"],
+        trial_config=TRIAL_CONFIGS["multi_attempt"],
+        trial_index=1,
+    )
+
+    assert trial["goal_achieved"] is False
+    assert len(trial["attempts"]) == 1
+    assert mock.call_count == 1
+    assert trial["attempts"][0]["trace"][-1]["reason"] == (
+        "max_iterations"
+    )
+
+
 def test_run_trial_recovers_from_max_iterations(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -251,6 +329,107 @@ def test_run_trial_recovers_from_max_iterations(
     )
 
     assert trial["attempts"][0]["trace"][-1]["reason"] == (
+        "max_iterations"
+    )
+
+
+def test_run_trial_limits_repeated_max_iterations_recovery(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """max_iterations no puede multiplicar attempts indefinidamente."""
+
+    scenario = Scenario(
+        id="test-max-iterations-recovery-limit",
+        description="Escenario controlado para probar el límite.",
+        user_message="Tomá la llave.",
+        initial_world=World(
+            rooms={
+                "sala": Room(
+                    id="sala",
+                    name="Sala",
+                    description="Una sala con una llave.",
+                    items=["llave"],
+                ),
+            },
+            items={
+                "llave": Item(
+                    id="llave",
+                    name="Llave",
+                    description="Una llave.",
+                    takeable=True,
+                ),
+            },
+            current_room="sala",
+        ),
+        goal={
+            "type": "item_in_inventory",
+            "item": "llave",
+        },
+        difficulty="test",
+    )
+
+    mock = MockLLMClient([
+        LLMResponse(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id="call-1",
+                    name="look",
+                    arguments=json.dumps({}),
+                ),
+            ],
+        ),
+        LLMResponse(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id="call-2",
+                    name="look",
+                    arguments=json.dumps({}),
+                ),
+            ],
+        ),
+    ])
+
+    agent_config = dict(experiment.AGENT_CONFIGS["minimal"])
+    agent_config["max_iterations"] = 1
+
+    monkeypatch.setattr(
+        experiment,
+        "_resolve_scenario",
+        lambda spec: scenario,
+    )
+    monkeypatch.setattr(
+        experiment,
+        "build_llm_client",
+        lambda config: mock,
+    )
+
+    trial = experiment.run_trial(
+        scenario_spec="test-max-iterations-recovery-limit",
+        agent_config=agent_config,
+        llm_config=experiment.LLM_CONFIGS["llama3.1"],
+        trial_config={
+            "max_attempts": 10,
+            "continuation_message": CONTINUATION_MESSAGE,
+            "recoverable_attempt_terminations": {
+                "max_iterations": "Feedback de recuperación.",
+            },
+            "attempt_recovery_max_recoveries": {
+                "max_iterations": 1,
+            },
+        },
+        trial_index=1,
+    )
+
+    assert trial["goal_achieved"] is False
+    assert len(trial["attempts"]) == 2
+    assert mock.call_count == 2
+
+    assert trial["attempts"][0]["trace"][-1]["reason"] == (
+        "max_iterations"
+    )
+    assert trial["attempts"][1]["trace"][-1]["reason"] == (
         "max_iterations"
     )
 
@@ -375,6 +554,140 @@ def test_run_trial_recovers_from_context_overflow(
     }
 
 
+def test_run_trial_allows_repeated_context_overflow_recovery(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Una causa sin límite propio puede recuperar varias veces."""
+
+    scenario = Scenario(
+        id="test-repeated-context-overflow-recovery",
+        description="Escenario controlado para probar recuperación.",
+        user_message="Tomá la llave.",
+        initial_world=World(
+            rooms={
+                "sala": Room(
+                    id="sala",
+                    name="Sala",
+                    description="Una sala con una llave.",
+                    items=["llave"],
+                ),
+            },
+            items={
+                "llave": Item(
+                    id="llave",
+                    name="Llave",
+                    description="Una llave.",
+                    takeable=True,
+                ),
+            },
+            current_room="sala",
+        ),
+        goal={
+            "type": "item_in_inventory",
+            "item": "llave",
+        },
+        difficulty="test",
+    )
+
+    mock = MockLLMClient([
+        LLMResponse(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id="call-1",
+                    name="look",
+                    arguments=json.dumps({}),
+                ),
+            ],
+        ),
+        LLMResponse(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id="call-2",
+                    name="look",
+                    arguments=json.dumps({}),
+                ),
+            ],
+        ),
+        LLMResponse(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id="call-3",
+                    name="look",
+                    arguments=json.dumps({}),
+                ),
+            ],
+        ),
+        LLMResponse(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id="call-4",
+                    name="look",
+                    arguments=json.dumps({}),
+                ),
+            ],
+        ),
+        LLMResponse(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id="call-5",
+                    name="take",
+                    arguments=json.dumps({"item": "llave"}),
+                ),
+            ],
+        ),
+        LLMResponse(content="Listo."),
+    ])
+
+    agent_config = dict(experiment.AGENT_CONFIGS["minimal"])
+    agent_config["max_iterations"] = 3
+    agent_config["max_history_messages"] = 3
+
+    monkeypatch.setattr(
+        experiment,
+        "_resolve_scenario",
+        lambda spec: scenario,
+    )
+    monkeypatch.setattr(
+        experiment,
+        "build_llm_client",
+        lambda config: mock,
+    )
+
+    trial = experiment.run_trial(
+        scenario_spec="test-repeated-context-overflow-recovery",
+        agent_config=agent_config,
+        llm_config=experiment.LLM_CONFIGS["llama3.1"],
+        trial_config={
+            "max_attempts": 3,
+            "continuation_message": CONTINUATION_MESSAGE,
+            "recoverable_attempt_terminations": {
+                "context_overflow": "Feedback de contexto.",
+            },
+            "attempt_recovery_max_recoveries": {
+                "max_iterations": 1,
+            },
+        },
+        trial_index=1,
+    )
+
+    assert trial["goal_achieved"] is True
+    assert len(trial["attempts"]) == 3
+    assert mock.call_count == 6
+
+    assert trial["attempts"][0]["trace"][-1]["reason"] == (
+        "context_overflow"
+    )
+    assert trial["attempts"][1]["trace"][-1]["reason"] == (
+        "context_overflow"
+    )
+    assert trial["attempts"][2]["goal_achieved"] is True
+
+
 def test_recovery_run_manifest_materializes_effective_policy(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -413,6 +726,11 @@ def test_recovery_run_manifest_materializes_effective_policy(
     ]["recoverable_attempt_terminations"] == {
         "max_iterations": MAX_ITERATIONS_RECOVERY_MESSAGE,
         "context_overflow": CONTEXT_OVERFLOW_RECOVERY_MESSAGE,
+    }
+    assert manifest["trial_configs"][
+        "multi_attempt_recovery"
+    ]["attempt_recovery_max_recoveries"] == {
+        "max_iterations": 1,
     }
 
     json.dumps(
