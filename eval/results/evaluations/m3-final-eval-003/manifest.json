@@ -1,0 +1,26 @@
+{
+  "schema_version": 2,
+  "eval_id": "m3-final-eval-003",
+  "run_ids": [
+    "m3-final-run-002",
+    "m3-final-run-003"
+  ],
+  "created_at": "2026-08-25T23:16:57+00:00",
+  "git": {
+    "commit": "2cf26117b6373434de8dca33adcbdfe57ee4c057",
+    "branch": "m3/final-experimental-improvements",
+    "dirty": false
+  },
+  "evaluation": {
+    "metrics": [
+      "success_rate"
+    ],
+    "analyses": [
+      "error_analysis",
+      "attempt_recovery_analysis",
+      "tool_call_repair_analysis",
+      "efficiency_analysis",
+      "context_analysis"
+    ]
+  }
+}
