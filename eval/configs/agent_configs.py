@@ -88,6 +88,34 @@ PLANNER_SUMMARY_INCREMENTAL_AGENT_CONFIG: dict[str, Any] = {
 }
 
 
+SUMMARY_TOKEN_TRIGGER_AGENT_CONFIG: dict[str, Any] = {
+    **SUMMARY_AGENT_CONFIG,
+    "max_history_messages": 100,
+    "history_compaction_input_token_threshold": 8_000,
+}
+
+
+PLANNER_SUMMARY_TOKEN_TRIGGER_AGENT_CONFIG: dict[str, Any] = {
+    **PLANNER_SUMMARY_AGENT_CONFIG,
+    "max_history_messages": 100,
+    "history_compaction_input_token_threshold": 8_000,
+}
+
+
+SUMMARY_STRATEGIC_AGENT_CONFIG: dict[str, Any] = {
+    **SUMMARY_TOKEN_TRIGGER_AGENT_CONFIG,
+    "history_compaction_profile": "strategic_v1",
+    "history_compaction_message_interval": 20,
+}
+
+
+PLANNER_SUMMARY_STRATEGIC_AGENT_CONFIG: dict[str, Any] = {
+    **PLANNER_SUMMARY_TOKEN_TRIGGER_AGENT_CONFIG,
+    "history_compaction_profile": "strategic_v1",
+    "history_compaction_message_interval": 20,
+}
+
+
 SUMMARY_INCREMENTAL_TOKEN_TRIGGER_AGENT_CONFIG: dict[str, Any] = {
     **SUMMARY_INCREMENTAL_AGENT_CONFIG,
     "max_history_messages": 100,
@@ -172,6 +200,10 @@ AGENT_CONFIGS: dict[str, dict[str, Any]] = {
     "planner_incremental": PLANNER_INCREMENTAL_AGENT_CONFIG,
     "summary_incremental": SUMMARY_INCREMENTAL_AGENT_CONFIG,
     "planner_summary_incremental": PLANNER_SUMMARY_INCREMENTAL_AGENT_CONFIG,
+    "summary_token_trigger": SUMMARY_TOKEN_TRIGGER_AGENT_CONFIG,
+    "planner_summary_token_trigger": PLANNER_SUMMARY_TOKEN_TRIGGER_AGENT_CONFIG,
+    "summary_strategic": SUMMARY_STRATEGIC_AGENT_CONFIG,
+    "planner_summary_strategic": PLANNER_SUMMARY_STRATEGIC_AGENT_CONFIG,
     "summary_incremental_token_trigger": SUMMARY_INCREMENTAL_TOKEN_TRIGGER_AGENT_CONFIG,
     "planner_summary_incremental_token_trigger": PLANNER_SUMMARY_INCREMENTAL_TOKEN_TRIGGER_AGENT_CONFIG,
     "summary_incremental_strategic": SUMMARY_INCREMENTAL_STRATEGIC_AGENT_CONFIG,

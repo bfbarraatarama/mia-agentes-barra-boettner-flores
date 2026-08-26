@@ -18,7 +18,8 @@ from eval.evaluation import start_evaluation
 from eval.persistence import RUNS_DIR, evaluation_dir
 from eval.configs.evaluation_configs import M3_EVALUATION_CONFIG
 from eval.configs.run_configs import (
-    M3_FINAL_STRATEGIC_SUMMARY_RUN_CONFIG,
+    M3_FINAL_RECOVERY_STRATEGIC_SUMMARY_RUN_CONFIG,
+    M3_FINAL_RECOVERY_TOKEN_TRIGGER_RUN_CONFIG,
 )
 from eval.run_execution import resume_run, start_run
 from eval.report import (
@@ -41,16 +42,31 @@ from eval.analyses.context_analysis import (
 
 RUNS = [
     (
-        "m3-final-run-005",
-        M3_FINAL_STRATEGIC_SUMMARY_RUN_CONFIG,
+        "m3-final-run-006",
+        M3_FINAL_RECOVERY_TOKEN_TRIGGER_RUN_CONFIG,
+    ),
+    (
+        "m3-final-run-007",
+        M3_FINAL_RECOVERY_STRATEGIC_SUMMARY_RUN_CONFIG,
     ),
 ]
 
-EVALUATION_RUN_IDS = [
-    run_id
-    for run_id, _ in RUNS
+EVALUATIONS = [
+    (
+        "m3-final-eval-006",
+        [
+            "m3-final-run-002",
+            "m3-final-run-006",
+        ],
+    ),
+    (
+        "m3-final-eval-007",
+        [
+            "m3-final-run-006",
+            "m3-final-run-007",
+        ],
+    ),
 ]
-EVAL_ID = "m3-final-eval-005"
 
 EVALUATION_CONFIG = M3_EVALUATION_CONFIG
 
@@ -76,38 +92,17 @@ def print_progress(
     )
 
 
-def main() -> int:
-    for run_id, run_config in RUNS:
-        run_manifest_path = (
-            RUNS_DIR / f"{run_id}.manifest.json"
-        )
-        run_results_path = (
-            RUNS_DIR / f"{run_id}.json"
-        )
-
-        if (
-            not run_manifest_path.exists()
-            and not run_results_path.exists()
-        ):
-            start_run(
-                run_id=run_id,
-                run_config=run_config,
-                progress_callback=print_progress,
-            )
-        else:
-            resume_run(
-                run_id=run_id,
-                progress_callback=print_progress,
-            )
-
-
+def _run_evaluation(
+    eval_id: str,
+    run_ids: list[str],
+) -> None:
     evaluation_result = start_evaluation(
-        eval_id=EVAL_ID,
-        run_ids=EVALUATION_RUN_IDS,
+        eval_id=eval_id,
+        run_ids=run_ids,
         evaluation_config=EVALUATION_CONFIG,
     )
 
-    evaluation_output_dir = evaluation_dir(EVAL_ID)
+    evaluation_output_dir = evaluation_dir(eval_id)
 
     success_rate_plot_path = (
         evaluation_output_dir / "success_rate.png"
@@ -193,7 +188,7 @@ def main() -> int:
 
     print()
 
-    for run_id in EVALUATION_RUN_IDS:
+    for run_id in run_ids:
         print(
             "Manifest del run: "
             f"{RUNS_DIR / f'{run_id}.manifest.json'}"
@@ -231,6 +226,37 @@ def main() -> int:
         "Análisis de presión de contexto: "
         f"{context_analysis_path}"
     )
+
+
+def main() -> int:
+    for run_id, run_config in RUNS:
+        run_manifest_path = (
+            RUNS_DIR / f"{run_id}.manifest.json"
+        )
+        run_results_path = (
+            RUNS_DIR / f"{run_id}.json"
+        )
+
+        if (
+            not run_manifest_path.exists()
+            and not run_results_path.exists()
+        ):
+            start_run(
+                run_id=run_id,
+                run_config=run_config,
+                progress_callback=print_progress,
+            )
+        else:
+            resume_run(
+                run_id=run_id,
+                progress_callback=print_progress,
+            )
+
+    for eval_id, run_ids in EVALUATIONS:
+        _run_evaluation(
+            eval_id,
+            run_ids,
+        )
 
     return 0
 

@@ -312,6 +312,36 @@ M3_FINAL_RECOVERY_RUN_CONFIG: dict[str, Any] = {
 }
 
 
+M3_FINAL_RECOVERY_TOKEN_TRIGGER_RUN_CONFIG: dict[str, Any] = {
+    **M3_FINAL_RECOVERY_RUN_CONFIG,
+    "systems": [
+        {
+            "agent_config": "summary_token_trigger",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "planner_summary_token_trigger",
+            "llm_config": "nova-lite",
+        },
+    ],
+}
+
+
+M3_FINAL_RECOVERY_STRATEGIC_SUMMARY_RUN_CONFIG: dict[str, Any] = {
+    **M3_FINAL_RECOVERY_TOKEN_TRIGGER_RUN_CONFIG,
+    "systems": [
+        {
+            "agent_config": "summary_strategic",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "planner_summary_strategic",
+            "llm_config": "nova-lite",
+        },
+    ],
+}
+
+
 M3_FINAL_INCREMENTAL_RUN_CONFIG: dict[str, Any] = {
     **M3_FINAL_RECOVERY_RUN_CONFIG,
     "systems": [
