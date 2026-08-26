@@ -393,3 +393,23 @@ M3_FINAL_STRATEGIC_SUMMARY_RUN_CONFIG: dict[str, Any] = {
         },
     ],
 }
+
+
+M3_FINAL_SELECTION_RUN_CONFIG: dict[str, Any] = {
+    **M3_FINAL_RECOVERY_RUN_CONFIG,
+    "systems": [
+        {
+            "agent_config": "planner",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "baseline_incremental",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "planner_incremental",
+            "llm_config": "nova-lite",
+        },
+    ],
+    "trials_per_case": 20,
+}

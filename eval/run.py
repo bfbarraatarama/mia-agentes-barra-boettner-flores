@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -18,8 +19,7 @@ from eval.evaluation import start_evaluation
 from eval.persistence import RUNS_DIR, evaluation_dir
 from eval.configs.evaluation_configs import M3_EVALUATION_CONFIG
 from eval.configs.run_configs import (
-    M3_FINAL_RECOVERY_STRATEGIC_SUMMARY_RUN_CONFIG,
-    M3_FINAL_RECOVERY_TOKEN_TRIGGER_RUN_CONFIG,
+    M3_FINAL_SELECTION_RUN_CONFIG,
 )
 from eval.run_execution import resume_run, start_run
 from eval.report import (
@@ -39,34 +39,48 @@ from eval.analyses.efficiency_analysis import (
 from eval.analyses.context_analysis import (
     render_markdown as render_context_markdown,
 )
+from eval.llm_judge.configs.dataset_configs import (
+    M3_FINAL_SELECTION_QUALITATIVE_DATASET_CONFIG,
+)
+from eval.llm_judge.configs.judge_configs import (
+    M3_FINAL_SELECTION_JUDGE_CONFIG,
+)
+from eval.llm_judge.persistence import (
+    RESULTS_DIR as LLM_JUDGE_RESULTS_DIR,
+)
+from eval.llm_judge.prepare_dataset import (
+    execute_dataset_config,
+)
+from eval.llm_judge.report import (
+    build_judge_system_summary,
+    render_judge_system_summary,
+)
+from eval.llm_judge.run import (
+    execute_judge_config,
+)
 
 RUNS = [
     (
-        "m3-final-run-006",
-        M3_FINAL_RECOVERY_TOKEN_TRIGGER_RUN_CONFIG,
-    ),
-    (
-        "m3-final-run-007",
-        M3_FINAL_RECOVERY_STRATEGIC_SUMMARY_RUN_CONFIG,
+        "m3-final-run-008",
+        M3_FINAL_SELECTION_RUN_CONFIG,
     ),
 ]
 
 EVALUATIONS = [
     (
-        "m3-final-eval-006",
+        "m3-final-eval-008",
         [
-            "m3-final-run-002",
-            "m3-final-run-006",
-        ],
-    ),
-    (
-        "m3-final-eval-007",
-        [
-            "m3-final-run-002",
-            "m3-final-run-007",
+            "m3-final-run-008",
         ],
     ),
 ]
+
+QUALITATIVE_DATASET_CONFIG = (
+    M3_FINAL_SELECTION_QUALITATIVE_DATASET_CONFIG
+)
+QUALITATIVE_JUDGE_CONFIG = (
+    M3_FINAL_SELECTION_JUDGE_CONFIG
+)
 
 EVALUATION_CONFIG = M3_EVALUATION_CONFIG
 
@@ -228,6 +242,77 @@ def _run_evaluation(
     )
 
 
+def _run_qualitative_evaluation() -> None:
+    dataset_result = execute_dataset_config(
+        QUALITATIVE_DATASET_CONFIG
+    )
+    judge_result = execute_judge_config(
+        QUALITATIVE_JUDGE_CONFIG
+    )
+
+    dataset_id = QUALITATIVE_DATASET_CONFIG[
+        "dataset_id"
+    ]
+    judge_eval_id = QUALITATIVE_JUDGE_CONFIG[
+        "judge_eval_id"
+    ]
+    judge_output_dir = (
+        LLM_JUDGE_RESULTS_DIR
+        / dataset_id
+        / "judge_evaluations"
+        / judge_eval_id
+    )
+
+    system_summary = build_judge_system_summary(
+        dataset_id,
+        judge_eval_id,
+    )
+
+    system_summary_json_path = (
+        judge_output_dir
+        / "system_summary.json"
+    )
+    system_summary_markdown_path = (
+        judge_output_dir
+        / "system_summary.md"
+    )
+
+    system_summary_json_path.write_text(
+        json.dumps(
+            system_summary,
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    system_summary_markdown_path.write_text(
+        render_judge_system_summary(
+            system_summary
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    print()
+    print(
+        "Dataset cualitativo: "
+        f"{dataset_id} ({dataset_result['mode']})"
+    )
+    print(
+        "Evaluación LLM-as-judge: "
+        f"{judge_eval_id} ({judge_result['mode']})"
+    )
+    print(
+        "Resumen cualitativo estructurado: "
+        f"{system_summary_json_path}"
+    )
+    print(
+        "Resumen cualitativo Markdown: "
+        f"{system_summary_markdown_path}"
+    )
+
+
 def main() -> int:
     for run_id, run_config in RUNS:
         run_manifest_path = (
@@ -257,6 +342,8 @@ def main() -> int:
             eval_id,
             run_ids,
         )
+
+    _run_qualitative_evaluation()
 
     return 0
 

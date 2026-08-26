@@ -31,6 +31,57 @@ FINAL_EVAL = "m3-final-eval-001"
 MODELS_EVAL = "m3-three-model-repair-comparison-eval-003"
 CONTEXT_EVAL = "m3-context-comparison-eval-008"
 
+RANKING_SOURCES = [
+    ("m3-final-eval-002", "baseline", "multi_attempt"),
+    ("m3-final-eval-002", "planner", "multi_attempt"),
+    ("m3-final-eval-002", "summary", "multi_attempt"),
+    ("m3-final-eval-002", "planner_summary", "multi_attempt"),
+    ("m3-final-eval-002", "baseline", "multi_attempt_recovery"),
+    ("m3-final-eval-002", "planner", "multi_attempt_recovery"),
+    ("m3-final-eval-002", "summary", "multi_attempt_recovery"),
+    ("m3-final-eval-002", "planner_summary", "multi_attempt_recovery"),
+    (
+        "m3-final-eval-003",
+        "baseline_incremental",
+        "multi_attempt_recovery",
+    ),
+    (
+        "m3-final-eval-003",
+        "planner_incremental",
+        "multi_attempt_recovery",
+    ),
+    (
+        "m3-final-eval-003",
+        "summary_incremental",
+        "multi_attempt_recovery",
+    ),
+    (
+        "m3-final-eval-003",
+        "planner_summary_incremental",
+        "multi_attempt_recovery",
+    ),
+    (
+        "m3-final-eval-006",
+        "summary_token_trigger",
+        "multi_attempt_recovery",
+    ),
+    (
+        "m3-final-eval-006",
+        "planner_summary_token_trigger",
+        "multi_attempt_recovery",
+    ),
+    (
+        "m3-final-eval-007",
+        "summary_strategic",
+        "multi_attempt_recovery",
+    ),
+    (
+        "m3-final-eval-007",
+        "planner_summary_strategic",
+        "multi_attempt_recovery",
+    ),
+]
+
 SCENARIOS = [
     ("study-with-key", "easy"),
     ("color-locks", "medium"),
@@ -521,11 +572,177 @@ def figure_experiments() -> None:
     save(fig, "m3_experiments.svg")
 
 
+def _aggregate_system_success(
+    evaluation: dict,
+    *,
+    agent_config: str,
+    trial_config: str,
+) -> tuple[int, int]:
+    """Agrega success sobre los escenarios de una condición."""
+
+    cases = [
+        case
+        for case in evaluation["results"]
+        if (
+            case["agent_config"] == agent_config
+            and case["llm_config"] == "nova-lite"
+            and case["trial_config"] == trial_config
+        )
+    ]
+
+    if not cases:
+        raise ValueError(
+            "No se encontró la condición del ranking: "
+            f"{agent_config} / nova-lite / {trial_config}."
+        )
+
+    total_trials = sum(
+        case["trial_count"]
+        for case in cases
+    )
+    successful_trials = round(sum(
+        case["trial_count"]
+        * case["metrics"]["success_rate"]
+        for case in cases
+    ))
+
+    return successful_trials, total_trials
+
+
+def figure_system_ranking() -> None:
+    """Top 5 de sistemas observados en la línea experimental final."""
+
+    evaluations = {
+        eval_id: load_evaluation(eval_id)
+        for eval_id, _, _ in RANKING_SOURCES
+    }
+
+    ranking = []
+
+    for eval_id, agent_config, trial_config in RANKING_SOURCES:
+        successes, trials = _aggregate_system_success(
+            evaluations[eval_id],
+            agent_config=agent_config,
+            trial_config=trial_config,
+        )
+        has_recovery = (
+            trial_config == "multi_attempt_recovery"
+        )
+        label = agent_config.replace("_", " ")
+
+        if has_recovery:
+            label = f"{label} + recovery"
+
+        ranking.append({
+            "label": label,
+            "successes": successes,
+            "trials": trials,
+            "success_rate": successes / trials,
+            "has_recovery": has_recovery,
+        })
+
+    top_five = sorted(
+        ranking,
+        key=lambda item: (
+            item["success_rate"],
+            item["label"],
+        ),
+    )[-5:]
+
+    fig, ax = plt.subplots(figsize=(10.5, 4.8))
+
+    positions = list(range(len(top_five)))
+    colors = [
+        "#3f8f6f"
+        if item["has_recovery"]
+        else "#9aa0a6"
+        for item in top_five
+    ]
+
+    bars = ax.barh(
+        positions,
+        [
+            item["success_rate"]
+            for item in top_five
+        ],
+        height=0.62,
+        color=colors,
+        edgecolor="white",
+        linewidth=1.2,
+    )
+
+    for bar, item in zip(bars, top_five):
+        ax.text(
+            item["success_rate"] + 0.012,
+            bar.get_y() + bar.get_height() / 2,
+            (
+                f"{item['successes']}/{item['trials']} · "
+                f"{item['success_rate']:.1%}"
+            ),
+            ha="left",
+            va="center",
+            fontsize=9.5,
+            color=TEXT,
+            fontweight="bold",
+        )
+
+    ax.set_yticks(positions)
+    ax.set_yticklabels(
+        [
+            item["label"]
+            for item in top_five
+        ],
+        fontsize=9.5,
+    )
+    ax.set_xlim(0, 0.9)
+    ax.set_xticks([0, 0.2, 0.4, 0.6, 0.8])
+    ax.set_xticklabels(["0%", "20%", "40%", "60%", "80%"])
+    ax.set_xlabel("tasa de éxito", fontsize=9.5, color=MUTED)
+
+    style_axes(ax)
+    ax.spines["left"].set_visible(False)
+    ax.grid(axis="x", color="#eceef0", linewidth=0.8)
+
+    handles = [
+        plt.Rectangle((0, 0), 1, 1, color="#3f8f6f"),
+        plt.Rectangle((0, 0), 1, 1, color="#9aa0a6"),
+    ]
+    ax.legend(
+        handles,
+        ["con recovery", "sin recovery"],
+        loc="upper right",
+        bbox_to_anchor=(1.0, 1.08),
+        ncol=2,
+        frameon=False,
+        fontsize=9,
+        labelcolor=MUTED,
+    )
+
+    ax.set_title(
+        "Cinco mejores sistemas observados",
+        fontsize=12,
+        color=TEXT,
+        pad=28,
+        loc="left",
+    )
+    ax.text(
+        0,
+        1.04,
+        "línea experimental final · nova-lite · 80 trials por sistema",
+        transform=ax.transAxes,
+        fontsize=8.5,
+        color=MUTED,
+    )
+
+    save(fig, "m3_system_ranking.svg")
+
+
 def main() -> int:
     figure_success_heatmap()
     figure_outcomes_by_system()
     figure_cost_vs_success()
     figure_experiments()
+    figure_system_ranking()
 
     return 0
 
