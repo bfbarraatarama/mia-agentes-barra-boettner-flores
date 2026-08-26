@@ -88,6 +88,34 @@ PLANNER_SUMMARY_INCREMENTAL_AGENT_CONFIG: dict[str, Any] = {
 }
 
 
+SUMMARY_INCREMENTAL_TOKEN_TRIGGER_AGENT_CONFIG: dict[str, Any] = {
+    **SUMMARY_INCREMENTAL_AGENT_CONFIG,
+    "max_history_messages": 100,
+    "history_compaction_input_token_threshold": 8_000,
+}
+
+
+PLANNER_SUMMARY_INCREMENTAL_TOKEN_TRIGGER_AGENT_CONFIG: dict[str, Any] = {
+    **PLANNER_SUMMARY_INCREMENTAL_AGENT_CONFIG,
+    "max_history_messages": 100,
+    "history_compaction_input_token_threshold": 8_000,
+}
+
+
+SUMMARY_INCREMENTAL_STRATEGIC_AGENT_CONFIG: dict[str, Any] = {
+    **SUMMARY_INCREMENTAL_TOKEN_TRIGGER_AGENT_CONFIG,
+    "history_compaction_profile": "strategic_v1",
+    "history_compaction_message_interval": 20,
+}
+
+
+PLANNER_SUMMARY_INCREMENTAL_STRATEGIC_AGENT_CONFIG: dict[str, Any] = {
+    **PLANNER_SUMMARY_INCREMENTAL_TOKEN_TRIGGER_AGENT_CONFIG,
+    "history_compaction_profile": "strategic_v1",
+    "history_compaction_message_interval": 20,
+}
+
+
 MINIMAL_AGENT_CONFIG: dict[str, Any] = {
     "system_prompt": ESCAPE_ROOM_MINIMAL_SYSTEM_PROMPT,
     "register_default_tools": False,
@@ -144,6 +172,10 @@ AGENT_CONFIGS: dict[str, dict[str, Any]] = {
     "planner_incremental": PLANNER_INCREMENTAL_AGENT_CONFIG,
     "summary_incremental": SUMMARY_INCREMENTAL_AGENT_CONFIG,
     "planner_summary_incremental": PLANNER_SUMMARY_INCREMENTAL_AGENT_CONFIG,
+    "summary_incremental_token_trigger": SUMMARY_INCREMENTAL_TOKEN_TRIGGER_AGENT_CONFIG,
+    "planner_summary_incremental_token_trigger": PLANNER_SUMMARY_INCREMENTAL_TOKEN_TRIGGER_AGENT_CONFIG,
+    "summary_incremental_strategic": SUMMARY_INCREMENTAL_STRATEGIC_AGENT_CONFIG,
+    "planner_summary_incremental_strategic": PLANNER_SUMMARY_INCREMENTAL_STRATEGIC_AGENT_CONFIG,
     "minimal": MINIMAL_AGENT_CONFIG,
     "minimal_tool_repair": MINIMAL_TOOL_REPAIR_AGENT_CONFIG,
     "minimal_history_200": MINIMAL_HISTORY_200_AGENT_CONFIG,
