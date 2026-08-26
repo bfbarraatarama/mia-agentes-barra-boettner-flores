@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import json
 from pathlib import Path
 from typing import Any
@@ -163,12 +162,13 @@ def _plot_grouped_bars(
     ax: plt.Axes,
     baseline_values: list[float],
     recovery_values: list[float],
+    system_labels: list[str],
 ) -> None:
     bar_width = 0.34
-    x_positions = list(range(len(SYSTEMS)))
+    x_positions = list(range(len(system_labels)))
 
-    for index, system in enumerate(SYSTEMS):
-        color = SYSTEM_COLORS[system]
+    for index, system in enumerate(system_labels):
+        color = SYSTEM_COLORS.get(system, f"C{index % 10}")
 
         ax.bar(
             index - bar_width / 2,
@@ -208,7 +208,7 @@ def _plot_grouped_bars(
 
     ax.set_xticks(x_positions)
     ax.set_xticklabels(
-        [SYSTEM_LABELS[system] for system in SYSTEMS],
+        [SYSTEM_LABELS.get(system, system) for system in system_labels],
         rotation=20,
         ha="right",
     )
@@ -218,14 +218,15 @@ def _add_legends(
     fig: plt.Figure,
     reference_label: str,
     candidate_label: str,
+    system_labels: list[str],
 ) -> None:
     system_handles = [
         Patch(
-            facecolor=SYSTEM_COLORS[system],
+            facecolor=SYSTEM_COLORS.get(system, f"C{index % 10}"),
             edgecolor="black",
-            label=SYSTEM_LABELS[system],
+            label=SYSTEM_LABELS.get(system, system),
         )
-        for system in SYSTEMS
+        for index, system in enumerate(system_labels)
     ]
 
     condition_handles = [
@@ -283,6 +284,7 @@ def plot_success_comparison(
     candidate_summary: dict[tuple[str, str], dict[str, float]],
     reference_systems: list[str],
     candidate_systems: list[str],
+    system_labels: list[str],
     reference_label: str,
     candidate_label: str,
     output_path: Path,
@@ -317,6 +319,7 @@ def plot_success_comparison(
             ax,
             baseline_values,
             recovery_values,
+            system_labels,
         )
         _apply_common_panel_style(ax, panel_title)
         ax.set_ylim(0.0, 1.05)
@@ -337,6 +340,7 @@ def plot_success_comparison(
         fig,
         reference_label,
         candidate_label,
+        system_labels,
     )
 
     plt.subplots_adjust(
@@ -372,6 +376,7 @@ def plot_cost_comparison(
     candidate_summary: dict[tuple[str, str], dict[str, float]],
     reference_systems: list[str],
     candidate_systems: list[str],
+    system_labels: list[str],
     reference_label: str,
     candidate_label: str,
     output_path: Path,
@@ -414,6 +419,7 @@ def plot_cost_comparison(
             ax,
             baseline_values,
             recovery_values,
+            system_labels,
         )
         _apply_common_panel_style(ax, panel_title)
         ax.set_ylim(0.0, upper_limit)
@@ -433,6 +439,7 @@ def plot_cost_comparison(
         fig,
         reference_label,
         candidate_label,
+        system_labels,
     )
 
     plt.subplots_adjust(
@@ -456,103 +463,102 @@ def plot_cost_comparison(
     plt.close(fig)
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(
-        description=(
-            "Genera figuras comparativas entre "
-            "dos condiciones experimentales."
+def plot_experiment_comparison(
+    *,
+    reference_run_path: Path,
+    candidate_run_path: Path,
+    reference_systems: list[str],
+    candidate_systems: list[str],
+    system_labels: list[str],
+    reference_label: str,
+    candidate_label: str,
+    output_dir: Path,
+    output_prefix: str,
+) -> tuple[Path, Path]:
+    if not system_labels:
+        raise ValueError("Debe indicarse al menos un sistema.")
+    if len(reference_systems) != len(candidate_systems):
+        raise ValueError(
+            "reference_systems y candidate_systems deben tener "
+            "la misma cantidad de elementos."
         )
-    )
-    parser.add_argument(
-        "--reference-run",
-        required=True,
-        help="Path al run usado como referencia.",
-    )
-    parser.add_argument(
-        "--candidate-run",
-        required=True,
-        help="Path al run de la nueva intervención.",
-    )
-    parser.add_argument(
-        "--reference-label",
-        required=True,
-        help="Etiqueta visible para la condición de referencia.",
-    )
-    parser.add_argument(
-        "--candidate-label",
-        required=True,
-        help="Etiqueta visible para la nueva condición.",
-    )
-    parser.add_argument(
-        "--reference-systems",
-        nargs=len(SYSTEMS),
-        default=SYSTEMS,
-        metavar="SYSTEM",
-        help=(
-            "Configs del run de referencia, en el orden "
-            "baseline planner summary planner_summary."
-        ),
-    )
-    parser.add_argument(
-        "--candidate-systems",
-        nargs=len(SYSTEMS),
-        default=SYSTEMS,
-        metavar="SYSTEM",
-        help=(
-            "Configs del run candidato homologadas con "
-            "baseline planner summary planner_summary."
-        ),
-    )
-    parser.add_argument(
-        "--output-dir",
-        default="informes/recursos",
-        help="Directorio de salida para las figuras.",
-    )
-    parser.add_argument(
-        "--output-prefix",
-        required=True,
-        help="Prefijo común de los archivos generados.",
-    )
-    args = parser.parse_args()
+    if len(reference_systems) != len(system_labels):
+        raise ValueError(
+            "system_labels debe tener un elemento por par de sistemas."
+        )
 
-    reference_run = _load_run(Path(args.reference_run))
-    candidate_run = _load_run(Path(args.candidate_run))
+    reference_run = _load_run(reference_run_path)
+    candidate_run = _load_run(candidate_run_path)
 
     reference_summary = _summarize_run(reference_run)
     candidate_summary = _summarize_run(candidate_run)
 
-    output_dir = Path(args.output_dir)
-
-    success_path = (
-        output_dir
-        / f"{args.output_prefix}_success.png"
-    )
-    cost_path = (
-        output_dir
-        / f"{args.output_prefix}_cost.png"
-    )
+    success_path = output_dir / f"{output_prefix}_success.png"
+    cost_path = output_dir / f"{output_prefix}_cost.png"
 
     plot_success_comparison(
         reference_summary,
         candidate_summary,
-        args.reference_systems,
-        args.candidate_systems,
-        args.reference_label,
-        args.candidate_label,
+        reference_systems,
+        candidate_systems,
+        system_labels,
+        reference_label,
+        candidate_label,
         success_path,
     )
     plot_cost_comparison(
         reference_summary,
         candidate_summary,
-        args.reference_systems,
-        args.candidate_systems,
-        args.reference_label,
-        args.candidate_label,
+        reference_systems,
+        candidate_systems,
+        system_labels,
+        reference_label,
+        candidate_label,
         cost_path,
     )
 
-    print(f"Figura de success rate: {success_path}")
-    print(f"Figura de costo: {cost_path}")
+    return success_path, cost_path
+
+
+def main() -> int:
+    repo_root = Path(__file__).resolve().parents[2]
+    runs_dir = repo_root / "eval" / "results" / "runs"
+    output_dir = repo_root / "informes" / "recursos"
+
+    comparisons = [
+        {
+            "reference_run_path": runs_dir / "m3-final-run-001.json",
+            "candidate_run_path": runs_dir / "m3-final-run-002.json",
+            "reference_systems": SYSTEMS,
+            "candidate_systems": SYSTEMS,
+            "system_labels": SYSTEMS,
+            "reference_label": "multi_attempt",
+            "candidate_label": "multi_attempt_recovery",
+            "output_dir": output_dir,
+            "output_prefix": "m3_attempt_recovery",
+        },
+        {
+            "reference_run_path": runs_dir / "m3-final-run-002.json",
+            "candidate_run_path": runs_dir / "m3-final-run-003.json",
+            "reference_systems": SYSTEMS,
+            "candidate_systems": [
+                "baseline_incremental",
+                "planner_incremental",
+                "summary_incremental",
+                "planner_summary_incremental",
+            ],
+            "system_labels": SYSTEMS,
+            "reference_label": "recovery",
+            "candidate_label": "recovery + incremental",
+            "output_dir": output_dir,
+            "output_prefix": "m3_incremental_execution",
+        },
+    ]
+
+    for comparison in comparisons:
+        success_path, cost_path = plot_experiment_comparison(**comparison)
+        print(f"Figura de success rate: {success_path}")
+        print(f"Figura de costo: {cost_path}")
 
     return 0
 
