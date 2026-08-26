@@ -62,7 +62,7 @@ EVALUATIONS = [
     (
         "m3-final-eval-007",
         [
-            "m3-final-run-006",
+            "m3-final-run-002",
             "m3-final-run-007",
         ],
     ),

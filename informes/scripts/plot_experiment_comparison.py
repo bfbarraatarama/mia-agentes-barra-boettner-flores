@@ -124,6 +124,8 @@ def _max_metric_value(
     metric_key: str,
     reference_systems: list[str],
     candidate_systems: list[str],
+    benchmark_summary: dict[tuple[str, str], dict[str, float]] | None = None,
+    benchmark_system: str | None = None,
 ) -> float:
     max_value = 0.0
 
@@ -140,11 +142,24 @@ def _max_metric_value(
             scenario,
             candidate_systems,
         )
-        max_value = max(
-            max_value,
+        panel_max = max(
             max(reference_values),
             max(candidate_values),
         )
+
+        if (
+            benchmark_summary is not None
+            and benchmark_system is not None
+        ):
+            benchmark_value = _panel_values(
+                benchmark_summary,
+                metric_key,
+                scenario,
+                [benchmark_system],
+            )[0]
+            panel_max = max(panel_max, benchmark_value)
+
+        max_value = max(max_value, panel_max)
 
     return max_value
 
@@ -219,6 +234,7 @@ def _add_legends(
     reference_label: str,
     candidate_label: str,
     system_labels: list[str],
+    benchmark_label: str | None = None,
 ) -> None:
     system_handles = [
         Patch(
@@ -261,6 +277,18 @@ def _add_legends(
         ),
     ]
 
+    if benchmark_label is not None:
+        condition_handles.append(
+            Line2D(
+                [0],
+                [0],
+                color="dimgray",
+                linestyle="-",
+                linewidth=1.8,
+                label=f"Referencia: {benchmark_label}",
+            )
+        )
+
     fig.legend(
         handles=system_handles,
         loc="upper center",
@@ -273,7 +301,7 @@ def _add_legends(
         handles=condition_handles,
         loc="upper center",
         bbox_to_anchor=(0.5, 0.92),
-        ncol=4,
+        ncol=len(condition_handles),
         frameon=False,
         title="Condición",
     )
@@ -288,6 +316,9 @@ def plot_success_comparison(
     reference_label: str,
     candidate_label: str,
     output_path: Path,
+    benchmark_summary: dict[tuple[str, str], dict[str, float]] | None = None,
+    benchmark_system: str | None = None,
+    benchmark_label: str | None = None,
 ) -> None:
     fig, axes = plt.subplots(
         3,
@@ -321,6 +352,24 @@ def plot_success_comparison(
             recovery_values,
             system_labels,
         )
+
+        if (
+            benchmark_summary is not None
+            and benchmark_system is not None
+        ):
+            benchmark_value = _panel_values(
+                benchmark_summary,
+                "success_rate",
+                scenario,
+                [benchmark_system],
+            )[0]
+            ax.axhline(
+                benchmark_value,
+                color="dimgray",
+                linestyle="-",
+                linewidth=1.8,
+            )
+
         _apply_common_panel_style(ax, panel_title)
         ax.set_ylim(0.0, 1.05)
         ax.yaxis.set_major_formatter(
@@ -341,6 +390,7 @@ def plot_success_comparison(
         reference_label,
         candidate_label,
         system_labels,
+        benchmark_label,
     )
 
     plt.subplots_adjust(
@@ -380,6 +430,9 @@ def plot_cost_comparison(
     reference_label: str,
     candidate_label: str,
     output_path: Path,
+    benchmark_summary: dict[tuple[str, str], dict[str, float]] | None = None,
+    benchmark_system: str | None = None,
+    benchmark_label: str | None = None,
 ) -> None:
     fig, axes = plt.subplots(
         3,
@@ -395,6 +448,8 @@ def plot_cost_comparison(
         "avg_total_tokens_per_trial",
         reference_systems,
         candidate_systems,
+        benchmark_summary,
+        benchmark_system,
     )
     upper_limit = max_value * 1.12 if max_value > 0 else 1.0
 
@@ -421,6 +476,24 @@ def plot_cost_comparison(
             recovery_values,
             system_labels,
         )
+
+        if (
+            benchmark_summary is not None
+            and benchmark_system is not None
+        ):
+            benchmark_value = _panel_values(
+                benchmark_summary,
+                "avg_total_tokens_per_trial",
+                scenario,
+                [benchmark_system],
+            )[0]
+            ax.axhline(
+                benchmark_value,
+                color="dimgray",
+                linestyle="-",
+                linewidth=1.8,
+            )
+
         _apply_common_panel_style(ax, panel_title)
         ax.set_ylim(0.0, upper_limit)
         ax.yaxis.set_major_formatter(
@@ -440,6 +513,7 @@ def plot_cost_comparison(
         reference_label,
         candidate_label,
         system_labels,
+        benchmark_label,
     )
 
     plt.subplots_adjust(
@@ -474,6 +548,9 @@ def plot_experiment_comparison(
     candidate_label: str,
     output_dir: Path,
     output_prefix: str,
+    benchmark_run_path: Path | None = None,
+    benchmark_system: str | None = None,
+    benchmark_label: str | None = None,
 ) -> tuple[Path, Path]:
     if not system_labels:
         raise ValueError("Debe indicarse al menos un sistema.")
@@ -487,11 +564,31 @@ def plot_experiment_comparison(
             "system_labels debe tener un elemento por par de sistemas."
         )
 
+    benchmark_values = (
+        benchmark_run_path,
+        benchmark_system,
+        benchmark_label,
+    )
+    if (
+        any(value is not None for value in benchmark_values)
+        and not all(value is not None for value in benchmark_values)
+    ):
+        raise ValueError(
+            "benchmark_run_path, benchmark_system y benchmark_label "
+            "deben indicarse juntos."
+        )
+
     reference_run = _load_run(reference_run_path)
     candidate_run = _load_run(candidate_run_path)
 
     reference_summary = _summarize_run(reference_run)
     candidate_summary = _summarize_run(candidate_run)
+
+    benchmark_summary = None
+    if benchmark_run_path is not None:
+        benchmark_summary = _summarize_run(
+            _load_run(benchmark_run_path)
+        )
 
     success_path = output_dir / f"{output_prefix}_success.png"
     cost_path = output_dir / f"{output_prefix}_cost.png"
@@ -505,6 +602,9 @@ def plot_experiment_comparison(
         reference_label,
         candidate_label,
         success_path,
+        benchmark_summary,
+        benchmark_system,
+        benchmark_label,
     )
     plot_cost_comparison(
         reference_summary,
@@ -515,6 +615,9 @@ def plot_experiment_comparison(
         reference_label,
         candidate_label,
         cost_path,
+        benchmark_summary,
+        benchmark_system,
+        benchmark_label,
     )
 
     return success_path, cost_path
@@ -552,6 +655,52 @@ def main() -> int:
             "candidate_label": "recovery + incremental",
             "output_dir": output_dir,
             "output_prefix": "m3_incremental_execution",
+        },
+        {
+            "reference_run_path": runs_dir / "m3-final-run-002.json",
+            "candidate_run_path": runs_dir / "m3-final-run-006.json",
+            "reference_systems": [
+                "summary",
+                "planner_summary",
+            ],
+            "candidate_systems": [
+                "summary_token_trigger",
+                "planner_summary_token_trigger",
+            ],
+            "system_labels": [
+                "summary",
+                "planner_summary",
+            ],
+            "reference_label": "recovery",
+            "candidate_label": "recovery + token trigger",
+            "output_dir": output_dir,
+            "output_prefix": "m3_token_trigger",
+            "benchmark_run_path": runs_dir / "m3-final-run-002.json",
+            "benchmark_system": "planner",
+            "benchmark_label": "planner + recovery",
+        },
+        {
+            "reference_run_path": runs_dir / "m3-final-run-002.json",
+            "candidate_run_path": runs_dir / "m3-final-run-007.json",
+            "reference_systems": [
+                "summary",
+                "planner_summary",
+            ],
+            "candidate_systems": [
+                "summary_strategic",
+                "planner_summary_strategic",
+            ],
+            "system_labels": [
+                "summary",
+                "planner_summary",
+            ],
+            "reference_label": "recovery",
+            "candidate_label": "recovery + strategic summary",
+            "output_dir": output_dir,
+            "output_prefix": "m3_strategic_summary",
+            "benchmark_run_path": runs_dir / "m3-final-run-002.json",
+            "benchmark_system": "planner",
+            "benchmark_label": "planner + recovery",
         },
     ]
 
