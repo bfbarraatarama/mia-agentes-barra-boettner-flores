@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Genera las figuras del informe M3 a partir de la evidencia persistida.
 
-Las figuras son artefactos derivados: se regeneran enteras desde los
-`results.json` de las evaluaciones, sin volver a ejecutar los modelos.
+Las figuras son artefactos derivados: se regeneran enteras desde la
+evidencia persistida, sin volver a ejecutar los modelos.
 
     python scripts/informe_m3_figures.py
 
@@ -12,7 +12,9 @@ Salida: informes/recursos/m3_*.svg
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
+from textwrap import fill
 
 import matplotlib
 
@@ -23,13 +25,76 @@ from matplotlib.colors import LinearSegmentedColormap
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from eval.llm_judge.rubric import CRITERIA_BY_ID, DIMENSION_NAME
+
 EVALUATIONS = REPO_ROOT / "eval" / "results" / "evaluations"
 HISTORIC = REPO_ROOT / "eval" / "results" / "historic" / "evaluations"
+LLM_JUDGE_RESULTS = REPO_ROOT / "eval" / "results" / "llm_judge"
 OUTPUT_DIR = REPO_ROOT / "informes" / "recursos"
 
 FINAL_EVAL = "m3-final-eval-001"
 MODELS_EVAL = "m3-three-model-repair-comparison-eval-003"
 CONTEXT_EVAL = "m3-context-comparison-eval-008"
+FINAL_SELECTION_EVAL = "m3-final-eval-008"
+FINAL_SELECTION_QUALITATIVE_DATASET = (
+    "m3-final-selection-qualitative-v1"
+)
+FINAL_SELECTION_JUDGE_EVAL = "m3-final-selection-judge-001"
+
+RANKING_SOURCES = [
+    ("m3-final-eval-002", "baseline", "multi_attempt"),
+    ("m3-final-eval-002", "planner", "multi_attempt"),
+    ("m3-final-eval-002", "summary", "multi_attempt"),
+    ("m3-final-eval-002", "planner_summary", "multi_attempt"),
+    ("m3-final-eval-002", "baseline", "multi_attempt_recovery"),
+    ("m3-final-eval-002", "planner", "multi_attempt_recovery"),
+    ("m3-final-eval-002", "summary", "multi_attempt_recovery"),
+    ("m3-final-eval-002", "planner_summary", "multi_attempt_recovery"),
+    (
+        "m3-final-eval-003",
+        "baseline_incremental",
+        "multi_attempt_recovery",
+    ),
+    (
+        "m3-final-eval-003",
+        "planner_incremental",
+        "multi_attempt_recovery",
+    ),
+    (
+        "m3-final-eval-003",
+        "summary_incremental",
+        "multi_attempt_recovery",
+    ),
+    (
+        "m3-final-eval-003",
+        "planner_summary_incremental",
+        "multi_attempt_recovery",
+    ),
+    (
+        "m3-final-eval-006",
+        "summary_token_trigger",
+        "multi_attempt_recovery",
+    ),
+    (
+        "m3-final-eval-006",
+        "planner_summary_token_trigger",
+        "multi_attempt_recovery",
+    ),
+    (
+        "m3-final-eval-007",
+        "summary_strategic",
+        "multi_attempt_recovery",
+    ),
+    (
+        "m3-final-eval-007",
+        "planner_summary_strategic",
+        "multi_attempt_recovery",
+    ),
+]
 
 SCENARIOS = [
     ("study-with-key", "easy"),
@@ -49,11 +114,29 @@ FINAL_SYSTEMS = [
     "planner_summary",
 ]
 
+FINAL_SELECTION_SYSTEMS = [
+    "planner",
+    "baseline_incremental",
+    "planner_incremental",
+]
+
+FINAL_SELECTION_LABELS = {
+    "planner": "planner + recovery",
+    "baseline_incremental": "baseline incremental + recovery",
+    "planner_incremental": "planner incremental + recovery",
+}
+
 SYSTEM_COLORS = {
     "baseline": "#2f6f9f",
     "planner": "#3f8f6f",
     "summary": "#d1863a",
     "planner_summary": "#9a5f96",
+}
+
+FINAL_SELECTION_COLORS = {
+    "planner": SYSTEM_COLORS["planner"],
+    "baseline_incremental": SYSTEM_COLORS["baseline"],
+    "planner_incremental": SYSTEM_COLORS["planner_summary"],
 }
 
 OUTCOME_COLORS = {
@@ -70,6 +153,22 @@ MUTED = "#6b7177"
 def load_evaluation(eval_id: str, *, historic: bool = False) -> dict:
     base = HISTORIC if historic else EVALUATIONS
     path = base / eval_id / "results.json"
+
+    with path.open(encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def load_qualitative_system_summary(
+    dataset_id: str,
+    judge_eval_id: str,
+) -> dict:
+    path = (
+        LLM_JUDGE_RESULTS
+        / dataset_id
+        / "judge_evaluations"
+        / judge_eval_id
+        / "system_summary.json"
+    )
 
     with path.open(encoding="utf-8") as handle:
         return json.load(handle)
@@ -521,11 +620,668 @@ def figure_experiments() -> None:
     save(fig, "m3_experiments.svg")
 
 
+def _aggregate_system_success(
+    evaluation: dict,
+    *,
+    agent_config: str,
+    trial_config: str,
+) -> tuple[int, int]:
+    """Agrega success sobre los escenarios de una condición."""
+
+    cases = [
+        case
+        for case in evaluation["results"]
+        if (
+            case["agent_config"] == agent_config
+            and case["llm_config"] == "nova-lite"
+            and case["trial_config"] == trial_config
+        )
+    ]
+
+    if not cases:
+        raise ValueError(
+            "No se encontró la condición del ranking: "
+            f"{agent_config} / nova-lite / {trial_config}."
+        )
+
+    total_trials = sum(
+        case["trial_count"]
+        for case in cases
+    )
+    successful_trials = round(sum(
+        case["trial_count"]
+        * case["metrics"]["success_rate"]
+        for case in cases
+    ))
+
+    return successful_trials, total_trials
+
+
+def figure_system_ranking() -> None:
+    """Top 5 de sistemas observados en la línea experimental final."""
+
+    evaluations = {
+        eval_id: load_evaluation(eval_id)
+        for eval_id, _, _ in RANKING_SOURCES
+    }
+
+    ranking = []
+
+    for eval_id, agent_config, trial_config in RANKING_SOURCES:
+        successes, trials = _aggregate_system_success(
+            evaluations[eval_id],
+            agent_config=agent_config,
+            trial_config=trial_config,
+        )
+        has_recovery = (
+            trial_config == "multi_attempt_recovery"
+        )
+        label = agent_config.replace("_", " ")
+
+        if has_recovery:
+            label = f"{label} + recovery"
+
+        ranking.append({
+            "label": label,
+            "successes": successes,
+            "trials": trials,
+            "success_rate": successes / trials,
+            "has_recovery": has_recovery,
+        })
+
+    top_five = sorted(
+        ranking,
+        key=lambda item: (
+            item["success_rate"],
+            item["label"],
+        ),
+    )[-5:]
+
+    fig, ax = plt.subplots(figsize=(10.5, 4.8))
+
+    positions = list(range(len(top_five)))
+    colors = [
+        "#3f8f6f"
+        if item["has_recovery"]
+        else "#9aa0a6"
+        for item in top_five
+    ]
+
+    bars = ax.barh(
+        positions,
+        [
+            item["success_rate"]
+            for item in top_five
+        ],
+        height=0.62,
+        color=colors,
+        edgecolor="white",
+        linewidth=1.2,
+    )
+
+    for bar, item in zip(bars, top_five):
+        ax.text(
+            item["success_rate"] + 0.012,
+            bar.get_y() + bar.get_height() / 2,
+            (
+                f"{item['successes']}/{item['trials']} · "
+                f"{item['success_rate']:.1%}"
+            ),
+            ha="left",
+            va="center",
+            fontsize=9.5,
+            color=TEXT,
+            fontweight="bold",
+        )
+
+    ax.set_yticks(positions)
+    ax.set_yticklabels(
+        [
+            item["label"]
+            for item in top_five
+        ],
+        fontsize=9.5,
+    )
+    ax.set_xlim(0, 0.9)
+    ax.set_xticks([0, 0.2, 0.4, 0.6, 0.8])
+    ax.set_xticklabels(["0%", "20%", "40%", "60%", "80%"])
+    ax.set_xlabel("tasa de éxito", fontsize=9.5, color=MUTED)
+
+    style_axes(ax)
+    ax.spines["left"].set_visible(False)
+    ax.grid(axis="x", color="#eceef0", linewidth=0.8)
+
+    handles = [
+        plt.Rectangle((0, 0), 1, 1, color="#3f8f6f"),
+        plt.Rectangle((0, 0), 1, 1, color="#9aa0a6"),
+    ]
+    ax.legend(
+        handles,
+        ["con recovery", "sin recovery"],
+        loc="upper right",
+        bbox_to_anchor=(1.0, 1.08),
+        ncol=2,
+        frameon=False,
+        fontsize=9,
+        labelcolor=MUTED,
+    )
+
+    ax.set_title(
+        "Cinco mejores sistemas observados",
+        fontsize=12,
+        color=TEXT,
+        pad=28,
+        loc="left",
+    )
+    ax.text(
+        0,
+        1.04,
+        "línea experimental final · nova-lite · 80 trials por sistema",
+        transform=ax.transAxes,
+        fontsize=8.5,
+        color=MUTED,
+    )
+
+    save(fig, "m3_system_ranking.svg")
+
+
+def figure_final_selection_success() -> None:
+    """Éxito por sistema y escenario en la validación final."""
+
+    evaluation = load_evaluation(FINAL_SELECTION_EVAL)
+    rates = success_by_system_and_scenario(evaluation)
+
+    colormap = LinearSegmentedColormap.from_list(
+        "seleccion_final_exito",
+        ["#f7f3ee", "#f0d9b5", "#8fbf9f", "#2f7f5f"],
+    )
+
+    global_results = {
+        system: _aggregate_system_success(
+            evaluation,
+            agent_config=system,
+            trial_config="multi_attempt_recovery",
+        )
+        for system in FINAL_SELECTION_SYSTEMS
+    }
+
+    matrix = []
+
+    for system in FINAL_SELECTION_SYSTEMS:
+        successes, trials = global_results[system]
+        matrix.append(
+            [
+                rates[(system, scenario)]
+                for scenario, _ in SCENARIOS
+            ]
+            + [successes / trials]
+        )
+
+    fig, ax = plt.subplots(figsize=(11.6, 3.7))
+    image = ax.imshow(
+        matrix,
+        cmap=colormap,
+        vmin=0,
+        vmax=1,
+        aspect="auto",
+    )
+
+    for row, system in enumerate(FINAL_SELECTION_SYSTEMS):
+        for column, value in enumerate(matrix[row]):
+            if column == len(SCENARIOS):
+                successes, trials = global_results[system]
+                label = (
+                    f"{successes}/{trials}\n"
+                    f"{value:.1%}"
+                )
+            else:
+                label = f"{value:.0%}"
+
+            ax.text(
+                column,
+                row,
+                label,
+                ha="center",
+                va="center",
+                fontsize=9.5,
+                color="white" if value >= 0.65 else TEXT,
+                fontweight="bold" if value >= 0.65 else "normal",
+            )
+
+    column_labels = [
+        f"{scenario} ({difficulty})"
+        for scenario, difficulty in SCENARIOS
+    ] + ["Global"]
+
+    ax.set_xticks(range(len(column_labels)))
+    ax.set_xticklabels(
+        column_labels,
+        fontsize=8.3,
+        rotation=22,
+        ha="right",
+        rotation_mode="anchor",
+    )
+    ax.set_yticks(range(len(FINAL_SELECTION_SYSTEMS)))
+    ax.set_yticklabels(
+        [
+            FINAL_SELECTION_LABELS[system]
+            for system in FINAL_SELECTION_SYSTEMS
+        ],
+        fontsize=9.5,
+    )
+
+    ax.set_xticks(
+        [x - 0.5 for x in range(1, len(column_labels))],
+        minor=True,
+    )
+    ax.set_yticks(
+        [y - 0.5 for y in range(1, len(FINAL_SELECTION_SYSTEMS))],
+        minor=True,
+    )
+    ax.grid(which="minor", color="white", linewidth=2)
+    ax.tick_params(which="minor", length=0)
+    ax.tick_params(colors=MUTED, length=0)
+
+    for side in ax.spines.values():
+        side.set_visible(False)
+
+    colorbar = fig.colorbar(
+        image,
+        ax=ax,
+        fraction=0.028,
+        pad=0.025,
+    )
+    colorbar.set_label(
+        "tasa de éxito",
+        fontsize=9,
+        color=MUTED,
+    )
+    colorbar.set_ticks([0, 0.25, 0.5, 0.75, 1])
+    colorbar.set_ticklabels(
+        ["0%", "25%", "50%", "75%", "100%"]
+    )
+    colorbar.ax.tick_params(colors=MUTED, labelsize=8.5)
+
+    ax.set_title(
+        "Validación final: tasa de éxito por sistema y escenario",
+        fontsize=12,
+        color=TEXT,
+        pad=30,
+        loc="left",
+    )
+    ax.text(
+        0,
+        1.07,
+        "nova-lite · multi_attempt_recovery · 20 trials por escenario",
+        transform=ax.transAxes,
+        fontsize=8.5,
+        color=MUTED,
+    )
+
+    save(fig, "m3_final_selection_success.svg")
+
+
+def figure_final_selection_cost() -> None:
+    """Consumo por trial de los tres candidatos de validación final."""
+
+    evaluation = load_evaluation(FINAL_SELECTION_EVAL)
+    systems = evaluation["analyses"]["efficiency_analysis"]["systems"]
+    payloads = {
+        payload["agent_config"]: payload
+        for payload in systems.values()
+    }
+
+    panel_names = [
+        scenario
+        for scenario, _ in SCENARIOS
+    ] + ["Global"]
+
+    values_by_panel = {}
+
+    for panel_name in panel_names:
+        values_by_panel[panel_name] = [
+            (
+                payloads[system]["global"]["total_tokens_per_trial"]
+                if panel_name == "Global"
+                else payloads[system]["by_scenario"][panel_name][
+                    "total_tokens_per_trial"
+                ]
+            )
+            / 1000
+            for system in FINAL_SELECTION_SYSTEMS
+        ]
+
+    max_value = max(
+        value
+        for values in values_by_panel.values()
+        for value in values
+    )
+    upper_limit = max_value * 1.16 if max_value > 0 else 1.0
+
+    fig, axes = plt.subplots(
+        3,
+        3,
+        figsize=(12, 9),
+        sharey=True,
+    )
+    axes_flat = axes.flatten()
+    colors = [
+        FINAL_SELECTION_COLORS[system]
+        for system in FINAL_SELECTION_SYSTEMS
+    ]
+
+    for ax, panel_name in zip(axes_flat, panel_names):
+        values = values_by_panel[panel_name]
+        bars = ax.bar(
+            range(len(FINAL_SELECTION_SYSTEMS)),
+            values,
+            width=0.6,
+            color=colors,
+            edgecolor="white",
+            linewidth=1.2,
+        )
+
+        for bar, value in zip(bars, values):
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                value + upper_limit * 0.018,
+                f"{value:.0f}k",
+                ha="center",
+                va="bottom",
+                fontsize=8.5,
+                color=TEXT,
+                fontweight="bold",
+            )
+
+        ax.set_ylim(0, upper_limit)
+        ax.set_xticks([])
+        ax.set_title(
+            panel_name,
+            fontsize=10.5,
+            color=TEXT,
+            pad=8,
+        )
+        style_axes(ax)
+        ax.spines["bottom"].set_visible(False)
+        ax.grid(axis="y", color="#eceef0", linewidth=0.8)
+
+    for ax in axes[:, 0]:
+        ax.set_ylabel(
+            "tokens promedio por trial (miles)",
+            fontsize=8.5,
+            color=MUTED,
+        )
+
+    handles = [
+        plt.Rectangle(
+            (0, 0),
+            1,
+            1,
+            color=FINAL_SELECTION_COLORS[system],
+        )
+        for system in FINAL_SELECTION_SYSTEMS
+    ]
+    fig.legend(
+        handles,
+        [
+            FINAL_SELECTION_LABELS[system]
+            for system in FINAL_SELECTION_SYSTEMS
+        ],
+        loc="upper center",
+        bbox_to_anchor=(0.5, 0.935),
+        ncol=3,
+        frameon=False,
+        fontsize=8.8,
+        labelcolor=MUTED,
+    )
+    fig.suptitle(
+        "Validación final: consumo de tokens por trial",
+        fontsize=13,
+        color=TEXT,
+        y=0.995,
+    )
+    fig.text(
+        0.5,
+        0.957,
+        "nova-lite · multi_attempt_recovery · tokens totales",
+        ha="center",
+        fontsize=8.5,
+        color=MUTED,
+    )
+
+    fig.subplots_adjust(
+        top=0.86,
+        bottom=0.07,
+        left=0.08,
+        right=0.98,
+        hspace=0.36,
+        wspace=0.16,
+    )
+
+    save(fig, "m3_final_selection_cost.svg")
+
+
+def figure_final_selection_qualitative() -> None:
+    """PASS por criterio cualitativo y sistema en la validación final."""
+
+    summary = load_qualitative_system_summary(
+        FINAL_SELECTION_QUALITATIVE_DATASET,
+        FINAL_SELECTION_JUDGE_EVAL,
+    )
+    payloads = {
+        payload["agent_config"]: payload
+        for payload in summary["systems"]
+    }
+    criteria = list(
+        payloads[FINAL_SELECTION_SYSTEMS[0]]["criteria"]
+    )
+
+    colormap = LinearSegmentedColormap.from_list(
+        "seleccion_final_cualitativa",
+        ["#f7f3ee", "#f0d9b5", "#8fbf9f", "#2f7f5f"],
+    )
+    colormap.set_bad("#e6e8ea")
+
+    matrix = []
+    q1_averages = {}
+
+    for system in FINAL_SELECTION_SYSTEMS:
+        criterion_rates = [
+            payloads[system]["criteria"][criterion]["pass_rate"]
+            for criterion in criteria
+        ]
+
+        q1_average = (
+            sum(criterion_rates) / len(criterion_rates)
+            if all(
+                rate is not None
+                for rate in criterion_rates
+            )
+            else None
+        )
+        q1_averages[system] = q1_average
+
+        matrix.append(
+            [
+                (
+                    rate
+                    if rate is not None
+                    else float("nan")
+                )
+                for rate in criterion_rates
+            ]
+            + [
+                (
+                    q1_average
+                    if q1_average is not None
+                    else float("nan")
+                )
+            ]
+        )
+
+    fig, ax = plt.subplots(figsize=(10.0, 3.8))
+    image = ax.imshow(
+        matrix,
+        cmap=colormap,
+        vmin=0,
+        vmax=1,
+        aspect="auto",
+    )
+
+    for row, system in enumerate(FINAL_SELECTION_SYSTEMS):
+        for column, criterion in enumerate(criteria):
+            criterion_summary = payloads[system]["criteria"][criterion]
+            applicable = criterion_summary["applicable"]
+            passes = criterion_summary["pass"]
+            pass_rate = criterion_summary["pass_rate"]
+
+            if pass_rate is None:
+                label = "N/A"
+                text_color = MUTED
+            else:
+                label = (
+                    f"{passes}/{applicable}\n"
+                    f"{pass_rate:.1%}"
+                )
+                text_color = (
+                    "white"
+                    if pass_rate >= 0.65
+                    else TEXT
+                )
+
+            ax.text(
+                column,
+                row,
+                label,
+                ha="center",
+                va="center",
+                fontsize=10,
+                color=text_color,
+                fontweight=(
+                    "bold"
+                    if pass_rate is not None and pass_rate >= 0.65
+                    else "normal"
+                ),
+            )
+
+        q1_average = q1_averages[system]
+        q1_column = len(criteria)
+
+        ax.text(
+            q1_column,
+            row,
+            (
+                f"{q1_average:.1%}"
+                if q1_average is not None
+                else "N/A"
+            ),
+            ha="center",
+            va="center",
+            fontsize=10,
+            color=(
+                "white"
+                if q1_average is not None and q1_average >= 0.65
+                else TEXT
+            ),
+            fontweight="bold",
+        )
+
+    criterion_labels = [
+        (
+            f"{criterion}\n"
+            f"{fill(CRITERIA_BY_ID[criterion].name, width=20)}"
+        )
+        for criterion in criteria
+    ]
+
+    column_labels = criterion_labels + [
+        "Q1\nPromedio",
+    ]
+
+    ax.set_xticks(range(len(column_labels)))
+    ax.set_xticklabels(
+        column_labels,
+        fontsize=8.2,
+        linespacing=1.2,
+    )
+    ax.set_yticks(range(len(FINAL_SELECTION_SYSTEMS)))
+    ax.set_yticklabels(
+        [
+            FINAL_SELECTION_LABELS[system]
+            for system in FINAL_SELECTION_SYSTEMS
+        ],
+        fontsize=9.5,
+    )
+
+    ax.set_xticks(
+        [x - 0.5 for x in range(1, len(column_labels))],
+        minor=True,
+    )
+    ax.set_yticks(
+        [y - 0.5 for y in range(1, len(FINAL_SELECTION_SYSTEMS))],
+        minor=True,
+    )
+    ax.grid(which="minor", color="white", linewidth=2)
+    ax.axvline(
+        len(criteria) - 0.5,
+        color="white",
+        linewidth=5,
+    )
+    ax.tick_params(which="minor", length=0)
+    ax.tick_params(colors=MUTED, length=0)
+
+    for side in ax.spines.values():
+        side.set_visible(False)
+
+    colorbar = fig.colorbar(
+        image,
+        ax=ax,
+        fraction=0.04,
+        pad=0.035,
+    )
+    colorbar.set_label(
+        "PASS sobre casos aplicables",
+        fontsize=9,
+        color=MUTED,
+    )
+    colorbar.set_ticks([0, 0.25, 0.5, 0.75, 1])
+    colorbar.set_ticklabels(
+        ["0%", "25%", "50%", "75%", "100%"]
+    )
+    colorbar.ax.tick_params(colors=MUTED, labelsize=8.5)
+
+    ax.set_title(
+        f"Validación final: {DIMENSION_NAME.lower()}",
+        fontsize=12,
+        color=TEXT,
+        pad=30,
+        loc="left",
+    )
+    ax.text(
+        0,
+        1.07,
+        (
+            "24 casos por sistema · 3 de cada escenario · "
+            "Q1.x: PASS/aplicables · "
+            "Q1: promedio simple de Q1.1-Q1.4"
+        ),
+        transform=ax.transAxes,
+        fontsize=8.5,
+        color=MUTED,
+    )
+
+    save(fig, "m3_final_selection_qualitative.svg")
+
+
 def main() -> int:
     figure_success_heatmap()
     figure_outcomes_by_system()
     figure_cost_vs_success()
     figure_experiments()
+    figure_system_ranking()
+    figure_final_selection_success()
+    figure_final_selection_cost()
+    figure_final_selection_qualitative()
 
     return 0
 

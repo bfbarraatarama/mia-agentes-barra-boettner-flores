@@ -45,4 +45,13 @@ M3_QUALITATIVE_JUDGE_HOLDOUT_CONFIG: dict[str, Any] = {
 }
 
 
+M3_FINAL_SELECTION_JUDGE_CONFIG: dict[str, Any] = {
+    "dataset_id": "m3-final-selection-qualitative-v1",
+    "judge_eval_id": "m3-final-selection-judge-001",
+    "split": "holdout",
+    "judge_llm_config": "claude-opus-4.5",
+    "max_repair_attempts": 2,
+}
+
+
 JUDGE_CONFIG = M3_QUALITATIVE_JUDGE_HOLDOUT_CONFIG

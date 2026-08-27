@@ -7,6 +7,7 @@ from typing import Any
 from eval.llm_judge.sampling import (
     BALANCED_HOLDOUT_THEN_DIAGNOSTIC_DEV_METHOD,
     RANDOM_STRATIFIED_BY_SCENARIO_METHOD,
+    RANDOM_STRATIFIED_BY_SYSTEM_SCENARIO_METHOD,
 )
 
 
@@ -116,6 +117,42 @@ M3_QUALITATIVE_FINAL_DATASET_CONFIG: dict[str, Any] = {
             "planner_summary",
         ],
         "dev_require_multi_attempt": True,
+    },
+}
+
+
+M3_FINAL_SELECTION_QUALITATIVE_DATASET_CONFIG: dict[str, Any] = {
+    "dataset_id": "m3-final-selection-qualitative-v1",
+    "run_ids": [
+        "m3-final-run-008",
+    ],
+    "population": {
+        "agent_configs": [
+            "planner",
+            "baseline_incremental",
+            "planner_incremental",
+        ],
+        "llm_configs": [
+            "nova-lite",
+        ],
+        "trial_configs": [
+            "multi_attempt_recovery",
+        ],
+        "scenarios": [
+            "study-with-key",
+            "color-locks",
+            "apartment-keys",
+            "library-search",
+            "office-sequence",
+            "extreme-archive",
+            "vault-combination",
+            "backtracking-vault",
+        ],
+    },
+    "sampling": {
+        "method": RANDOM_STRATIFIED_BY_SYSTEM_SCENARIO_METHOD,
+        "seed": 20260826,
+        "cases_per_system_scenario": 3,
     },
 }
 

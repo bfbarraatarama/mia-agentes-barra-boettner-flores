@@ -18,13 +18,16 @@ from eval.llm_judge.configs.dataset_configs import DATASET_CONFIG
 from eval.llm_judge.persistence import (
     RESULTS_DIR,
     create_qualitative_dataset,
+    load_dataset_manifest,
 )
 from eval.llm_judge.sampling import (
     BALANCED_HOLDOUT_THEN_DIAGNOSTIC_DEV_METHOD,
     RANDOM_STRATIFIED_BY_SCENARIO_METHOD,
+    RANDOM_STRATIFIED_BY_SYSTEM_SCENARIO_METHOD,
     collect_trial_candidates,
     sample_holdout_then_dev,
     sample_trials_by_scenario,
+    sample_trials_by_system_and_scenario,
 )
 from eval.persistence import load_run_results
 
@@ -63,6 +66,7 @@ def prepare_qualitative_dataset(
 
     if sampling["method"] not in {
         RANDOM_STRATIFIED_BY_SCENARIO_METHOD,
+        RANDOM_STRATIFIED_BY_SYSTEM_SCENARIO_METHOD,
         BALANCED_HOLDOUT_THEN_DIAGNOSTIC_DEV_METHOD,
     }:
         raise ValueError(
@@ -109,6 +113,18 @@ def prepare_qualitative_dataset(
             ],
         )
 
+    elif (
+        sampling["method"]
+        == RANDOM_STRATIFIED_BY_SYSTEM_SCENARIO_METHOD
+    ):
+        sampled_trials = sample_trials_by_system_and_scenario(
+            candidates,
+            seed=sampling["seed"],
+            cases_per_system_scenario=sampling[
+                "cases_per_system_scenario"
+            ],
+        )
+
     else:
         sampled_trials = sample_holdout_then_dev(
             candidates,
@@ -150,6 +166,50 @@ def prepare_qualitative_dataset(
         "manifest": manifest,
         "eligible_trials": len(candidates),
         "sampled_trials": sampled_trials,
+    }
+
+
+def execute_dataset_config(
+    dataset_config: dict[str, Any],
+    *,
+    results_dir: Path = RESULTS_DIR,
+) -> dict[str, Any]:
+    """Crea o reutiliza el dataset declarado por una configuración."""
+
+    dataset_id = dataset_config["dataset_id"]
+
+    try:
+        manifest = load_dataset_manifest(
+            dataset_id,
+            results_dir=results_dir,
+        )
+
+    except FileNotFoundError:
+        result = prepare_qualitative_dataset(
+            dataset_config,
+            results_dir=results_dir,
+        )
+
+        return {
+            "mode": "start",
+            "manifest": result["manifest"],
+        }
+
+    persisted_config = {
+        key: value
+        for key, value in dataset_config.items()
+        if key != "dataset_id"
+    }
+
+    if manifest["dataset"] != persisted_config:
+        raise ValueError(
+            f"El dataset {dataset_id!r} ya existe con "
+            "una configuración diferente."
+        )
+
+    return {
+        "mode": "reuse",
+        "manifest": manifest,
     }
 
 

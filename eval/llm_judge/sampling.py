@@ -16,6 +16,10 @@ RANDOM_STRATIFIED_BY_SCENARIO_METHOD = (
     "random_stratified_by_scenario_without_replacement"
 )
 
+RANDOM_STRATIFIED_BY_SYSTEM_SCENARIO_METHOD = (
+    "random_stratified_by_system_and_scenario_without_replacement"
+)
+
 BALANCED_HOLDOUT_THEN_DIAGNOSTIC_DEV_METHOD = (
     "balanced_holdout_then_diagnostic_dev"
 )
@@ -724,6 +728,94 @@ def sample_trials_by_scenario(
             candidate=candidate,
         )
         for case_index, (candidate, split) in enumerate(
+            selected,
+            start=1,
+        )
+    ]
+
+
+def sample_trials_by_system_and_scenario(
+    candidates: list[TrialCandidate],
+    *,
+    seed: int,
+    cases_per_system_scenario: int,
+) -> list[SampledTrial]:
+    """Muestrea holdout por sistema y escenario sin reemplazo."""
+
+    if cases_per_system_scenario < 1:
+        raise ValueError(
+            "cases_per_system_scenario debe ser al menos 1."
+        )
+
+    if not candidates:
+        raise ValueError(
+            "No hay trials elegibles para muestrear."
+        )
+
+    systems = sorted({
+        _candidate_system(candidate)
+        for candidate in candidates
+    })
+    scenarios = sorted({
+        candidate.scenario
+        for candidate in candidates
+    })
+
+    candidates_by_cell: dict[
+        tuple[tuple[str, str, str], str],
+        list[TrialCandidate],
+    ] = {}
+
+    for candidate in candidates:
+        key = (
+            _candidate_system(candidate),
+            candidate.scenario,
+        )
+        candidates_by_cell.setdefault(
+            key,
+            [],
+        ).append(candidate)
+
+    rng = random.Random(seed)
+    selected: list[TrialCandidate] = []
+
+    for system, scenario in product(
+        systems,
+        scenarios,
+    ):
+        cell_candidates = sorted(
+            candidates_by_cell.get(
+                (system, scenario),
+                [],
+            ),
+            key=lambda candidate: candidate.identity,
+        )
+
+        if not cell_candidates:
+            raise ValueError(
+                "No hay trials elegibles para la celda "
+                f"{system!r} / {scenario!r}."
+            )
+
+        selected.extend(
+            rng.sample(
+                cell_candidates,
+                k=min(
+                    cases_per_system_scenario,
+                    len(cell_candidates),
+                ),
+            )
+        )
+
+    rng.shuffle(selected)
+
+    return [
+        SampledTrial(
+            case_id=f"qc-{case_index:03d}",
+            split="holdout",
+            candidate=candidate,
+        )
+        for case_index, candidate in enumerate(
             selected,
             start=1,
         )

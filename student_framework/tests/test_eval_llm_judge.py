@@ -58,20 +58,27 @@ from eval.llm_judge.rubric import (
     RUBRIC_VERSION,
 )
 from eval.llm_judge.configs.dataset_configs import (
+    M3_FINAL_SELECTION_QUALITATIVE_DATASET_CONFIG,
     M3_QUALITATIVE_FINAL_DATASET_CONFIG,
     M3_QUALITATIVE_PILOT_DATASET_CONFIG,
 )
+from eval.llm_judge.configs.judge_configs import (
+    M3_FINAL_SELECTION_JUDGE_CONFIG,
+)
 from eval.llm_judge.prepare_dataset import (
+    execute_dataset_config,
     prepare_qualitative_dataset,
 )
 from eval.llm_judge.sampling import (
     BALANCED_HOLDOUT_THEN_DIAGNOSTIC_DEV_METHOD,
     RANDOM_STRATIFIED_BY_SCENARIO_METHOD,
+    RANDOM_STRATIFIED_BY_SYSTEM_SCENARIO_METHOD,
     SampledTrial,
     TrialCandidate,
     collect_trial_candidates,
     sample_holdout_then_dev,
     sample_trials_by_scenario,
+    sample_trials_by_system_and_scenario,
     select_balanced_holdout_candidates,
 )
 from eval.llm_judge.annotations import (
@@ -118,15 +125,18 @@ from eval.llm_judge.comparison import (
 )
 from eval.llm_judge.report import (
     build_judge_evaluation_status,
+    build_judge_system_summary,
     render_human_agreement_report,
     render_judge_agreement_report,
     render_judge_evaluation_status,
+    render_judge_system_summary,
 )
 from eval.llm_judge.report_run import (
     execute_report_config,
     main as judge_report_main,
     render_judge_agreement_details,
 )
+from eval.run import _run_qualitative_evaluation
 from mia_agents.testing.mock_llm import MockLLMClient
 from mia_agents.tool_schema import FINAL_RESULT_TOOL_NAME
 from mia_agents.types import LLMResponse, ToolCall
@@ -2027,6 +2037,90 @@ def test_sample_trials_by_scenario_is_reproducible() -> None:
     ]
 
 
+def test_sample_trials_by_system_and_scenario_is_reproducible() -> None:
+    candidates = collect_trial_candidates(
+        {
+            "test-run": _sampling_run(),
+        },
+        llm_configs={"nova-lite"},
+    )
+
+    first = sample_trials_by_system_and_scenario(
+        candidates,
+        seed=1234,
+        cases_per_system_scenario=2,
+    )
+    second = sample_trials_by_system_and_scenario(
+        list(reversed(candidates)),
+        seed=1234,
+        cases_per_system_scenario=2,
+    )
+
+    assert len(first) == 8
+    assert all(
+        sample.split == "holdout"
+        for sample in first
+    )
+
+    for agent_config in (
+        "minimal",
+        "minimal_tool_repair",
+    ):
+        for scenario in (
+            "study-with-key",
+            "office-sequence",
+        ):
+            assert sum(
+                (
+                    sample.candidate.agent_config
+                    == agent_config
+                )
+                and (
+                    sample.candidate.scenario
+                    == scenario
+                )
+                for sample in first
+            ) == 2
+
+    assert [
+        (
+            sample.case_id,
+            sample.candidate.identity,
+        )
+        for sample in first
+    ] == [
+        (
+            sample.case_id,
+            sample.candidate.identity,
+        )
+        for sample in second
+    ]
+
+
+def test_sample_trials_by_system_and_scenario_uses_all_when_n_is_larger() -> None:
+    candidates = collect_trial_candidates(
+        {
+            "test-run": _sampling_run(),
+        },
+        llm_configs={"nova-lite"},
+    )
+
+    sampled = sample_trials_by_system_and_scenario(
+        candidates,
+        seed=1234,
+        cases_per_system_scenario=10,
+    )
+
+    assert len(sampled) == 12
+    assert {
+        sample.candidate.identity
+        for sample in sampled
+    } == {
+        candidate.identity
+        for candidate in candidates
+    }
+
+
 def test_select_balanced_holdout_candidates_is_reproducible() -> None:
     run = _sampling_run()
 
@@ -2436,6 +2530,46 @@ def test_final_dataset_config_defines_holdout_then_dev_sampling() -> None:
     }
 
 
+def test_final_selection_qualitative_configs() -> None:
+    dataset_config = (
+        M3_FINAL_SELECTION_QUALITATIVE_DATASET_CONFIG
+    )
+
+    assert dataset_config["dataset_id"] == (
+        "m3-final-selection-qualitative-v1"
+    )
+    assert dataset_config["run_ids"] == [
+        "m3-final-run-008",
+    ]
+    assert dataset_config["population"]["agent_configs"] == [
+        "planner",
+        "baseline_incremental",
+        "planner_incremental",
+    ]
+    assert dataset_config["population"]["llm_configs"] == [
+        "nova-lite",
+    ]
+    assert dataset_config["population"]["trial_configs"] == [
+        "multi_attempt_recovery",
+    ]
+    assert len(
+        dataset_config["population"]["scenarios"]
+    ) == 8
+    assert dataset_config["sampling"] == {
+        "method": RANDOM_STRATIFIED_BY_SYSTEM_SCENARIO_METHOD,
+        "seed": 20260826,
+        "cases_per_system_scenario": 3,
+    }
+
+    assert M3_FINAL_SELECTION_JUDGE_CONFIG == {
+        "dataset_id": "m3-final-selection-qualitative-v1",
+        "judge_eval_id": "m3-final-selection-judge-001",
+        "split": "holdout",
+        "judge_llm_config": "claude-opus-4.5",
+        "max_repair_attempts": 2,
+    }
+
+
 def test_prepare_qualitative_dataset_uses_shared_config(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2506,6 +2640,158 @@ def test_prepare_qualitative_dataset_uses_shared_config(
         result["manifest"]["dataset"]["sampling"]
         == dataset_config["sampling"]
     )
+
+
+def test_prepare_qualitative_dataset_supports_sampling_by_system_and_scenario(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    run = _sampling_run()
+
+    for result in run["results"]:
+        for trial in result["trials"]:
+            trial["attempts"] = [
+                _attempt(
+                    user_message="Resolvé el desafío.",
+                    trace=[
+                        _agent_call(
+                            content="Respuesta final.",
+                        ),
+                    ],
+                    answer="Respuesta final.",
+                ),
+            ]
+
+    monkeypatch.setattr(
+        "eval.llm_judge.prepare_dataset.load_run_results",
+        lambda run_id: run,
+    )
+
+    dataset_config = {
+        "dataset_id": "system-scenario-dataset",
+        "run_ids": [
+            "test-run",
+        ],
+        "population": {
+            "agent_configs": None,
+            "llm_configs": [
+                "nova-lite",
+            ],
+            "trial_configs": [
+                "single_attempt",
+            ],
+            "scenarios": [
+                "study-with-key",
+                "office-sequence",
+            ],
+        },
+        "sampling": {
+            "method": (
+                RANDOM_STRATIFIED_BY_SYSTEM_SCENARIO_METHOD
+            ),
+            "seed": 1234,
+            "cases_per_system_scenario": 2,
+        },
+    }
+
+    result = prepare_qualitative_dataset(
+        dataset_config,
+        results_dir=tmp_path,
+    )
+
+    assert result["eligible_trials"] == 12
+    assert result["manifest"]["counts"] == {
+        "total": 8,
+        "dev": 0,
+        "holdout": 8,
+    }
+    assert (
+        result["manifest"]["dataset"]["sampling"]
+        == dataset_config["sampling"]
+    )
+
+
+def test_execute_dataset_config_starts_or_reuses_matching_dataset(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dataset_config = {
+        "dataset_id": "test-dataset",
+        "run_ids": [
+            "test-run",
+        ],
+        "population": {
+            "agent_configs": None,
+        },
+        "sampling": {
+            "method": "test",
+        },
+    }
+
+    def missing_manifest(
+        dataset_id,
+        *,
+        results_dir,
+    ):
+        raise FileNotFoundError
+
+    monkeypatch.setattr(
+        "eval.llm_judge.prepare_dataset.load_dataset_manifest",
+        missing_manifest,
+    )
+    monkeypatch.setattr(
+        "eval.llm_judge.prepare_dataset.prepare_qualitative_dataset",
+        lambda config, *, results_dir: {
+            "manifest": {
+                "dataset_id": config["dataset_id"],
+                "dataset": {
+                    key: value
+                    for key, value in config.items()
+                    if key != "dataset_id"
+                },
+            },
+        },
+    )
+
+    started = execute_dataset_config(
+        dataset_config,
+        results_dir=tmp_path,
+    )
+
+    assert started["mode"] == "start"
+
+    existing_manifest = started["manifest"]
+
+    monkeypatch.setattr(
+        "eval.llm_judge.prepare_dataset.load_dataset_manifest",
+        lambda dataset_id, *, results_dir: existing_manifest,
+    )
+
+    reused = execute_dataset_config(
+        dataset_config,
+        results_dir=tmp_path,
+    )
+
+    assert reused == {
+        "mode": "reuse",
+        "manifest": existing_manifest,
+    }
+
+    changed_config = {
+        **dataset_config,
+        "run_ids": [
+            "other-run",
+        ],
+    }
+
+    with pytest.raises(
+        ValueError,
+        match="configuración diferente",
+    ):
+        execute_dataset_config(
+            changed_config,
+            results_dir=tmp_path,
+        )
 
 
 def test_prepare_qualitative_dataset_rejects_unknown_sampling_method(
@@ -3325,6 +3611,149 @@ def test_execute_judge_config_resumes_existing_evaluation(
             "results_dir": tmp_path,
         },
     ]
+
+
+def test_final_run_qualitative_pipeline_executes_and_persists_summary(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dataset_config = {
+        "dataset_id": "test-final-dataset",
+    }
+    judge_config = {
+        "dataset_id": "test-final-dataset",
+        "judge_eval_id": "test-final-judge",
+    }
+    summary = {
+        "dataset_id": "test-final-dataset",
+        "judge_eval_id": "test-final-judge",
+        "systems": [],
+    }
+    calls = []
+
+    monkeypatch.setattr(
+        "eval.run.QUALITATIVE_DATASET_CONFIG",
+        dataset_config,
+    )
+    monkeypatch.setattr(
+        "eval.run.QUALITATIVE_JUDGE_CONFIG",
+        judge_config,
+    )
+    monkeypatch.setattr(
+        "eval.run.LLM_JUDGE_RESULTS_DIR",
+        tmp_path,
+    )
+
+    def fake_execute_dataset_config(config):
+        calls.append(
+            (
+                "dataset",
+                config,
+            )
+        )
+        return {
+            "mode": "start",
+            "manifest": {},
+        }
+
+    def fake_execute_judge_config(config):
+        calls.append(
+            (
+                "judge",
+                config,
+            )
+        )
+
+        (
+            tmp_path
+            / "test-final-dataset"
+            / "judge_evaluations"
+            / "test-final-judge"
+        ).mkdir(
+            parents=True,
+        )
+
+        return {
+            "mode": "start",
+            "predictions": [],
+        }
+
+    def fake_build_judge_system_summary(
+        dataset_id,
+        judge_eval_id,
+    ):
+        calls.append(
+            (
+                "summary",
+                dataset_id,
+                judge_eval_id,
+            )
+        )
+        return summary
+
+    monkeypatch.setattr(
+        "eval.run.execute_dataset_config",
+        fake_execute_dataset_config,
+    )
+    monkeypatch.setattr(
+        "eval.run.execute_judge_config",
+        fake_execute_judge_config,
+    )
+    monkeypatch.setattr(
+        "eval.run.build_judge_system_summary",
+        fake_build_judge_system_summary,
+    )
+    monkeypatch.setattr(
+        "eval.run.render_judge_system_summary",
+        lambda received: (
+            "RESUMEN CUALITATIVO"
+            if received is summary
+            else pytest.fail(
+                "Se recibió un resumen inesperado."
+            )
+        ),
+    )
+
+    _run_qualitative_evaluation()
+
+    assert calls == [
+        (
+            "dataset",
+            dataset_config,
+        ),
+        (
+            "judge",
+            judge_config,
+        ),
+        (
+            "summary",
+            "test-final-dataset",
+            "test-final-judge",
+        ),
+    ]
+
+    output_dir = (
+        tmp_path
+        / "test-final-dataset"
+        / "judge_evaluations"
+        / "test-final-judge"
+    )
+
+    assert json.loads(
+        (
+            output_dir
+            / "system_summary.json"
+        ).read_text(
+            encoding="utf-8",
+        )
+    ) == summary
+
+    assert (
+        output_dir
+        / "system_summary.md"
+    ).read_text(
+        encoding="utf-8",
+    ) == "RESUMEN CUALITATIVO\n"
 
 
 def test_judge_run_main_renders_reconstructed_status(
@@ -4232,6 +4661,156 @@ def test_compare_human_annotators_requires_distinct_annotators(
             split="dev",
             results_dir=tmp_path,
         )
+
+
+def test_judge_system_summary_aggregates_passes_by_system_and_criterion(
+    tmp_path,
+) -> None:
+    sampled_trials = _sampled_trials_for_persistence()
+    first_sample = sampled_trials[0]
+    second_sample = sampled_trials[1]
+
+    first_holdout = SampledTrial(
+        case_id=first_sample.case_id,
+        split="holdout",
+        candidate=first_sample.candidate,
+    )
+
+    third_trial = {
+        **first_sample.candidate.trial,
+        "trial_index": 3,
+    }
+    third_sample = SampledTrial(
+        case_id="qc-003",
+        split="holdout",
+        candidate=TrialCandidate(
+            run_id=first_sample.candidate.run_id,
+            agent_config=first_sample.candidate.agent_config,
+            llm_config=first_sample.candidate.llm_config,
+            trial_config=first_sample.candidate.trial_config,
+            scenario=first_sample.candidate.scenario,
+            trial_index=3,
+            trial=third_trial,
+        ),
+    )
+
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        [
+            first_holdout,
+            second_sample,
+            third_sample,
+        ],
+        results_dir=tmp_path,
+    )
+    create_judge_evaluation(
+        "test-dataset",
+        "judge-eval-001",
+        split="holdout",
+        judge_llm_config="nova-lite",
+        max_repair_attempts=0,
+        results_dir=tmp_path,
+    )
+
+    cases = load_qualitative_cases(
+        "test-dataset",
+        results_dir=tmp_path,
+    )
+
+    for case in cases:
+        decisions = {
+            criterion_id: JudgeCriterionDecision(
+                verdict=(
+                    "FAIL"
+                    if (
+                        (
+                            case.case_id == "qc-003"
+                            and criterion_id == "Q1.2"
+                        )
+                        or (
+                            case.case_id == "qc-002"
+                            and criterion_id == "Q1.1"
+                        )
+                    )
+                    else "PASS"
+                ),
+                reason=(
+                    f"Decisión para {case.case_id} / "
+                    f"{criterion_id}."
+                ),
+                evidence_refs=[
+                    "a1.i1",
+                ],
+            )
+            for criterion_id, applicability
+            in case.criteria_applicability.items()
+            if applicability.applicable
+        }
+
+        save_judge_case_prediction(
+            "test-dataset",
+            "judge-eval-001",
+            build_judge_case_prediction(
+                case,
+                decisions,
+            ),
+            results_dir=tmp_path,
+        )
+
+    summary = build_judge_system_summary(
+        "test-dataset",
+        "judge-eval-001",
+        results_dir=tmp_path,
+    )
+
+    assert summary["dataset_id"] == "test-dataset"
+    assert summary["judge_eval_id"] == "judge-eval-001"
+    assert len(summary["systems"]) == 2
+
+    minimal = summary["systems"][0]
+
+    assert minimal["agent_config"] == "minimal"
+    assert minimal["case_count"] == 2
+    assert minimal["criteria"]["Q1.1"] == {
+        "applicable": 2,
+        "pass": 2,
+        "pass_rate": 1.0,
+    }
+    assert minimal["criteria"]["Q1.2"] == {
+        "applicable": 2,
+        "pass": 1,
+        "pass_rate": 0.5,
+    }
+    assert minimal["criteria"]["Q1.4"] == {
+        "applicable": 0,
+        "pass": 0,
+        "pass_rate": None,
+    }
+
+    tool_repair = summary["systems"][1]
+
+    assert (
+        tool_repair["agent_config"]
+        == "minimal_tool_repair"
+    )
+    assert tool_repair["case_count"] == 1
+    assert tool_repair["criteria"]["Q1.1"] == {
+        "applicable": 1,
+        "pass": 0,
+        "pass_rate": 0.0,
+    }
+
+    rendered = render_judge_system_summary(
+        summary
+    )
+
+    assert "# Evaluación cualitativa por sistema" in rendered
+    assert (
+        "`minimal / nova-lite / single_attempt`"
+        in rendered
+    )
+    assert "1/2 (50.0%)" in rendered
+    assert "N/A" in rendered
 
 
 def test_llm_judge_report_reconstructs_operational_status(

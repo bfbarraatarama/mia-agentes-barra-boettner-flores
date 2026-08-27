@@ -1,7 +1,5 @@
 import json
 
-import pytest
-
 from mia_agents.testing import MockLLMClient
 from mia_agents.tool_schema import FINAL_RESULT_TOOL_NAME
 from mia_agents.types import LLMResponse, ToolCall
@@ -125,6 +123,8 @@ def test_planner_respects_planning_repair_limit() -> None:
                     arguments=json.dumps({"steps": []}),
                 )
             ],
+            input_tokens=10,
+            output_tokens=2,
         ),
         LLMResponse(
             content=None,
@@ -142,18 +142,37 @@ def test_planner_respects_planning_repair_limit() -> None:
         ),
         LLMResponse(content="hecho"),
     ])
+    trace_events: list[dict[str, object]] = []
 
     agent = build_agent({
         "llm_client": mock,
         "register_default_tools": False,
         "use_planner": True,
         "planning_repair_max_attempts": 0,
+        "trace_callback": trace_events.append,
     })
 
-    with pytest.raises(ValueError):
-        agent.run("Abrí la puerta.")
+    result = agent.run("Abrí la puerta.")
 
+    assert result.error is not None
+    assert result.answer == result.error
+    assert "No se pudo generar el plan inicial" in result.error
+    assert "structured_call falló tras 1 intentos" in result.error
+    assert result.input_tokens == 10
+    assert result.output_tokens == 2
+    assert result.steps == []
     assert mock.call_count == 1
+
+    assert [
+        event
+        for event in trace_events
+        if event["type"] == "planning_failure"
+    ] == [
+        {
+            "type": "planning_failure",
+            "message": result.error,
+        },
+    ]
 
 
 def test_planner_generates_plan_only_for_initial_turn() -> None:
