@@ -35,6 +35,12 @@ LLM_CONFIGS: dict[str, dict[str, Any]] = {
         "model": "us.amazon.nova-pro-v1:0",
         "region": "us-west-2",
     },
+    "claude-opus-4.5": {
+        "provider": "bedrock",
+        "model": "us.anthropic.claude-opus-4-5-20251101-v1:0",
+        "region": "us-west-2",
+        "temperature": 0.0,
+    },
 }
 
 

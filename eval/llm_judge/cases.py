@@ -23,8 +23,8 @@ from eval.llm_judge.models import (
 from eval.llm_judge.rubric import Q1_4_NO_TRIGGER_REASON
 
 
-QUALITATIVE_CASE_SCHEMA_VERSION = 5
-CASE_VIEW_VERSION = "trajectory-planning-v5"
+QUALITATIVE_CASE_SCHEMA_VERSION = 6
+CASE_VIEW_VERSION = "trajectory-planning-v6"
 
 def _parse_arguments(arguments_raw: str | None) -> dict[str, Any] | None:
     """Parsea argumentos JSON sólo cuando representan un objeto."""
@@ -185,47 +185,193 @@ def _planning_contexts(
     return contexts
 
 
-def _summary_contexts(
-    events: list[dict[str, Any]],
+def _iteration_has_raw_round(
+    iteration: QualitativeIteration,
+) -> bool:
+    """Indica si la iteración llegó a persistirse como ronda assistant+tool."""
+
+    return (
+        bool(iteration.actions)
+        and all(
+            action.execution is not None
+            for action in iteration.actions
+        )
+    )
+
+
+def _preserved_raw_round_refs(
+    messages: list[dict[str, Any]],
     *,
-    attempt_index: int,
-    iteration_index: int,
-) -> list[QualitativeInternalContext]:
-    """Normaliza summaries producidos después de una decisión."""
+    summary: str,
+    prior_iterations: list[tuple[str, QualitativeIteration]],
+    current_iteration_ref: str,
+) -> list[str]:
+    """Identifica las rondas crudas que seguían disponibles junto al summary."""
 
-    contexts = []
-
-    for event in events:
-        if (
-            event.get("type") != "history_compaction"
-            or event.get("error") is not None
-        ):
-            continue
-
-        summary = event.get("summary")
-
-        if not isinstance(summary, str):
-            raise ValueError(
-                "La traza contiene una compactación exitosa sin el "
-                "summary utilizado por el agente."
+    summary_message_index = next(
+        (
+            index
+            for index, message in enumerate(messages)
+            if (
+                isinstance(message.get("content"), str)
+                and summary in message["content"]
             )
+        ),
+        None,
+    )
 
-        contexts.append(QualitativeInternalContext(
-            context_id=(
-                f"a{attempt_index}.i{iteration_index}."
-                f"summary{len(contexts) + 1}"
-            ),
-            kind="summary",
-            content=summary,
+    if summary_message_index is None:
+        return []
+
+    raw_round_count = sum(
+        1
+        for message in messages[summary_message_index + 1:]
+        if (
+            message.get("role") == "assistant"
+            and bool(message.get("tool_calls"))
+        )
+    )
+    current_iteration = next(
+        iteration
+        for iteration_ref, iteration in prior_iterations
+        if iteration_ref == current_iteration_ref
+    )
+    current_round_count = (
+        1
+        if _iteration_has_raw_round(current_iteration)
+        else 0
+    )
+    preserved_count = raw_round_count - current_round_count
+
+    if preserved_count < 0:
+        raise ValueError(
+            "El contexto posterior al summary no contiene la ronda "
+            "cruda de la iteración que produjo la compactación."
+        )
+
+    previous_raw_round_refs = [
+        iteration_ref
+        for iteration_ref, iteration in prior_iterations
+        if (
+            iteration_ref != current_iteration_ref
+            and _iteration_has_raw_round(iteration)
+        )
+    ]
+
+    if preserved_count > len(previous_raw_round_refs):
+        raise ValueError(
+            "El contexto posterior al summary contiene más rondas "
+            "crudas que las reconstruibles desde la trayectoria."
+        )
+
+    if preserved_count == 0:
+        return []
+
+    return previous_raw_round_refs[-preserved_count:]
+
+
+def _attach_summary_contexts(
+    raw_attempts: list[dict[str, Any]],
+    attempts: list[QualitativeAttempt],
+) -> None:
+    """Adjunta sólo summaries realmente disponibles en una decisión posterior."""
+
+    decisions = []
+
+    for attempt_position, raw_attempt in enumerate(raw_attempts):
+        agent_calls = _successful_agent_calls(raw_attempt["trace"])
+        normalized_attempt = attempts[attempt_position]
+
+        for iteration_position, (trace_index, llm_call) in enumerate(
+            agent_calls
+        ):
+            decisions.append((
+                attempt_position,
+                trace_index,
+                llm_call,
+                normalized_attempt.iterations[iteration_position],
+            ))
+
+    prior_iterations: list[tuple[str, QualitativeIteration]] = []
+
+    for decision_position, decision in enumerate(decisions):
+        (
+            attempt_position,
+            trace_index,
+            _,
+            iteration,
+        ) = decision
+        attempt = attempts[attempt_position]
+        iteration_ref = (
+            f"a{attempt.attempt_index}."
+            f"i{iteration.iteration_index}"
+        )
+        prior_iterations.append((
+            iteration_ref,
+            iteration,
         ))
 
-    return contexts
+        if decision_position + 1 >= len(decisions):
+            continue
+
+        next_decision = decisions[decision_position + 1]
+        next_attempt_position = next_decision[0]
+        next_trace_index = next_decision[1]
+        next_llm_call = next_decision[2]
+        trace = raw_attempts[attempt_position]["trace"]
+        end = (
+            next_trace_index
+            if next_attempt_position == attempt_position
+            else len(trace)
+        )
+        events = trace[trace_index + 1:end]
+        next_messages = next_llm_call.get("messages") or []
+        contexts = []
+
+        for event in events:
+            if (
+                event.get("type") != "history_compaction"
+                or event.get("error") is not None
+            ):
+                continue
+
+            summary = event.get("summary")
+
+            if not isinstance(summary, str):
+                raise ValueError(
+                    "La traza contiene una compactación exitosa sin el "
+                    "summary utilizado por el agente."
+                )
+
+            if not any(
+                isinstance(message.get("content"), str)
+                and summary in message["content"]
+                for message in next_messages
+            ):
+                continue
+
+            contexts.append(QualitativeInternalContext(
+                context_id=(
+                    f"{iteration_ref}."
+                    f"summary{len(contexts) + 1}"
+                ),
+                kind="summary",
+                content=summary,
+                preserved_raw_round_refs=(
+                    _preserved_raw_round_refs(
+                        next_messages,
+                        summary=summary,
+                        prior_iterations=prior_iterations,
+                        current_iteration_ref=iteration_ref,
+                    )
+                ),
+            ))
+
+        iteration.context_after_decision = contexts
 
 
 def _build_attempt(
     attempt: dict[str, Any],
-    *,
-    later_attempt_has_decision: bool,
 ) -> QualitativeAttempt:
     """Reconstruye iteraciones lógicas y acciones efectivas de un attempt."""
 
@@ -245,30 +391,12 @@ def _build_attempt(
             if iteration_position > 0
             else -1
         )
-        next_trace_index = (
-            agent_calls[iteration_position + 1][0]
-            if iteration_position + 1 < len(agent_calls)
-            else len(trace)
-        )
-        has_later_decision = (
-            iteration_position + 1 < len(agent_calls)
-            or later_attempt_has_decision
-        )
-
         context_before_decision = _planning_contexts(
             trace[previous_trace_index + 1:trace_index],
             attempt_index=attempt["attempt_index"],
             iteration_index=iteration_index,
         )
-        context_after_decision = (
-            _summary_contexts(
-                trace[trace_index + 1:next_trace_index],
-                attempt_index=attempt["attempt_index"],
-                iteration_index=iteration_index,
-            )
-            if has_later_decision
-            else []
-        )
+        context_after_decision = []
 
         response = llm_call["response"]
         proposed_calls = response.get("tool_calls") or []
@@ -625,18 +753,15 @@ def build_qualitative_case(
     if not raw_attempts:
         raise ValueError("El trial debe contener al menos un attempt.")
 
-    attempts = []
+    attempts = [
+        _build_attempt(attempt)
+        for attempt in raw_attempts
+    ]
 
-    for attempt_position, attempt in enumerate(raw_attempts):
-        later_attempt_has_decision = any(
-            _successful_agent_calls(later_attempt["trace"])
-            for later_attempt in raw_attempts[attempt_position + 1:]
-        )
-
-        attempts.append(_build_attempt(
-            attempt,
-            later_attempt_has_decision=later_attempt_has_decision,
-        ))
+    _attach_summary_contexts(
+        raw_attempts,
+        attempts,
+    )
 
     return QualitativeCase(
         schema_version=QUALITATIVE_CASE_SCHEMA_VERSION,

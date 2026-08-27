@@ -57,4 +57,32 @@ M3_LLM_JUDGE_SMOKE_HOLDOUT_REPORT_CONFIG: dict[str, Any] = {
 }
 
 
-REPORT_CONFIG = M3_LLM_JUDGE_SMOKE_DEV_REPORT_CONFIG
+M3_QUALITATIVE_JUDGE_CALIBRATION_REPORT_CONFIG: dict[str, Any] = {
+    "report_id": "m3-qualitative-judge-calibration-003",
+    "status": {
+        "dataset_id": "m3-qualitative-final-v2",
+        "judge_eval_id": "m3-qualitative-judge-calibration-003",
+    },
+    "judge_agreement": {
+        "dataset_id": "m3-qualitative-final-v2",
+        "judge_eval_id": "m3-qualitative-judge-calibration-003",
+        "annotator_id": "bruno",
+    },
+}
+
+
+M3_QUALITATIVE_JUDGE_HOLDOUT_REPORT_CONFIG: dict[str, Any] = {
+    "report_id": "m3-qualitative-judge-holdout-001",
+    "status": {
+        "dataset_id": "m3-qualitative-final-v2",
+        "judge_eval_id": "m3-qualitative-judge-holdout-001",
+    },
+    "judge_agreement": {
+        "dataset_id": "m3-qualitative-final-v2",
+        "judge_eval_id": "m3-qualitative-judge-holdout-001",
+        "annotator_id": "bruno",
+    },
+}
+
+
+REPORT_CONFIG = M3_QUALITATIVE_JUDGE_HOLDOUT_REPORT_CONFIG

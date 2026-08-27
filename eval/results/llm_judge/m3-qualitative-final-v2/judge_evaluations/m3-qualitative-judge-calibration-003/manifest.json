@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "judge_eval_id": "m3-qualitative-judge-calibration-003",
+  "dataset_id": "m3-qualitative-final-v2",
+  "created_at": "2026-08-25T00:18:31+00:00",
+  "git": {
+    "commit": "ae3874dd5207dfcdf9adc7a423486cd9d7f41684",
+    "branch": "m3/qualitative-sampling",
+    "dirty": true
+  },
+  "split": "dev",
+  "case_ids": [
+    "qc-009",
+    "qc-010",
+    "qc-011",
+    "qc-012"
+  ],
+  "judge": {
+    "llm_config": "claude-opus-4.5",
+    "effective_llm_config": {
+      "provider": "bedrock",
+      "model": "us.anthropic.claude-opus-4-5-20251101-v1:0",
+      "region": "us-west-2",
+      "temperature": 0.0,
+      "max_tokens": 4096
+    },
+    "system_prompt": "Actuás exclusivamente como evaluador cualitativo ciego. Debés aplicar la rúbrica y la evidencia proporcionadas sin incorporar conocimiento externo ni inferir metadata experimental.",
+    "prompt_fingerprint_sha256": "ad9490c32b788cfd6a107186289be45df51e18b7d489b4bb8b963bf2ddc0cd9f",
+    "max_repair_attempts": 2
+  },
+  "versions": {
+    "prediction_schema_version": 1,
+    "case_schema_version": 6,
+    "case_view_version": "trajectory-planning-v6",
+    "presentation_version": "planning-evidence-v6",
+    "rubric_version": "planning-quality-v5",
+    "judge_prompt_version": "planning-criterion-judge-v1"
+  }
+}

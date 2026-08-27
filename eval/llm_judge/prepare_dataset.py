@@ -20,8 +20,10 @@ from eval.llm_judge.persistence import (
     create_qualitative_dataset,
 )
 from eval.llm_judge.sampling import (
+    BALANCED_HOLDOUT_THEN_DIAGNOSTIC_DEV_METHOD,
     RANDOM_STRATIFIED_BY_SCENARIO_METHOD,
     collect_trial_candidates,
+    sample_holdout_then_dev,
     sample_trials_by_scenario,
 )
 from eval.persistence import load_run_results
@@ -59,10 +61,10 @@ def prepare_qualitative_dataset(
 
     sampling = dataset_config["sampling"]
 
-    if (
-        sampling["method"]
-        != RANDOM_STRATIFIED_BY_SCENARIO_METHOD
-    ):
+    if sampling["method"] not in {
+        RANDOM_STRATIFIED_BY_SCENARIO_METHOD,
+        BALANCED_HOLDOUT_THEN_DIAGNOSTIC_DEV_METHOD,
+    }:
         raise ValueError(
             "Método de sampling no soportado: "
             f"{sampling['method']!r}."
@@ -92,16 +94,51 @@ def prepare_qualitative_dataset(
     )
 
 
-    sampled_trials = sample_trials_by_scenario(
-        candidates,
-        seed=sampling["seed"],
-        cases_per_scenario=sampling[
-            "cases_per_scenario"
-        ],
-        dev_per_scenario=sampling[
-            "dev_per_scenario"
-        ],
-    )
+    if (
+        sampling["method"]
+        == RANDOM_STRATIFIED_BY_SCENARIO_METHOD
+    ):
+        sampled_trials = sample_trials_by_scenario(
+            candidates,
+            seed=sampling["seed"],
+            cases_per_scenario=sampling[
+                "cases_per_scenario"
+            ],
+            dev_per_scenario=sampling[
+                "dev_per_scenario"
+            ],
+        )
+
+    else:
+        sampled_trials = sample_holdout_then_dev(
+            candidates,
+            seed=sampling["seed"],
+            holdout_shortest_per_cell=sampling[
+                "holdout_shortest_per_cell"
+            ],
+            holdout_cases_per_system=sampling[
+                "holdout_cases_per_system"
+            ],
+            holdout_successes=sampling[
+                "holdout_successes"
+            ],
+            dev_successes=sampling[
+                "dev_successes"
+            ],
+            dev_require_plan_for_agent_configs=set(
+                sampling[
+                    "dev_require_plan_for_agent_configs"
+                ]
+            ),
+            dev_require_summary_for_agent_configs=set(
+                sampling[
+                    "dev_require_summary_for_agent_configs"
+                ]
+            ),
+            dev_require_multi_attempt=sampling[
+                "dev_require_multi_attempt"
+            ],
+        )
 
     manifest = create_qualitative_dataset(
         dataset_config,
