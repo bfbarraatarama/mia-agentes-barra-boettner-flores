@@ -13,7 +13,7 @@ from eval.llm_judge.models import (
 from eval.llm_judge.rubric import EVIDENCE_RULES
 
 
-PRESENTATION_VERSION = "planning-evidence-v5"
+PRESENTATION_VERSION = "planning-evidence-v6"
 
 
 @dataclass(frozen=True)
@@ -75,12 +75,18 @@ def build_case_presentation(
 
             for context in iteration.context_after_decision:
                 evidence_refs.append(context.context_id)
-                context_after_decision.append({
+                context_data = {
                     "ref": context.context_id,
                     "kind": context.kind,
                     "content": context.content,
-                })
+                }
 
+                if context.kind == "summary":
+                    context_data["preserved_raw_round_refs"] = list(
+                        context.preserved_raw_round_refs
+                    )
+
+                context_after_decision.append(context_data)
             actions = []
 
             for action in iteration.actions:

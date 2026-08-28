@@ -1,0 +1,90 @@
+{
+  "dataset_id": "m3-final-selection-qualitative-v1",
+  "judge_eval_id": "m3-final-selection-judge-001",
+  "systems": [
+    {
+      "agent_config": "baseline_incremental",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt_recovery",
+      "case_count": 24,
+      "criteria": {
+        "Q1.1": {
+          "applicable": 24,
+          "pass": 18,
+          "pass_rate": 0.75
+        },
+        "Q1.2": {
+          "applicable": 24,
+          "pass": 20,
+          "pass_rate": 0.8333333333333334
+        },
+        "Q1.3": {
+          "applicable": 24,
+          "pass": 14,
+          "pass_rate": 0.5833333333333334
+        },
+        "Q1.4": {
+          "applicable": 21,
+          "pass": 10,
+          "pass_rate": 0.47619047619047616
+        }
+      }
+    },
+    {
+      "agent_config": "planner",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt_recovery",
+      "case_count": 24,
+      "criteria": {
+        "Q1.1": {
+          "applicable": 24,
+          "pass": 19,
+          "pass_rate": 0.7916666666666666
+        },
+        "Q1.2": {
+          "applicable": 24,
+          "pass": 20,
+          "pass_rate": 0.8333333333333334
+        },
+        "Q1.3": {
+          "applicable": 24,
+          "pass": 16,
+          "pass_rate": 0.6666666666666666
+        },
+        "Q1.4": {
+          "applicable": 18,
+          "pass": 9,
+          "pass_rate": 0.5
+        }
+      }
+    },
+    {
+      "agent_config": "planner_incremental",
+      "llm_config": "nova-lite",
+      "trial_config": "multi_attempt_recovery",
+      "case_count": 24,
+      "criteria": {
+        "Q1.1": {
+          "applicable": 24,
+          "pass": 17,
+          "pass_rate": 0.7083333333333334
+        },
+        "Q1.2": {
+          "applicable": 24,
+          "pass": 19,
+          "pass_rate": 0.7916666666666666
+        },
+        "Q1.3": {
+          "applicable": 24,
+          "pass": 16,
+          "pass_rate": 0.6666666666666666
+        },
+        "Q1.4": {
+          "applicable": 21,
+          "pass": 13,
+          "pass_rate": 0.6190476190476191
+        }
+      }
+    }
+  ]
+}

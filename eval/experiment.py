@@ -27,7 +27,10 @@ from mia_world import (
 )
 from student_framework import build_agent
 from eval.configs.agent_configs import AGENT_CONFIGS
-from eval.configs.trial_configs import TRIAL_CONFIGS
+from eval.configs.trial_configs import (
+    DEFAULT_ATTEMPT_RECOVERY_MESSAGES,
+    TRIAL_CONFIGS,
+)
 from eval.configs.llm_configs import LLM_CONFIGS, build_llm_client
 
 
@@ -53,6 +56,65 @@ def _serialize_trace_event(
         }
 
     return serialized
+
+
+def _run_termination_reason(
+    trace: list[dict[str, Any]],
+) -> str | None:
+    """Obtiene la causa estructurada de terminación de un run."""
+
+    return next(
+        (
+            event.get("reason")
+            for event in reversed(trace)
+            if event.get("type") == "run_termination"
+        ),
+        None,
+    )
+
+
+def _resolve_recovery_user_message(
+    *,
+    termination_reason: str | None,
+    trial_config: dict[str, Any],
+) -> str | None:
+    """Resuelve si una terminación abre otro attempt y con qué mensaje."""
+
+    if termination_reason is None:
+        return None
+
+    recovery_policy = trial_config.get(
+        "recoverable_attempt_terminations",
+        {},
+    )
+
+    if termination_reason not in recovery_policy:
+        return None
+
+    feedback = recovery_policy[termination_reason]
+
+    if feedback is None:
+        feedback = DEFAULT_ATTEMPT_RECOVERY_MESSAGES.get(
+            termination_reason
+        )
+
+        if feedback is None:
+            raise ValueError(
+                "No existe feedback default para la terminación "
+                f"{termination_reason!r}."
+            )
+
+    if not isinstance(feedback, str):
+        raise ValueError(
+            "El feedback de recuperación debe ser str o None."
+        )
+
+    continuation_message = trial_config["continuation_message"]
+
+    if feedback == "":
+        return continuation_message
+
+    return f"{feedback}\n\n{continuation_message}"
 
 
 def _resolve_scenario(spec: str) -> Scenario:
@@ -119,6 +181,7 @@ def run_trial(
 
     attempts = []
     user_message = scenario.user_message
+    recovery_counts: dict[str, int] = {}
 
     for attempt_index in range(
         1,
@@ -139,8 +202,59 @@ def run_trial(
             "trace": trace,
         })
 
-        if achieved or result.error is not None:
+        if achieved:
             break
+
+        if result.error is not None:
+            termination_reason = _run_termination_reason(trace)
+            recovery_user_message = _resolve_recovery_user_message(
+                termination_reason=termination_reason,
+                trial_config=trial_config,
+            )
+
+            if (
+                termination_reason is None
+                or recovery_user_message is None
+            ):
+                break
+
+            recovery_limits = trial_config.get(
+                "attempt_recovery_max_recoveries",
+                {},
+            )
+            max_recoveries = recovery_limits.get(
+                termination_reason
+            )
+
+            if (
+                max_recoveries is not None
+                and (
+                    not isinstance(max_recoveries, int)
+                    or max_recoveries < 0
+                )
+            ):
+                raise ValueError(
+                    "El límite de recuperaciones debe ser "
+                    "un entero no negativo."
+                )
+
+            used_recoveries = recovery_counts.get(
+                termination_reason,
+                0,
+            )
+
+            if (
+                max_recoveries is not None
+                and used_recoveries >= max_recoveries
+            ):
+                break
+
+            recovery_counts[termination_reason] = (
+                used_recoveries + 1
+            )
+
+            user_message = recovery_user_message
+            continue
 
         user_message = trial_config["continuation_message"]
 

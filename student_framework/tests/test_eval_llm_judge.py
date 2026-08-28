@@ -58,17 +58,28 @@ from eval.llm_judge.rubric import (
     RUBRIC_VERSION,
 )
 from eval.llm_judge.configs.dataset_configs import (
+    M3_FINAL_SELECTION_QUALITATIVE_DATASET_CONFIG,
+    M3_QUALITATIVE_FINAL_DATASET_CONFIG,
     M3_QUALITATIVE_PILOT_DATASET_CONFIG,
 )
+from eval.llm_judge.configs.judge_configs import (
+    M3_FINAL_SELECTION_JUDGE_CONFIG,
+)
 from eval.llm_judge.prepare_dataset import (
+    execute_dataset_config,
     prepare_qualitative_dataset,
 )
 from eval.llm_judge.sampling import (
+    BALANCED_HOLDOUT_THEN_DIAGNOSTIC_DEV_METHOD,
     RANDOM_STRATIFIED_BY_SCENARIO_METHOD,
+    RANDOM_STRATIFIED_BY_SYSTEM_SCENARIO_METHOD,
     SampledTrial,
     TrialCandidate,
     collect_trial_candidates,
+    sample_holdout_then_dev,
     sample_trials_by_scenario,
+    sample_trials_by_system_and_scenario,
+    select_balanced_holdout_candidates,
 )
 from eval.llm_judge.annotations import (
     HUMAN_ANNOTATION_SCHEMA_VERSION,
@@ -114,15 +125,18 @@ from eval.llm_judge.comparison import (
 )
 from eval.llm_judge.report import (
     build_judge_evaluation_status,
+    build_judge_system_summary,
     render_human_agreement_report,
     render_judge_agreement_report,
     render_judge_evaluation_status,
+    render_judge_system_summary,
 )
 from eval.llm_judge.report_run import (
     execute_report_config,
     main as judge_report_main,
     render_judge_agreement_details,
 )
+from eval.run import _run_qualitative_evaluation
 from mia_agents.testing.mock_llm import MockLLMClient
 from mia_agents.tool_schema import FINAL_RESULT_TOOL_NAME
 from mia_agents.types import LLMResponse, ToolCall
@@ -142,8 +156,8 @@ from eval.llm_judge.annotate import (
 
 def _qualitative_case() -> QualitativeCase:
     return QualitativeCase(
-        schema_version=5,
-        case_view_version="trajectory-planning-v5",
+        schema_version=6,
+        case_view_version="trajectory-planning-v6",
         case_id="qc-001",
         task="Abrí la puerta principal.",
         criteria_applicability={
@@ -207,8 +221,8 @@ def _human_annotation() -> HumanAnnotation:
 
     return HumanAnnotation(
         schema_version=HUMAN_ANNOTATION_SCHEMA_VERSION,
-        case_schema_version=5,
-        case_view_version="trajectory-planning-v5",
+        case_schema_version=6,
+        case_view_version="trajectory-planning-v6",
         presentation_version=PRESENTATION_VERSION,
         rubric_version=RUBRIC_VERSION,
         case_id="qc-001",
@@ -250,12 +264,13 @@ def _agent_call(
     *,
     content: str | None,
     tool_calls: list[dict] | None = None,
+    messages: list[dict] | None = None,
 ) -> dict:
     return {
         "type": "llm_call",
         "purpose": "agent",
         "retry_index": 0,
-        "messages": [],
+        "messages": messages or [],
         "response": {
             "content": content,
             "tool_calls": tool_calls or [],
@@ -428,7 +443,7 @@ def _judge_response(
 
 
 def test_llm_judge_rubric_defines_planning_quality_criteria() -> None:
-    assert RUBRIC_VERSION == "planning-quality-v4"
+    assert RUBRIC_VERSION == "planning-quality-v5"
     assert DIMENSION_ID == "Q1"
     assert CRITERION_IDS == (
         "Q1.1",
@@ -681,6 +696,37 @@ def test_build_qualitative_case_preserves_internal_context_temporally() -> None:
         },
         _agent_call(
             content="Todavía no terminé.",
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        "[Resumen de progreso del intento actual]\n"
+                        f"{first_summary}"
+                    ),
+                },
+                {
+                    "role": "assistant",
+                    "content": "Primero examino la puerta.",
+                    "tool_calls": [
+                        {
+                            "id": "examine-1",
+                            "type": "function",
+                            "function": {
+                                "name": "examine",
+                                "arguments": json.dumps({
+                                    "target": "puerta",
+                                }),
+                            },
+                        },
+                    ],
+                },
+                {
+                    "role": "tool",
+                    "tool_call_id": "examine-1",
+                    "name": "examine",
+                    "content": "La puerta está cerrada.",
+                },
+            ],
         ),
         {
             "type": "history_compaction",
@@ -700,6 +746,16 @@ def test_build_qualitative_case_preserves_internal_context_temporally() -> None:
     second_attempt_trace = [
         _agent_call(
             content="Continúo buscando la llave.",
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        "[Resumen de progreso del intento actual]\n"
+                        f"{continuation_summary}\n\n"
+                        "El desafío todavía no está completado. Continuá."
+                    ),
+                },
+            ],
         ),
         {
             "type": "history_compaction",
@@ -750,6 +806,7 @@ def test_build_qualitative_case_preserves_internal_context_temporally() -> None:
                 "1. Examinar la puerta\n"
                 "2. Encontrar la llave"
             ),
+            "preserved_raw_round_refs": [],
         },
     ]
     assert [
@@ -760,6 +817,7 @@ def test_build_qualitative_case_preserves_internal_context_temporally() -> None:
             "context_id": "a1.i1.summary1",
             "kind": "summary",
             "content": first_summary,
+            "preserved_raw_round_refs": [],
         },
     ]
     assert [
@@ -772,10 +830,203 @@ def test_build_qualitative_case_preserves_internal_context_temporally() -> None:
             "context_id": "a1.i2.summary1",
             "kind": "summary",
             "content": continuation_summary,
+            "preserved_raw_round_refs": [],
         },
     ]
     assert second_attempt_iteration.context_before_decision == []
     assert second_attempt_iteration.context_after_decision == []
+
+
+def test_build_qualitative_case_records_raw_rounds_preserved_with_summary() -> None:
+    summary = (
+        "Hechos descubiertos:\n"
+        "- Hay una llave en la habitación."
+    )
+    look_arguments = "{}"
+    go_arguments = json.dumps({"direction": "norte"})
+    examine_arguments = json.dumps({"target": "puerta"})
+
+    trace = [
+        _agent_call(
+            content="Primero miro.",
+            tool_calls=[
+                {
+                    "id": "look-1",
+                    "name": "look",
+                    "arguments": look_arguments,
+                },
+            ],
+        ),
+        {
+            "type": "tool_execution",
+            "retry_index": 0,
+            "tool_name": "look",
+            "arguments": {},
+            "output": "Ves un pasillo.",
+        },
+        _agent_call(
+            content="Avanzo al norte.",
+            tool_calls=[
+                {
+                    "id": "go-1",
+                    "name": "go",
+                    "arguments": go_arguments,
+                },
+            ],
+        ),
+        {
+            "type": "tool_execution",
+            "retry_index": 0,
+            "tool_name": "go",
+            "arguments": {"direction": "norte"},
+            "output": "Llegas al pasillo.",
+        },
+        _agent_call(
+            content="Examino la puerta.",
+            tool_calls=[
+                {
+                    "id": "examine-1",
+                    "name": "examine",
+                    "arguments": examine_arguments,
+                },
+            ],
+        ),
+        {
+            "type": "history_compaction",
+            "evicted_messages": 6,
+            "summary": summary,
+            "summary_chars": len(summary),
+        },
+        {
+            "type": "tool_execution",
+            "retry_index": 0,
+            "tool_name": "examine",
+            "arguments": {"target": "puerta"},
+            "output": "La puerta está cerrada.",
+        },
+        _agent_call(
+            content="Sigo buscando.",
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        "[Resumen de progreso del intento actual]\n"
+                        f"{summary}"
+                    ),
+                },
+                {
+                    "role": "assistant",
+                    "content": "Primero miro.",
+                    "tool_calls": [
+                        {
+                            "id": "look-1",
+                            "type": "function",
+                            "function": {
+                                "name": "look",
+                                "arguments": look_arguments,
+                            },
+                        },
+                    ],
+                },
+                {
+                    "role": "tool",
+                    "tool_call_id": "look-1",
+                    "name": "look",
+                    "content": "Ves un pasillo.",
+                },
+                {
+                    "role": "assistant",
+                    "content": "Avanzo al norte.",
+                    "tool_calls": [
+                        {
+                            "id": "go-1",
+                            "type": "function",
+                            "function": {
+                                "name": "go",
+                                "arguments": go_arguments,
+                            },
+                        },
+                    ],
+                },
+                {
+                    "role": "tool",
+                    "tool_call_id": "go-1",
+                    "name": "go",
+                    "content": "Llegas al pasillo.",
+                },
+                {
+                    "role": "assistant",
+                    "content": "Examino la puerta.",
+                    "tool_calls": [
+                        {
+                            "id": "examine-1",
+                            "type": "function",
+                            "function": {
+                                "name": "examine",
+                                "arguments": examine_arguments,
+                            },
+                        },
+                    ],
+                },
+                {
+                    "role": "tool",
+                    "tool_call_id": "examine-1",
+                    "name": "examine",
+                    "content": "La puerta está cerrada.",
+                },
+            ],
+        ),
+    ]
+    steps = [
+        {
+            "tool_name": "look",
+            "tool_input": look_arguments,
+            "tool_output": "Ves un pasillo.",
+            "error": None,
+        },
+        {
+            "tool_name": "go",
+            "tool_input": go_arguments,
+            "tool_output": "Llegas al pasillo.",
+            "error": None,
+        },
+        {
+            "tool_name": "examine",
+            "tool_input": examine_arguments,
+            "tool_output": "La puerta está cerrada.",
+            "error": None,
+        },
+    ]
+    trial = {
+        "trial_index": 1,
+        "goal_achieved": False,
+        "goal_reason": "pendiente",
+        "attempts": [
+            _attempt(
+                trace=trace,
+                steps=steps,
+                answer="Sigo buscando.",
+            ),
+        ],
+    }
+
+    case = build_qualitative_case(
+        trial,
+        case_id="qc-preserved-rounds",
+    )
+
+    context = (
+        case.attempts[0]
+        .iterations[2]
+        .context_after_decision[0]
+    )
+
+    assert context.kind == "summary"
+    assert context.content == summary
+    assert context.preserved_raw_round_refs == [
+        "a1.i1",
+        "a1.i2",
+    ]
 
 
 def test_build_qualitative_case_distinguishes_repaired_action() -> None:
@@ -1786,6 +2037,260 @@ def test_sample_trials_by_scenario_is_reproducible() -> None:
     ]
 
 
+def test_sample_trials_by_system_and_scenario_is_reproducible() -> None:
+    candidates = collect_trial_candidates(
+        {
+            "test-run": _sampling_run(),
+        },
+        llm_configs={"nova-lite"},
+    )
+
+    first = sample_trials_by_system_and_scenario(
+        candidates,
+        seed=1234,
+        cases_per_system_scenario=2,
+    )
+    second = sample_trials_by_system_and_scenario(
+        list(reversed(candidates)),
+        seed=1234,
+        cases_per_system_scenario=2,
+    )
+
+    assert len(first) == 8
+    assert all(
+        sample.split == "holdout"
+        for sample in first
+    )
+
+    for agent_config in (
+        "minimal",
+        "minimal_tool_repair",
+    ):
+        for scenario in (
+            "study-with-key",
+            "office-sequence",
+        ):
+            assert sum(
+                (
+                    sample.candidate.agent_config
+                    == agent_config
+                )
+                and (
+                    sample.candidate.scenario
+                    == scenario
+                )
+                for sample in first
+            ) == 2
+
+    assert [
+        (
+            sample.case_id,
+            sample.candidate.identity,
+        )
+        for sample in first
+    ] == [
+        (
+            sample.case_id,
+            sample.candidate.identity,
+        )
+        for sample in second
+    ]
+
+
+def test_sample_trials_by_system_and_scenario_uses_all_when_n_is_larger() -> None:
+    candidates = collect_trial_candidates(
+        {
+            "test-run": _sampling_run(),
+        },
+        llm_configs={"nova-lite"},
+    )
+
+    sampled = sample_trials_by_system_and_scenario(
+        candidates,
+        seed=1234,
+        cases_per_system_scenario=10,
+    )
+
+    assert len(sampled) == 12
+    assert {
+        sample.candidate.identity
+        for sample in sampled
+    } == {
+        candidate.identity
+        for candidate in candidates
+    }
+
+
+def test_select_balanced_holdout_candidates_is_reproducible() -> None:
+    run = _sampling_run()
+
+    for result in run["results"]:
+        if result["llm_config"] != "nova-lite":
+            continue
+
+        for trial in result["trials"]:
+            trial["attempts"] = [
+                _attempt(
+                    user_message="Resolvé el desafío.",
+                    trace=[
+                        _agent_call(
+                            content=(
+                                "paso " * trial["trial_index"]
+                            ).strip(),
+                        ),
+                    ],
+                    answer="Respuesta final.",
+                ),
+            ]
+
+    candidates = collect_trial_candidates(
+        {
+            "test-run": run,
+        },
+        llm_configs={"nova-lite"},
+    )
+
+    first = select_balanced_holdout_candidates(
+        candidates,
+        seed=1234,
+        shortest_per_cell=2,
+        cases_per_system=1,
+        successes=1,
+    )
+    second = select_balanced_holdout_candidates(
+        list(reversed(candidates)),
+        seed=1234,
+        shortest_per_cell=2,
+        cases_per_system=1,
+        successes=1,
+    )
+
+    assert [
+        candidate.identity
+        for candidate in first
+    ] == [
+        candidate.identity
+        for candidate in second
+    ]
+
+    assert len(first) == 2
+    assert len({
+        candidate.scenario
+        for candidate in first
+    }) == 2
+    assert len({
+        _candidate.agent_config
+        for _candidate in first
+    }) == 2
+    assert sum(
+        bool(candidate.trial["goal_achieved"])
+        for candidate in first
+    ) == 1
+    assert all(
+        candidate.trial_index in {1, 2}
+        for candidate in first
+    )
+
+
+def test_sample_holdout_then_dev_selects_splits_in_order() -> None:
+    run = _sampling_run()
+
+    for result in run["results"]:
+        if result["llm_config"] != "nova-lite":
+            continue
+
+        for trial in result["trials"]:
+            trial["attempts"] = [
+                _attempt(
+                    user_message="Resolvé el desafío.",
+                    trace=[
+                        _agent_call(
+                            content=(
+                                "paso " * trial["trial_index"]
+                            ).strip(),
+                        ),
+                    ],
+                    answer="Respuesta final.",
+                ),
+            ]
+
+    candidates = collect_trial_candidates(
+        {
+            "test-run": run,
+        },
+        llm_configs={"nova-lite"},
+    )
+
+    sampled = sample_holdout_then_dev(
+        candidates,
+        seed=1234,
+        holdout_shortest_per_cell=2,
+        holdout_cases_per_system=1,
+        holdout_successes=1,
+        dev_successes=1,
+        dev_require_plan_for_agent_configs=set(),
+        dev_require_summary_for_agent_configs=set(),
+        dev_require_multi_attempt=False,
+    )
+
+    assert len(sampled) == 4
+    assert [
+        sample.split
+        for sample in sampled
+    ] == [
+        "holdout",
+        "holdout",
+        "dev",
+        "dev",
+    ]
+    assert [
+        sample.case_id
+        for sample in sampled
+    ] == [
+        "qc-001",
+        "qc-002",
+        "qc-003",
+        "qc-004",
+    ]
+    assert len({
+        sample.candidate.identity
+        for sample in sampled
+    }) == 4
+
+    holdout = [
+        sample
+        for sample in sampled
+        if sample.split == "holdout"
+    ]
+    dev = [
+        sample
+        for sample in sampled
+        if sample.split == "dev"
+    ]
+
+    assert len({
+        sample.candidate.scenario
+        for sample in holdout
+    }) == 2
+    assert len({
+        sample.candidate.agent_config
+        for sample in holdout
+    }) == 2
+    assert sum(
+        bool(sample.candidate.trial["goal_achieved"])
+        for sample in holdout
+    ) == 1
+
+    assert len({
+        sample.candidate.agent_config
+        for sample in dev
+    }) == 2
+    assert sum(
+        bool(sample.candidate.trial["goal_achieved"])
+        for sample in dev
+    ) == 1
+
+
 def test_sample_trials_by_scenario_rejects_insufficient_population() -> None:
     candidates = collect_trial_candidates(
         {
@@ -1912,8 +2417,8 @@ def test_load_dataset_manifest_preserves_dataset_config(
         "population": dataset_config["population"],
         "sampling": dataset_config["sampling"],
     }
-    assert manifest["rubric_version"] == "planning-quality-v4"
-    assert manifest["case_view_version"] == "trajectory-planning-v5"
+    assert manifest["rubric_version"] == "planning-quality-v5"
+    assert manifest["case_view_version"] == "trajectory-planning-v6"
 
 
 def test_create_qualitative_dataset_rejects_existing_dataset(
@@ -1982,6 +2487,86 @@ def test_pilot_dataset_config_defines_shared_population_and_sampling() -> None:
         "seed": 20260821,
         "cases_per_scenario": 3,
         "dev_per_scenario": 2,
+    }
+
+
+def test_final_dataset_config_defines_holdout_then_dev_sampling() -> None:
+    config = M3_QUALITATIVE_FINAL_DATASET_CONFIG
+
+    assert config["dataset_id"] == "m3-qualitative-final-v2"
+    assert config["run_ids"] == [
+        "m3-final-run-001",
+    ]
+    assert config["population"]["agent_configs"] == [
+        "baseline",
+        "planner",
+        "summary",
+        "planner_summary",
+    ]
+    assert config["population"]["llm_configs"] == [
+        "nova-lite",
+    ]
+    assert config["population"]["trial_configs"] == [
+        "multi_attempt",
+    ]
+    assert len(config["population"]["scenarios"]) == 8
+
+    assert config["sampling"] == {
+        "method": BALANCED_HOLDOUT_THEN_DIAGNOSTIC_DEV_METHOD,
+        "seed": 20260824,
+        "holdout_shortest_per_cell": 5,
+        "holdout_cases_per_system": 2,
+        "holdout_successes": 4,
+        "dev_successes": 2,
+        "dev_require_plan_for_agent_configs": [
+            "planner",
+            "planner_summary",
+        ],
+        "dev_require_summary_for_agent_configs": [
+            "summary",
+            "planner_summary",
+        ],
+        "dev_require_multi_attempt": True,
+    }
+
+
+def test_final_selection_qualitative_configs() -> None:
+    dataset_config = (
+        M3_FINAL_SELECTION_QUALITATIVE_DATASET_CONFIG
+    )
+
+    assert dataset_config["dataset_id"] == (
+        "m3-final-selection-qualitative-v1"
+    )
+    assert dataset_config["run_ids"] == [
+        "m3-final-run-008",
+    ]
+    assert dataset_config["population"]["agent_configs"] == [
+        "planner",
+        "baseline_incremental",
+        "planner_incremental",
+    ]
+    assert dataset_config["population"]["llm_configs"] == [
+        "nova-lite",
+    ]
+    assert dataset_config["population"]["trial_configs"] == [
+        "multi_attempt_recovery",
+    ]
+    assert len(
+        dataset_config["population"]["scenarios"]
+    ) == 8
+    assert dataset_config["sampling"] == {
+        "method": RANDOM_STRATIFIED_BY_SYSTEM_SCENARIO_METHOD,
+        "seed": 20260826,
+        "cases_per_system_scenario": 3,
+    }
+
+    assert M3_FINAL_SELECTION_JUDGE_CONFIG == {
+        "dataset_id": "m3-final-selection-qualitative-v1",
+        "judge_eval_id": "m3-final-selection-judge-001",
+        "split": "holdout",
+        "judge_llm_config": "claude-opus-4.5",
+        "max_repair_attempts": 2,
     }
 
 
@@ -2055,6 +2640,158 @@ def test_prepare_qualitative_dataset_uses_shared_config(
         result["manifest"]["dataset"]["sampling"]
         == dataset_config["sampling"]
     )
+
+
+def test_prepare_qualitative_dataset_supports_sampling_by_system_and_scenario(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    run = _sampling_run()
+
+    for result in run["results"]:
+        for trial in result["trials"]:
+            trial["attempts"] = [
+                _attempt(
+                    user_message="Resolvé el desafío.",
+                    trace=[
+                        _agent_call(
+                            content="Respuesta final.",
+                        ),
+                    ],
+                    answer="Respuesta final.",
+                ),
+            ]
+
+    monkeypatch.setattr(
+        "eval.llm_judge.prepare_dataset.load_run_results",
+        lambda run_id: run,
+    )
+
+    dataset_config = {
+        "dataset_id": "system-scenario-dataset",
+        "run_ids": [
+            "test-run",
+        ],
+        "population": {
+            "agent_configs": None,
+            "llm_configs": [
+                "nova-lite",
+            ],
+            "trial_configs": [
+                "single_attempt",
+            ],
+            "scenarios": [
+                "study-with-key",
+                "office-sequence",
+            ],
+        },
+        "sampling": {
+            "method": (
+                RANDOM_STRATIFIED_BY_SYSTEM_SCENARIO_METHOD
+            ),
+            "seed": 1234,
+            "cases_per_system_scenario": 2,
+        },
+    }
+
+    result = prepare_qualitative_dataset(
+        dataset_config,
+        results_dir=tmp_path,
+    )
+
+    assert result["eligible_trials"] == 12
+    assert result["manifest"]["counts"] == {
+        "total": 8,
+        "dev": 0,
+        "holdout": 8,
+    }
+    assert (
+        result["manifest"]["dataset"]["sampling"]
+        == dataset_config["sampling"]
+    )
+
+
+def test_execute_dataset_config_starts_or_reuses_matching_dataset(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dataset_config = {
+        "dataset_id": "test-dataset",
+        "run_ids": [
+            "test-run",
+        ],
+        "population": {
+            "agent_configs": None,
+        },
+        "sampling": {
+            "method": "test",
+        },
+    }
+
+    def missing_manifest(
+        dataset_id,
+        *,
+        results_dir,
+    ):
+        raise FileNotFoundError
+
+    monkeypatch.setattr(
+        "eval.llm_judge.prepare_dataset.load_dataset_manifest",
+        missing_manifest,
+    )
+    monkeypatch.setattr(
+        "eval.llm_judge.prepare_dataset.prepare_qualitative_dataset",
+        lambda config, *, results_dir: {
+            "manifest": {
+                "dataset_id": config["dataset_id"],
+                "dataset": {
+                    key: value
+                    for key, value in config.items()
+                    if key != "dataset_id"
+                },
+            },
+        },
+    )
+
+    started = execute_dataset_config(
+        dataset_config,
+        results_dir=tmp_path,
+    )
+
+    assert started["mode"] == "start"
+
+    existing_manifest = started["manifest"]
+
+    monkeypatch.setattr(
+        "eval.llm_judge.prepare_dataset.load_dataset_manifest",
+        lambda dataset_id, *, results_dir: existing_manifest,
+    )
+
+    reused = execute_dataset_config(
+        dataset_config,
+        results_dir=tmp_path,
+    )
+
+    assert reused == {
+        "mode": "reuse",
+        "manifest": existing_manifest,
+    }
+
+    changed_config = {
+        **dataset_config,
+        "run_ids": [
+            "other-run",
+        ],
+    }
+
+    with pytest.raises(
+        ValueError,
+        match="configuración diferente",
+    ):
+        execute_dataset_config(
+            changed_config,
+            results_dir=tmp_path,
+        )
 
 
 def test_prepare_qualitative_dataset_rejects_unknown_sampling_method(
@@ -2146,8 +2883,8 @@ def test_create_judge_evaluation_persists_reproducible_manifest(
             "prediction_schema_version": (
                 JUDGE_PREDICTION_SCHEMA_VERSION
             ),
-            "case_schema_version": 5,
-            "case_view_version": "trajectory-planning-v5",
+            "case_schema_version": 6,
+            "case_view_version": "trajectory-planning-v6",
             "presentation_version": PRESENTATION_VERSION,
             "rubric_version": RUBRIC_VERSION,
             "judge_prompt_version": JUDGE_PROMPT_VERSION,
@@ -2874,6 +3611,149 @@ def test_execute_judge_config_resumes_existing_evaluation(
             "results_dir": tmp_path,
         },
     ]
+
+
+def test_final_run_qualitative_pipeline_executes_and_persists_summary(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dataset_config = {
+        "dataset_id": "test-final-dataset",
+    }
+    judge_config = {
+        "dataset_id": "test-final-dataset",
+        "judge_eval_id": "test-final-judge",
+    }
+    summary = {
+        "dataset_id": "test-final-dataset",
+        "judge_eval_id": "test-final-judge",
+        "systems": [],
+    }
+    calls = []
+
+    monkeypatch.setattr(
+        "eval.run.QUALITATIVE_DATASET_CONFIG",
+        dataset_config,
+    )
+    monkeypatch.setattr(
+        "eval.run.QUALITATIVE_JUDGE_CONFIG",
+        judge_config,
+    )
+    monkeypatch.setattr(
+        "eval.run.LLM_JUDGE_RESULTS_DIR",
+        tmp_path,
+    )
+
+    def fake_execute_dataset_config(config):
+        calls.append(
+            (
+                "dataset",
+                config,
+            )
+        )
+        return {
+            "mode": "start",
+            "manifest": {},
+        }
+
+    def fake_execute_judge_config(config):
+        calls.append(
+            (
+                "judge",
+                config,
+            )
+        )
+
+        (
+            tmp_path
+            / "test-final-dataset"
+            / "judge_evaluations"
+            / "test-final-judge"
+        ).mkdir(
+            parents=True,
+        )
+
+        return {
+            "mode": "start",
+            "predictions": [],
+        }
+
+    def fake_build_judge_system_summary(
+        dataset_id,
+        judge_eval_id,
+    ):
+        calls.append(
+            (
+                "summary",
+                dataset_id,
+                judge_eval_id,
+            )
+        )
+        return summary
+
+    monkeypatch.setattr(
+        "eval.run.execute_dataset_config",
+        fake_execute_dataset_config,
+    )
+    monkeypatch.setattr(
+        "eval.run.execute_judge_config",
+        fake_execute_judge_config,
+    )
+    monkeypatch.setattr(
+        "eval.run.build_judge_system_summary",
+        fake_build_judge_system_summary,
+    )
+    monkeypatch.setattr(
+        "eval.run.render_judge_system_summary",
+        lambda received: (
+            "RESUMEN CUALITATIVO"
+            if received is summary
+            else pytest.fail(
+                "Se recibió un resumen inesperado."
+            )
+        ),
+    )
+
+    _run_qualitative_evaluation()
+
+    assert calls == [
+        (
+            "dataset",
+            dataset_config,
+        ),
+        (
+            "judge",
+            judge_config,
+        ),
+        (
+            "summary",
+            "test-final-dataset",
+            "test-final-judge",
+        ),
+    ]
+
+    output_dir = (
+        tmp_path
+        / "test-final-dataset"
+        / "judge_evaluations"
+        / "test-final-judge"
+    )
+
+    assert json.loads(
+        (
+            output_dir
+            / "system_summary.json"
+        ).read_text(
+            encoding="utf-8",
+        )
+    ) == summary
+
+    assert (
+        output_dir
+        / "system_summary.md"
+    ).read_text(
+        encoding="utf-8",
+    ) == "RESUMEN CUALITATIVO\n"
 
 
 def test_judge_run_main_renders_reconstructed_status(
@@ -3783,6 +4663,156 @@ def test_compare_human_annotators_requires_distinct_annotators(
         )
 
 
+def test_judge_system_summary_aggregates_passes_by_system_and_criterion(
+    tmp_path,
+) -> None:
+    sampled_trials = _sampled_trials_for_persistence()
+    first_sample = sampled_trials[0]
+    second_sample = sampled_trials[1]
+
+    first_holdout = SampledTrial(
+        case_id=first_sample.case_id,
+        split="holdout",
+        candidate=first_sample.candidate,
+    )
+
+    third_trial = {
+        **first_sample.candidate.trial,
+        "trial_index": 3,
+    }
+    third_sample = SampledTrial(
+        case_id="qc-003",
+        split="holdout",
+        candidate=TrialCandidate(
+            run_id=first_sample.candidate.run_id,
+            agent_config=first_sample.candidate.agent_config,
+            llm_config=first_sample.candidate.llm_config,
+            trial_config=first_sample.candidate.trial_config,
+            scenario=first_sample.candidate.scenario,
+            trial_index=3,
+            trial=third_trial,
+        ),
+    )
+
+    create_qualitative_dataset(
+        _dataset_config_for_persistence(),
+        [
+            first_holdout,
+            second_sample,
+            third_sample,
+        ],
+        results_dir=tmp_path,
+    )
+    create_judge_evaluation(
+        "test-dataset",
+        "judge-eval-001",
+        split="holdout",
+        judge_llm_config="nova-lite",
+        max_repair_attempts=0,
+        results_dir=tmp_path,
+    )
+
+    cases = load_qualitative_cases(
+        "test-dataset",
+        results_dir=tmp_path,
+    )
+
+    for case in cases:
+        decisions = {
+            criterion_id: JudgeCriterionDecision(
+                verdict=(
+                    "FAIL"
+                    if (
+                        (
+                            case.case_id == "qc-003"
+                            and criterion_id == "Q1.2"
+                        )
+                        or (
+                            case.case_id == "qc-002"
+                            and criterion_id == "Q1.1"
+                        )
+                    )
+                    else "PASS"
+                ),
+                reason=(
+                    f"Decisión para {case.case_id} / "
+                    f"{criterion_id}."
+                ),
+                evidence_refs=[
+                    "a1.i1",
+                ],
+            )
+            for criterion_id, applicability
+            in case.criteria_applicability.items()
+            if applicability.applicable
+        }
+
+        save_judge_case_prediction(
+            "test-dataset",
+            "judge-eval-001",
+            build_judge_case_prediction(
+                case,
+                decisions,
+            ),
+            results_dir=tmp_path,
+        )
+
+    summary = build_judge_system_summary(
+        "test-dataset",
+        "judge-eval-001",
+        results_dir=tmp_path,
+    )
+
+    assert summary["dataset_id"] == "test-dataset"
+    assert summary["judge_eval_id"] == "judge-eval-001"
+    assert len(summary["systems"]) == 2
+
+    minimal = summary["systems"][0]
+
+    assert minimal["agent_config"] == "minimal"
+    assert minimal["case_count"] == 2
+    assert minimal["criteria"]["Q1.1"] == {
+        "applicable": 2,
+        "pass": 2,
+        "pass_rate": 1.0,
+    }
+    assert minimal["criteria"]["Q1.2"] == {
+        "applicable": 2,
+        "pass": 1,
+        "pass_rate": 0.5,
+    }
+    assert minimal["criteria"]["Q1.4"] == {
+        "applicable": 0,
+        "pass": 0,
+        "pass_rate": None,
+    }
+
+    tool_repair = summary["systems"][1]
+
+    assert (
+        tool_repair["agent_config"]
+        == "minimal_tool_repair"
+    )
+    assert tool_repair["case_count"] == 1
+    assert tool_repair["criteria"]["Q1.1"] == {
+        "applicable": 1,
+        "pass": 0,
+        "pass_rate": 0.0,
+    }
+
+    rendered = render_judge_system_summary(
+        summary
+    )
+
+    assert "# Evaluación cualitativa por sistema" in rendered
+    assert (
+        "`minimal / nova-lite / single_attempt`"
+        in rendered
+    )
+    assert "1/2 (50.0%)" in rendered
+    assert "N/A" in rendered
+
+
 def test_llm_judge_report_reconstructs_operational_status(
     tmp_path,
 ) -> None:
@@ -4601,6 +5631,7 @@ def test_case_presentation_exposes_internal_context_as_evidence() -> None:
                 "Hechos descubiertos:\n"
                 "- La puerta requiere una llave."
             ),
+            "preserved_raw_round_refs": [],
         },
     ]
 
@@ -4627,11 +5658,83 @@ def test_case_presentation_exposes_internal_context_as_evidence() -> None:
         "para decisiones posteriores"
     ) in rendered
     assert (
-        "Representación reducida de la trayectoria anterior; "
-        "no es una observación del mundo."
+        "Contexto realmente disponible para decisiones posteriores: "
+        "resumen sintetizado más las rondas recientes indicadas "
+        "como preservadas en crudo. No es una observación del mundo."
     ) in rendered
     assert "a1.i1.plan1" in rendered
     assert "a1.i1.summary1" in rendered
+
+
+def test_case_presentation_exposes_raw_rounds_preserved_with_summary() -> None:
+    case = _qualitative_case()
+    case.attempts[0].iterations.append(
+        QualitativeIteration(
+            iteration_index=2,
+            assistant_content="Sigo con la búsqueda.",
+            context_after_decision=[
+                QualitativeInternalContext(
+                    context_id="a1.i2.summary1",
+                    kind="summary",
+                    content=(
+                        "Hechos descubiertos:\n"
+                        "- La puerta requiere una llave."
+                    ),
+                    preserved_raw_round_refs=[
+                        "a1.i1",
+                    ],
+                ),
+            ],
+        )
+    )
+    case.attempts[0].iterations.append(
+        QualitativeIteration(
+            iteration_index=3,
+            assistant_content="Continúo.",
+        )
+    )
+
+    presentation = build_case_presentation(
+        case
+    )
+    data = json.loads(
+        presentation.text
+    )
+    summary_context = data["attempts"][0][
+        "iterations"
+    ][1]["context_after_decision"][0]
+
+    assert presentation.version == "planning-evidence-v6"
+    assert summary_context == {
+        "ref": "a1.i2.summary1",
+        "kind": "summary",
+        "content": (
+            "Hechos descubiertos:\n"
+            "- La puerta requiere una llave."
+        ),
+        "preserved_raw_round_refs": [
+            "a1.i1",
+        ],
+    }
+
+    assert (
+        data["attempts"][0]["iterations"][0][
+            "assistant_content"
+        ]
+        == "<thinking>Primero voy a mirar.</thinking>"
+    )
+    assert "preserved_raw_rounds" not in summary_context
+    assert presentation.evidence_refs.count(
+        "a1.i1"
+    ) == 1
+
+    prompt = build_judge_prompt(
+        presentation,
+        "Q1.1",
+    )
+
+    assert '"preserved_raw_round_refs": [' in prompt
+    assert '"a1.i1"' in prompt
 
 
 def test_case_presentation_excludes_evaluation_metadata() -> None:
@@ -5994,6 +7097,66 @@ def test_annotate_evidence_inputs_belong_to_annotation_form(
         'hidden '
         'form="annotation-form"'
     ) in page
+
+
+def test_annotate_evidence_renders_summary_with_preserved_raw_rounds() -> None:
+    case = _qualitative_case()
+
+    case.attempts[0].iterations.append(
+        QualitativeIteration(
+            iteration_index=2,
+            assistant_content="Ahora sigo buscando.",
+            context_after_decision=[
+                QualitativeInternalContext(
+                    context_id="a1.i2.summary1",
+                    kind="summary",
+                    content=(
+                        "Hechos descubiertos:\n"
+                        "- Hay una llave."
+                    ),
+                    preserved_raw_round_refs=[
+                        "a1.i1",
+                    ],
+                ),
+            ],
+        )
+    )
+    case.attempts[0].iterations.append(
+        QualitativeIteration(
+            iteration_index=3,
+            assistant_content="Continúo.",
+        )
+    )
+
+    review_case = ReviewCase(
+        case=case,
+        split="dev",
+        presentation=build_case_presentation(
+            case
+        ),
+        annotation=None,
+    )
+
+    evidence_html = _evidence_cards_html(
+        review_case
+    )
+
+    assert "Resumen sintetizado" in evidence_html
+    assert "Rondas preservadas en crudo" in evidence_html
+    assert "<strong>Ronda preservada 1</strong>" in evidence_html
+    assert 'class="preserved-round"' in evidence_html
+    assert (
+        "&lt;thinking&gt;Primero voy a mirar.&lt;/thinking&gt;"
+        in evidence_html
+    )
+    assert "Ves una llave." in evidence_html
+
+    assert (
+        evidence_html.count(
+            'data-evidence-ref="a1.i1"'
+        )
+        == 1
+    )
 
 
 def test_annotate_page_exposes_q1_4_trigger_navigation(

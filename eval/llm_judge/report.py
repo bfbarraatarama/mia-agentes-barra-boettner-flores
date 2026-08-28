@@ -15,6 +15,7 @@ from eval.llm_judge.comparison import (
 from eval.llm_judge.models import CaseSplit
 from eval.llm_judge.persistence import (
     RESULTS_DIR,
+    load_case_sources,
     load_judge_case_predictions,
     load_judge_evaluation_manifest,
     load_judge_evaluation_progress,
@@ -393,6 +394,210 @@ def render_judge_evaluation_status(
                 status.completed_with_checkpoint_case_ids
             )
         )
+
+    return "\n".join(
+        lines
+    )
+
+
+def build_judge_system_summary(
+    dataset_id: str,
+    judge_eval_id: str,
+    *,
+    results_dir: Path = RESULTS_DIR,
+) -> dict[str, Any]:
+    """Agrega las decisiones del judge por sistema y criterio."""
+
+    manifest = load_judge_evaluation_manifest(
+        dataset_id,
+        judge_eval_id,
+        results_dir=results_dir,
+    )
+    predictions = load_judge_case_predictions(
+        dataset_id,
+        judge_eval_id,
+        results_dir=results_dir,
+    )
+    case_sources = load_case_sources(
+        dataset_id,
+        results_dir=results_dir,
+    )
+
+    expected_case_ids = set(
+        manifest["case_ids"]
+    )
+    predictions_by_id = {
+        prediction.case_id: prediction
+        for prediction in predictions
+    }
+    sources_by_id = {
+        source.case_id: source
+        for source in case_sources
+    }
+
+    missing_predictions = (
+        expected_case_ids
+        - set(predictions_by_id)
+    )
+
+    if missing_predictions:
+        raise ValueError(
+            "Faltan predicciones del judge para los casos: "
+            f"{sorted(missing_predictions)}."
+        )
+
+    missing_sources = (
+        expected_case_ids
+        - set(sources_by_id)
+    )
+
+    if missing_sources:
+        raise ValueError(
+            "Falta procedencia para los casos: "
+            f"{sorted(missing_sources)}."
+        )
+
+    systems: dict[
+        tuple[str, str, str],
+        dict[str, Any],
+    ] = {}
+
+    for case_id in manifest["case_ids"]:
+        prediction = predictions_by_id[
+            case_id
+        ]
+        source = sources_by_id[
+            case_id
+        ]
+        system = (
+            source.agent_config,
+            source.llm_config,
+            source.trial_config,
+        )
+
+        system_summary = systems.setdefault(
+            system,
+            {
+                "agent_config": source.agent_config,
+                "llm_config": source.llm_config,
+                "trial_config": source.trial_config,
+                "case_count": 0,
+                "criteria": {
+                    criterion_id: {
+                        "applicable": 0,
+                        "pass": 0,
+                    }
+                    for criterion_id in CRITERION_IDS
+                },
+            },
+        )
+        system_summary["case_count"] += 1
+
+        for criterion_id, decision in (
+            prediction.criteria.items()
+        ):
+            criterion_summary = (
+                system_summary["criteria"][
+                    criterion_id
+                ]
+            )
+            criterion_summary["applicable"] += 1
+            criterion_summary["pass"] += int(
+                decision.verdict == "PASS"
+            )
+
+    for system_summary in systems.values():
+        for criterion_summary in (
+            system_summary["criteria"].values()
+        ):
+            applicable = criterion_summary[
+                "applicable"
+            ]
+            criterion_summary["pass_rate"] = (
+                criterion_summary["pass"]
+                / applicable
+                if applicable
+                else None
+            )
+
+    return {
+        "dataset_id": dataset_id,
+        "judge_eval_id": judge_eval_id,
+        "systems": [
+            systems[system]
+            for system in sorted(systems)
+        ],
+    }
+
+
+def _criterion_summary_text(
+    criterion_summary: dict[str, Any],
+) -> str:
+    """Formatea el resultado de un criterio para una tabla."""
+
+    applicable = criterion_summary[
+        "applicable"
+    ]
+
+    if not applicable:
+        return "N/A"
+
+    passes = criterion_summary[
+        "pass"
+    ]
+    pass_rate = criterion_summary[
+        "pass_rate"
+    ]
+
+    return (
+        f"{passes}/{applicable} "
+        f"({pass_rate:.1%})"
+    )
+
+
+def render_judge_system_summary(
+    summary: dict[str, Any],
+) -> str:
+    """Renderiza el resultado cualitativo agregado por sistema."""
+
+    lines = [
+        "# Evaluación cualitativa por sistema",
+        "",
+        f"- Dataset: `{summary['dataset_id']}`",
+        f"- Judge evaluation: `{summary['judge_eval_id']}`",
+        "",
+        "| Sistema | Casos | Q1.1 | Q1.2 | Q1.3 | Q1.4 |",
+        "|---|---:|---:|---:|---:|---:|",
+    ]
+
+    for system in summary["systems"]:
+        system_label = (
+            f"{system['agent_config']} / "
+            f"{system['llm_config']} / "
+            f"{system['trial_config']}"
+        )
+        criteria = system[
+            "criteria"
+        ]
+
+        lines.append(
+            "| "
+            f"`{system_label}` | "
+            f"{system['case_count']} | "
+            f"{_criterion_summary_text(criteria['Q1.1'])} | "
+            f"{_criterion_summary_text(criteria['Q1.2'])} | "
+            f"{_criterion_summary_text(criteria['Q1.3'])} | "
+            f"{_criterion_summary_text(criteria['Q1.4'])} |"
+        )
+
+    lines.extend([
+        "",
+        (
+            "Cada celda muestra `PASS/aplicables` y su proporción. "
+            "Q1.4 puede tener un denominador menor porque sólo se "
+            "evalúa cuando existe una oportunidad observable de adaptación."
+        ),
+    ])
 
     return "\n".join(
         lines

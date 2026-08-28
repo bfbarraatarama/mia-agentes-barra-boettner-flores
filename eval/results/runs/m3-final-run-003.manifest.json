@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "run_id": "m3-final-run-003",
+  "created_at": "2026-08-25T14:59:26+00:00",
+  "git": {
+    "commit": "06885bece6b72aae1aa7b419cc477dce68bd184a",
+    "branch": "m3/final-experimental-improvements",
+    "dirty": false
+  },
+  "run": {
+    "systems": [
+      {
+        "agent_config": "baseline_incremental",
+        "llm_config": "nova-lite"
+      },
+      {
+        "agent_config": "planner_incremental",
+        "llm_config": "nova-lite"
+      },
+      {
+        "agent_config": "summary_incremental",
+        "llm_config": "nova-lite"
+      },
+      {
+        "agent_config": "planner_summary_incremental",
+        "llm_config": "nova-lite"
+      }
+    ],
+    "trial_configs": [
+      "multi_attempt_recovery"
+    ],
+    "scenarios": [
+      "study-with-key",
+      "color-locks",
+      "apartment-keys",
+      "library-search",
+      "office-sequence",
+      "extreme-archive",
+      "vault-combination",
+      "backtracking-vault"
+    ],
+    "trials_per_case": 10
+  },
+  "agent_configs": {
+    "baseline_incremental": {
+      "system_prompt": "Estás resolviendo una sala de escape en un mundo simulado.\n\nTenés que cumplir el objetivo indicado en el mensaje del escenario utilizando las herramientas disponibles.\n\nTrabajá de forma incremental y verificable.\n\nPriorizá una sola acción con herramientas por iteración, para poder observar su resultado antes de decidir la siguiente. Podés solicitar varias acciones en una misma iteración sólo cuando sean independientes entre sí y ninguna dependa del resultado o del cambio de estado producido por otra.\n\nNo asumas que una acción tuvo éxito: usá la observación obtenida para decidir cómo continuar.\n\nMantené las acciones alineadas con el subobjetivo vigente. Si una acción o un patrón no produce progreso, o si nueva evidencia contradice la estrategia que venías siguiendo, revisá el curso de acción antes de repetirlo.\n\nAl navegar, mantené una representación consistente de las conexiones ya observadas. Norte y sur son direcciones opuestas; este y oeste son direcciones opuestas. Usá esas relaciones para reconstruir recorridos inversos.",
+      "register_default_tools": false,
+      "max_iterations": 40,
+      "max_history_messages": 100,
+      "tool_call_repair_max_attempts": 0
+    },
+    "planner_incremental": {
+      "system_prompt": "Estás resolviendo una sala de escape en un mundo simulado.\n\nTenés que cumplir el objetivo indicado en el mensaje del escenario utilizando las herramientas disponibles.\n\nTrabajá de forma incremental y verificable.\n\nPriorizá una sola acción con herramientas por iteración, para poder observar su resultado antes de decidir la siguiente. Podés solicitar varias acciones en una misma iteración sólo cuando sean independientes entre sí y ninguna dependa del resultado o del cambio de estado producido por otra.\n\nNo asumas que una acción tuvo éxito: usá la observación obtenida para decidir cómo continuar.\n\nMantené las acciones alineadas con el subobjetivo vigente. Si una acción o un patrón no produce progreso, o si nueva evidencia contradice la estrategia que venías siguiendo, revisá el curso de acción antes de repetirlo.\n\nAl navegar, mantené una representación consistente de las conexiones ya observadas. Norte y sur son direcciones opuestas; este y oeste son direcciones opuestas. Usá esas relaciones para reconstruir recorridos inversos.",
+      "register_default_tools": false,
+      "max_iterations": 40,
+      "max_history_messages": 100,
+      "tool_call_repair_max_attempts": 3,
+      "use_planner": true,
+      "planning_prompt": "Analizá la siguiente tarea de escape room y creá un plan de acción paso a paso. Tené en cuenta que el objetivo puede requerir cumplir sub-objetivos en un orden específico. Usá las herramientas disponibles para explorar, tomar objetos y usarlos.",
+      "plan_guidance": "Usá este plan como guía. Adaptá las acciones a las observaciones del entorno y no asumas que un paso es válido si nueva evidencia lo contradice.",
+      "planning_repair_max_attempts": 2
+    },
+    "planner_summary_incremental": {
+      "system_prompt": "Estás resolviendo una sala de escape en un mundo simulado.\n\nTenés que cumplir el objetivo indicado en el mensaje del escenario utilizando las herramientas disponibles.\n\nTrabajá de forma incremental y verificable.\n\nPriorizá una sola acción con herramientas por iteración, para poder observar su resultado antes de decidir la siguiente. Podés solicitar varias acciones en una misma iteración sólo cuando sean independientes entre sí y ninguna dependa del resultado o del cambio de estado producido por otra.\n\nNo asumas que una acción tuvo éxito: usá la observación obtenida para decidir cómo continuar.\n\nMantené las acciones alineadas con el subobjetivo vigente. Si una acción o un patrón no produce progreso, o si nueva evidencia contradice la estrategia que venías siguiendo, revisá el curso de acción antes de repetirlo.\n\nAl navegar, mantené una representación consistente de las conexiones ya observadas. Norte y sur son direcciones opuestas; este y oeste son direcciones opuestas. Usá esas relaciones para reconstruir recorridos inversos.",
+      "register_default_tools": false,
+      "max_iterations": 40,
+      "max_history_messages": 20,
+      "tool_call_repair_max_attempts": 3,
+      "use_planner": true,
+      "planning_prompt": "Analizá la siguiente tarea de escape room y creá un plan de acción paso a paso. Tené en cuenta que el objetivo puede requerir cumplir sub-objetivos en un orden específico. Usá las herramientas disponibles para explorar, tomar objetos y usarlos.",
+      "plan_guidance": "Usá este plan como guía. Adaptá las acciones a las observaciones del entorno y no asumas que un paso es válido si nueva evidencia lo contradice.",
+      "planning_repair_max_attempts": 2,
+      "history_compaction": "llm",
+      "compaction_keep_recent_rounds": 2,
+      "history_compaction_repair_max_attempts": 1
+    },
+    "summary_incremental": {
+      "system_prompt": "Estás resolviendo una sala de escape en un mundo simulado.\n\nTenés que cumplir el objetivo indicado en el mensaje del escenario utilizando las herramientas disponibles.\n\nTrabajá de forma incremental y verificable.\n\nPriorizá una sola acción con herramientas por iteración, para poder observar su resultado antes de decidir la siguiente. Podés solicitar varias acciones en una misma iteración sólo cuando sean independientes entre sí y ninguna dependa del resultado o del cambio de estado producido por otra.\n\nNo asumas que una acción tuvo éxito: usá la observación obtenida para decidir cómo continuar.\n\nMantené las acciones alineadas con el subobjetivo vigente. Si una acción o un patrón no produce progreso, o si nueva evidencia contradice la estrategia que venías siguiendo, revisá el curso de acción antes de repetirlo.\n\nAl navegar, mantené una representación consistente de las conexiones ya observadas. Norte y sur son direcciones opuestas; este y oeste son direcciones opuestas. Usá esas relaciones para reconstruir recorridos inversos.",
+      "register_default_tools": false,
+      "max_iterations": 40,
+      "max_history_messages": 20,
+      "tool_call_repair_max_attempts": 3,
+      "history_compaction": "llm",
+      "compaction_keep_recent_rounds": 2,
+      "history_compaction_repair_max_attempts": 1
+    }
+  },
+  "llm_configs": {
+    "nova-lite": {
+      "provider": "bedrock",
+      "model": "amazon.nova-lite-v1:0",
+      "region": "us-west-2",
+      "temperature": 0.2,
+      "max_tokens": 4096
+    }
+  },
+  "trial_configs": {
+    "multi_attempt_recovery": {
+      "max_attempts": 10,
+      "continuation_message": "El desafío todavía no está completado. Continuá.",
+      "recoverable_attempt_terminations": {
+        "max_iterations": "El intento anterior terminó porque alcanzó el límite externo de iteraciones. Esto no implica que la última acción haya fallado. El estado alcanzado hasta ese momento se conserva.",
+        "context_overflow": "El intento anterior terminó porque la ronda solicitada no cabía completa dentro del presupuesto de historial configurado. La ronda fue rechazada completa y sus acciones no se ejecutaron. Esto no implica que las acciones solicitadas fueran inválidas. El estado alcanzado hasta ese momento se conserva."
+      },
+      "attempt_recovery_max_recoveries": {
+        "max_iterations": 1
+      }
+    }
+  },
+  "scenario_metadata": {
+    "study-with-key": {
+      "difficulty": "easy",
+      "goal": {
+        "type": "item_open",
+        "item": "puerta_principal"
+      }
+    },
+    "color-locks": {
+      "difficulty": "medium",
+      "goal": {
+        "type": "item_open",
+        "item": "puerta_principal"
+      }
+    },
+    "apartment-keys": {
+      "difficulty": "medium",
+      "goal": {
+        "type": "item_open",
+        "item": "puerta_principal"
+      }
+    },
+    "library-search": {
+      "difficulty": "hard",
+      "goal": {
+        "type": "item_open",
+        "item": "puerta_principal"
+      }
+    },
+    "office-sequence": {
+      "difficulty": "hard",
+      "goal": {
+        "type": "sequence",
+        "goals": [
+          {
+            "type": "item_in_inventory",
+            "item": "documento_confidencial"
+          },
+          {
+            "type": "item_open",
+            "item": "puerta_principal"
+          }
+        ]
+      }
+    },
+    "extreme-archive": {
+      "difficulty": "extreme",
+      "goal": {
+        "type": "item_open",
+        "item": "puerta_principal"
+      }
+    },
+    "vault-combination": {
+      "difficulty": "extreme",
+      "goal": {
+        "type": "item_open",
+        "item": "puerta_principal"
+      }
+    },
+    "backtracking-vault": {
+      "difficulty": "extreme",
+      "goal": {
+        "type": "item_open",
+        "item": "puerta_principal"
+      }
+    }
+  }
+}

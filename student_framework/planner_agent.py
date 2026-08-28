@@ -75,14 +75,33 @@ class PlannerAgent(MyAgent):
             args = json.loads(final_call.arguments)
             return Plan.model_validate(args)
 
-        plan = self._structured_call_with_repair(
-            prompt=f"{self._planning_prompt}\n\n{user_message}",
-            tools=[final_tool],
-            validate_call=validate_plan,
-            max_repair_attempts=self._planning_repair_max_attempts,
-            response_callback=accumulate_plan_tokens,
-            purpose="planning",
-        )
+        try:
+            plan = self._structured_call_with_repair(
+                prompt=f"{self._planning_prompt}\n\n{user_message}",
+                tools=[final_tool],
+                validate_call=validate_plan,
+                max_repair_attempts=self._planning_repair_max_attempts,
+                response_callback=accumulate_plan_tokens,
+                purpose="planning",
+            )
+        except ValueError as error:
+            message = (
+                "No se pudo generar el plan inicial: "
+                f"{error}"
+            )
+
+            if self._trace_callback is not None:
+                self._trace_callback({
+                    "type": "planning_failure",
+                    "message": message,
+                })
+
+            return AgentResult(
+                answer=message,
+                error=message,
+                input_tokens=plan_input_tokens,
+                output_tokens=plan_output_tokens,
+            )
 
         if self._trace_callback is not None:
             self._trace_callback({

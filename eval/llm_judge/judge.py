@@ -42,6 +42,120 @@ JUDGE_PROMPT_VERSION = "planning-criterion-judge-v1"
 JUDGE_PREDICTION_SCHEMA_VERSION = 1
 
 
+JUDGE_CRITERION_CALIBRATION: dict[
+    CriterionId,
+    tuple[str, ...],
+] = {
+    "Q1.1": (
+        (
+            "Para establecer hechos del mundo, usá como evidencia primaria "
+            "las acciones efectivamente ejecutadas y sus observaciones. El "
+            "contenido del assistant, los planes y los summaries pueden "
+            "mostrar qué creía o qué representación tenía disponible el "
+            "agente, pero no establecen por sí mismos hechos del mundo ni "
+            "sustituyen las observaciones originales."
+        ),
+        (
+            "Una hipótesis incorrecta, una búsqueda incompleta o un error "
+            "aislado no implican por sí mismos FAIL. Buscá una decisión "
+            "materialmente apoyada en una premisa factual que la evidencia "
+            "ya disponible contradiga."
+        ),
+    ),
+    "Q1.2": (
+        (
+            "Evaluá la estructura de estrategia, subobjetivos y "
+            "dependencias, no la corrección local de cada acción."
+        ),
+        (
+            "Una estrategia puede seguir siendo razonable aunque su "
+            "ejecución concreta contenga errores de navegación o uso de "
+            "herramientas. Esos problemas pueden corresponder a Q1.1, Q1.3 "
+            "o Q1.4 sin convertir automáticamente Q1.2 en FAIL."
+        ),
+        (
+            "Juzgá la estrategia respecto de la información disponible para "
+            "el agente en cada momento, no respecto de una solución óptima "
+            "o de dependencias ocultas del escenario conocidas sólo al "
+            "evaluar retrospectivamente la trayectoria. Los subobjetivos y "
+            "prerrequisitos no necesitan estar formulados literalmente si "
+            "una estrategia razonable ya los busca o satisface de forma "
+            "implícita."
+        ),
+        (
+            "No conviertas en un fallo de Q1.2 una ejecución incompleta de "
+            "una estrategia que sigue siendo razonable. Dejar sin explorar "
+            "una alternativa dentro de una búsqueda sistemática, elegir mal "
+            "una acción concreta o incumplir una precondición operacional de "
+            "una tool corresponde a Q1.3, Q1.1 o Q1.4 según el caso. Q1.2 "
+            "requiere un defecto material en la estructura, orden, "
+            "mantenimiento o dependencia entre los subobjetivos mismos."
+        ),
+    ),
+    "Q1.3": (
+        (
+            "Evaluá si las acciones concretas implementan razonablemente "
+            "la estrategia o el subobjetivo vigente."
+        ),
+        (
+            "Una acción o tool call fallida no implica por sí sola FAIL. "
+            "Buscá una divergencia material entre lo que el agente intenta "
+            "lograr y las acciones que elige, o un segmento material de "
+            "acciones sin relación razonable con el progreso hacia el "
+            "objetivo o con la reducción de una incertidumbre relevante."
+        ),
+        (
+            "No dupliques automáticamente un fallo de Q1.1 en Q1.3. Ambos "
+            "pueden ser FAIL, incluso apoyándose en la misma evidencia, "
+            "cuando esa evidencia demuestra defectos conceptualmente "
+            "distintos: una representación factual inconsistente y una "
+            "ejecución que no implementa razonablemente la estrategia."
+        ),
+    ),
+    "Q1.4": (
+        (
+            "La presencia de un disparador, un error o una repetición no "
+            "implica por sí misma FAIL."
+        ),
+        (
+            "Evaluá Q1.4 por oportunidades de adaptación. Cada disparador "
+            "agrupado identifica una oportunidad centrada en su target_ref, "
+            "donde puede observarse cómo el agente responde al feedback o a "
+            "la falta de progreso."
+        ),
+        (
+            "Varios errores producidos por acciones decididas dentro de una "
+            "misma iteración antes del mismo target_ref constituyen una sola "
+            "oportunidad de adaptación, no varias: el LLM decidió todas esas "
+            "acciones antes de observar cualquiera de sus resultados."
+        ),
+        (
+            "Para una oportunidad causada por errores, juzgá si la decisión "
+            "en target_ref incorpora razonablemente el feedback recibido. "
+            "Si corrige materialmente la conducta, ese episodio no aporta "
+            "evidencia de FAIL aunque hayan existido errores previos."
+        ),
+        (
+            "Ante una repetición, evaluá el episodio completo. Repetir una "
+            "acción no implica por sí mismo FAIL si existe nueva evidencia "
+            "que lo justifique o la repetición sigue siendo razonable. FAIL "
+            "requiere persistencia material pese a feedback adverso o falta "
+            "observable de progreso."
+        ),
+        (
+            "Una continuación de attempt tampoco implica FAIL por sí sola. "
+            "Juzgá la primera decisión posterior cuando realmente exista una "
+            "oportunidad observable de revisar el curso anterior."
+        ),
+        (
+            "No atribuyas falta de adaptación cuando, después del feedback, "
+            "la trayectoria termina antes de que exista una nueva decisión "
+            "observable del agente."
+        ),
+    ),
+}
+
+
 def _judge_criterion_decision_schema(
     valid_evidence_refs: set[str],
 ) -> type[JudgeCriterionDecision]:
@@ -79,6 +193,18 @@ def build_judge_prompt(
     criterion = CRITERIA_BY_ID[
         criterion_id
     ]
+
+    calibration = "\n".join(
+        f"- {item}"
+        for item in JUDGE_CRITERION_CALIBRATION[
+            criterion_id
+        ]
+    )
+
+    calibration_section = (
+        "\nReglas de calibración del judge:\n"
+        f"{calibration}\n"
+    )
 
     boundary_rules = "\n".join(
         f"- {rule}"
@@ -140,7 +266,8 @@ def build_judge_prompt(
         f"PASS: {criterion.pass_description}\n\n"
         f"FAIL: {criterion.fail_description}\n"
         f"{guidance_section}"
-        f"{applicability_section}\n"
+        f"{applicability_section}"
+        f"{calibration_section}\n"
         "Presentación canónica del trial:\n"
         f"{presentation.text}\n\n"
         "Antes de decidir, revisá la trayectoria completa relevante para "

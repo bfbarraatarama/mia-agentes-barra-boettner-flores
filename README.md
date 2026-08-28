@@ -10,7 +10,7 @@ En este repositorio se desarrolla el trabajo integrador de la materia **Agentes 
 
 El desarrollo se realizará en tres "milestones", `M1`, `M2` y `M3`.
 
-Estado actual: `M2 abordada`.
+Estado actual: `M3 abordada`.
 
 ## Informes 
 La documentación de cada etapa completada se complementará con un informe en `informes/m*.md`
@@ -18,6 +18,7 @@ La documentación de cada etapa completada se complementará con un informe en `
 Informes actuales
 - [m1.md](informes/m1.md)
 - [m2.md](informes/m2.md)
+- [m3.md](informes/m3.md)
 
 ## Resultados experimentales y Git LFS
 

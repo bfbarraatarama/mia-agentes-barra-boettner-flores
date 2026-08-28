@@ -302,3 +302,114 @@ M3_FINAL_RUN_CONFIG: dict[str, Any] = {
     ],
     "trials_per_case": 10,
 }
+
+
+M3_FINAL_RECOVERY_RUN_CONFIG: dict[str, Any] = {
+    **M3_FINAL_RUN_CONFIG,
+    "trial_configs": [
+        "multi_attempt_recovery",
+    ],
+}
+
+
+M3_FINAL_RECOVERY_TOKEN_TRIGGER_RUN_CONFIG: dict[str, Any] = {
+    **M3_FINAL_RECOVERY_RUN_CONFIG,
+    "systems": [
+        {
+            "agent_config": "summary_token_trigger",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "planner_summary_token_trigger",
+            "llm_config": "nova-lite",
+        },
+    ],
+}
+
+
+M3_FINAL_RECOVERY_STRATEGIC_SUMMARY_RUN_CONFIG: dict[str, Any] = {
+    **M3_FINAL_RECOVERY_TOKEN_TRIGGER_RUN_CONFIG,
+    "systems": [
+        {
+            "agent_config": "summary_strategic",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "planner_summary_strategic",
+            "llm_config": "nova-lite",
+        },
+    ],
+}
+
+
+M3_FINAL_INCREMENTAL_RUN_CONFIG: dict[str, Any] = {
+    **M3_FINAL_RECOVERY_RUN_CONFIG,
+    "systems": [
+        {
+            "agent_config": "baseline_incremental",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "planner_incremental",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "summary_incremental",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "planner_summary_incremental",
+            "llm_config": "nova-lite",
+        },
+    ],
+}
+
+
+M3_FINAL_TOKEN_TRIGGER_RUN_CONFIG: dict[str, Any] = {
+    **M3_FINAL_INCREMENTAL_RUN_CONFIG,
+    "systems": [
+        {
+            "agent_config": "summary_incremental_token_trigger",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "planner_summary_incremental_token_trigger",
+            "llm_config": "nova-lite",
+        },
+    ],
+}
+
+
+M3_FINAL_STRATEGIC_SUMMARY_RUN_CONFIG: dict[str, Any] = {
+    **M3_FINAL_TOKEN_TRIGGER_RUN_CONFIG,
+    "systems": [
+        {
+            "agent_config": "summary_incremental_strategic",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "planner_summary_incremental_strategic",
+            "llm_config": "nova-lite",
+        },
+    ],
+}
+
+
+M3_FINAL_SELECTION_RUN_CONFIG: dict[str, Any] = {
+    **M3_FINAL_RECOVERY_RUN_CONFIG,
+    "systems": [
+        {
+            "agent_config": "planner",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "baseline_incremental",
+            "llm_config": "nova-lite",
+        },
+        {
+            "agent_config": "planner_incremental",
+            "llm_config": "nova-lite",
+        },
+    ],
+    "trials_per_case": 20,
+}
