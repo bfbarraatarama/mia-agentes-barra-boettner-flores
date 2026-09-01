@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 import json
 import sys
 from pathlib import Path
@@ -18,8 +19,12 @@ if str(REPO_ROOT) not in sys.path:
 from eval.evaluation import start_evaluation
 from eval.persistence import RUNS_DIR, evaluation_dir
 from eval.configs.evaluation_configs import M3_EVALUATION_CONFIG
-from eval.configs.run_configs import (
-    M3_FINAL_SELECTION_RUN_CONFIG,
+from eval.configs.run_configs import M3_COMPETITION_RUN_CONFIG
+from eval.llm_judge.configs.dataset_configs import (
+    M3_COMPETITION_QUALITATIVE_DATASET_CONFIG,
+)
+from eval.llm_judge.configs.judge_configs import (
+    M3_COMPETITION_JUDGE_CONFIG,
 )
 from eval.run_execution import resume_run, start_run
 from eval.report import (
@@ -39,12 +44,6 @@ from eval.analyses.efficiency_analysis import (
 from eval.analyses.context_analysis import (
     render_markdown as render_context_markdown,
 )
-from eval.llm_judge.configs.dataset_configs import (
-    M3_FINAL_SELECTION_QUALITATIVE_DATASET_CONFIG,
-)
-from eval.llm_judge.configs.judge_configs import (
-    M3_FINAL_SELECTION_JUDGE_CONFIG,
-)
 from eval.llm_judge.persistence import (
     RESULTS_DIR as LLM_JUDGE_RESULTS_DIR,
 )
@@ -59,28 +58,46 @@ from eval.llm_judge.run import (
     execute_judge_config,
 )
 
+EXPERIMENT_ID = "competition-001"
+TRIALS_PER_CASE = 20
+QUALITATIVE_CASES_PER_SYSTEM_SCENARIO = 3
+
+
+RUN_CONFIG = deepcopy(M3_COMPETITION_RUN_CONFIG)
+RUN_CONFIG["trials_per_case"] = TRIALS_PER_CASE
+
+QUALITATIVE_DATASET_CONFIG = deepcopy(
+    M3_COMPETITION_QUALITATIVE_DATASET_CONFIG
+)
+QUALITATIVE_DATASET_CONFIG["dataset_id"] = EXPERIMENT_ID
+QUALITATIVE_DATASET_CONFIG["run_ids"] = [
+    EXPERIMENT_ID,
+]
+QUALITATIVE_DATASET_CONFIG["sampling"][
+    "cases_per_system_scenario"
+] = QUALITATIVE_CASES_PER_SYSTEM_SCENARIO
+
+QUALITATIVE_JUDGE_CONFIG = deepcopy(
+    M3_COMPETITION_JUDGE_CONFIG
+)
+QUALITATIVE_JUDGE_CONFIG["dataset_id"] = EXPERIMENT_ID
+QUALITATIVE_JUDGE_CONFIG["judge_eval_id"] = EXPERIMENT_ID
+
 RUNS = [
     (
-        "m3-final-run-008",
-        M3_FINAL_SELECTION_RUN_CONFIG,
+        EXPERIMENT_ID,
+        RUN_CONFIG,
     ),
 ]
 
 EVALUATIONS = [
     (
-        "m3-final-eval-008",
+        EXPERIMENT_ID,
         [
-            "m3-final-run-008",
+            EXPERIMENT_ID,
         ],
     ),
 ]
-
-QUALITATIVE_DATASET_CONFIG = (
-    M3_FINAL_SELECTION_QUALITATIVE_DATASET_CONFIG
-)
-QUALITATIVE_JUDGE_CONFIG = (
-    M3_FINAL_SELECTION_JUDGE_CONFIG
-)
 
 EVALUATION_CONFIG = M3_EVALUATION_CONFIG
 
@@ -314,6 +331,12 @@ def _run_qualitative_evaluation() -> None:
 
 
 def main() -> int:
+    if not RUN_CONFIG["scenarios"]:
+        raise ValueError(
+            "La configuración de competencia no tiene escenarios. "
+            "Agregá al menos uno antes de ejecutar el run."
+        )
+
     for run_id, run_config in RUNS:
         run_manifest_path = (
             RUNS_DIR / f"{run_id}.manifest.json"

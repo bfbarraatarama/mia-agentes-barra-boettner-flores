@@ -157,4 +157,29 @@ M3_FINAL_SELECTION_QUALITATIVE_DATASET_CONFIG: dict[str, Any] = {
 }
 
 
+M3_COMPETITION_QUALITATIVE_DATASET_CONFIG: dict[str, Any] = {
+    "dataset_id": "competition-001",
+    "run_ids": [
+        "competition-001",
+    ],
+    "population": {
+        "agent_configs": [
+            "planner_incremental",
+        ],
+        "llm_configs": [
+            "nova-lite",
+        ],
+        "trial_configs": [
+            "multi_attempt_recovery",
+        ],
+        "scenarios": None,
+    },
+    "sampling": {
+        "method": RANDOM_STRATIFIED_BY_SYSTEM_SCENARIO_METHOD,
+        "seed": 20260826,
+        "cases_per_system_scenario": 3,
+    },
+}
+
+
 DATASET_CONFIG = M3_QUALITATIVE_FINAL_DATASET_CONFIG

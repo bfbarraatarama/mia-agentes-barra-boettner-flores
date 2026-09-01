@@ -413,3 +413,21 @@ M3_FINAL_SELECTION_RUN_CONFIG: dict[str, Any] = {
     ],
     "trials_per_case": 20,
 }
+
+
+M3_COMPETITION_RUN_CONFIG: dict[str, Any] = {
+    "systems": [
+        {
+            "agent_config": "planner_incremental",
+            "llm_config": "nova-lite",
+        },
+    ],
+    "trial_configs": [
+        "multi_attempt_recovery",
+    ],
+    "scenarios": [
+        # "aca-va-el-id-del-nuevo-escenario",
+        # "aca-va-el-id-de-otro-nuevo-escenario",
+    ],
+    "trials_per_case": 20,
+}
